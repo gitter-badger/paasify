@@ -1,0 +1,32 @@
+[tool.poetry]
+name = "paasify"
+version = "0.1.0"
+description = "Paasify your docker-compose files"
+authors = ["MrJK"]
+license = "Apache License"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+sh = "^1.14.2"
+jsonschema = "^4.3.3"
+jsonmerge = "^1.8.0"
+anyconfig = "^0.12.0"
+#python-box = "^5.4.1"
+prettytable = "^3.0.0"
+#dpath = "^2.0.5"
+diskcache = "^5.4.0"
+#mergedeep = "^1.3.4"
+typer = "^0.4.0"
+rich = "^12.2.0"
+pydantic = "^1.9.1"
+
+[tool.poetry.dev-dependencies]
+json-schema-for-humans = "^0.40"
+#black = "^24.1.0"
+pylint = "^2.12.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+[tool.poetry.scripts]
+paasify2 = "paasify.cli:app"
