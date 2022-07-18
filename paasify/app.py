@@ -42,6 +42,9 @@ class ClassClassifier():
     # Define live store, for containers
     store = None
 
+    # Define class schema_def
+    schema_def = None
+
 
     def __init__(self, parent, user_config=None, name=None, *args, **kwargs):
 
@@ -242,9 +245,43 @@ class StackManager(ClassClassifier):
 
 
 
+
 class Stack(ClassClassifier):
     """ A stack instance
     """
+
+    schema_def={
+        # "$def": {
+        #     "StackTag": StackTag.schema_def,
+        # },
+        "type": "object",
+        "title": "Paasify Stack configuration",
+        "additionalProperties": False,
+        "properties": {
+            "path": {
+                "type": "string",
+            },
+            "app": {
+                "type": "string",
+            },
+            "tags": {
+                "type": "array",
+            },
+            "env": {
+                "oneOf": [
+                    {
+                        "type": "array",
+                    },
+                    {
+                        "type": "object",
+                    },
+
+                ],
+                
+            }
+        },
+    }
+
 
     default_user_config = {
             "name": None,
@@ -735,6 +772,21 @@ class Stack(ClassClassifier):
 # =====================================================================
 
 class StackTag(ClassClassifier):
+
+    schema_def={
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Paasify Project configuration",
+
+        "oneOf":[
+            {
+                "type": "string",
+            },
+            {
+                "type": "object",
+            },
+
+        ],
+    }
     
     
     def _init(self, lookup_mode='public'):
@@ -1041,9 +1093,80 @@ class ProjectConfig(ClassClassifier):
 
 class Project(ClassClassifier):
 
-    APP_SCHEMA="""
+    schema_project_def = {
+        "type": "object",
+        "title": "Paasify Project settings",
+        "additionalProperties": False,
+        "properties": {
+            "namespace": {
+                "type": "string",
+            },
+            "env": {
+                "oneOf": [
+                    {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                        },
+                    },
+                    {
+                        "type": "object"
+                    },
+                    {
+                        "type": "null"
+                    },
+                ],
+                
+            },
+            "tags": {
+                "type": "array",
+            },
+            "tags_prefix": {
+                "type": "array",
+            },
+            "tags_suffix": {
+                "type": "array",
+            },
+            "tags_config": {
+                "type": "object",
+                "additionalProperties": False,
+                "patternProperties": {
+                    '.*': {
+                        "oneOf": [
+                            {"type": "object"},
+                            {"type": "null"},
+                        ],
+                    }
+                },
+            },
+        }
+    }
 
-    """
+    schema_def={
+        "$defs": {
+            "Stack": Stack.schema_def,
+            "Project": schema_project_def,
+        },
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Paasify Project configuration",
+        "additionalProperties": False,
+        "properties": {
+            "project": {
+                "$ref": "#/$defs/Project",
+            },
+            "sources": {
+                "type": "object",
+            },
+            "stacks": {
+                "type": "array",
+                "items": {
+                    "$ref": "#/$defs/Stack",
+                },
+            },
+            
+        }
+    }
 
     #name = "Paasify"
     
@@ -1112,7 +1235,14 @@ class Project(ClassClassifier):
         # Load anyconfig
         project_config = dict(self.default_user_config)
         project_config.update(anyconfig.load(project_config_path))
-        # (rc, err) = anyconfig.validate(project_config, self.APP_SCHEMA)
+        rc, rc_msg = anyconfig.validate(project_config, self.schema_def)
+        if not rc:
+            self.log.warn(f"Failed to validate paasify.yml, please check details with: -v")
+            self.log.info(f"Code: {rc}, {rc_msg}")
+            sys.exit(1)
+            #pprint (rc_msg)
+            raise Exception(f"Failed to validate paasify.yml")
+
 
         prj_namespace = project_config['project'].get('namespace', None) or os.path.basename(project_dir)
 
