@@ -184,7 +184,5 @@ def find_file_up(names, paths):
 
     return result
 
-from pprint import pprint
 def filter_existing_files(root_path, candidates):
-    pprint (candidates)
     return [os.path.join(root_path, cand) for cand in candidates if os.path.isfile( os.path.join(root_path, cand) ) ]

@@ -3,32 +3,21 @@
 import os
 import sys
 import re
+import logging
 from dataclasses import dataclass, astuple, asdict
 from pathlib import Path
 from copy import copy
+import json
 
-from pprint import pprint, pformat
-
-# @dataclasses
-# class ProjectData():
-#     cwd: str
-#     project_dir: str
-#     signup_ts: Optional[datetime] = None
-#     friends: List[int] = []
+import yaml
+import _jsonnet
 import anyconfig
 import sh
 
-#from paasify.common import get_logger, list_parent_dirs, find_file_up
 from paasify.common import *
-# print ("yupp")
-# log, log_level = get_logger(logger_name=__name__)
-# print ("yupp")
+from pprint import pprint, pformat
 
-
-import logging
 log = logging.getLogger(__name__)
-
-
 
 # =====================================================================
 # Class helpers
@@ -52,7 +41,6 @@ class ClassClassifier():
 
     # Define live store, for containers
     store = None
-
 
 
     def __init__(self, parent, user_config=None, name=None, *args, **kwargs):
@@ -290,7 +278,7 @@ class Stack(ClassClassifier):
         #config["app"] = config["app"] if config["app"] else None
         config["path"] = config["path"] if config["path"] else default_name
         config["name"] = config["name"].replace(os.sep, config["name"])
-        config["name"] = re.sub(f'[^0-9a-zA-Z{os.sep}]+', '_', config["name"])
+        config["name"] = re.sub(f'[^0-9a-zA-Z{os.sep}-]+', '_', config["name"])
 
 
         # Init object
@@ -310,24 +298,53 @@ class Stack(ClassClassifier):
 
         # if fail_on_app
         self.app_path = self.resolve_app(config['app'])
-        self.tags = self.get_tags()
+        self.tags_names = self._get_raw_tag_config()
+        self.tags = self._get_tags(self.tags_names)
         
     def _dump(self):
-        self.log.info ("Misc:")
-        self.log.info (f"Path: {self.path}")
-        self.log.info ("Tags:")
-        self.log.info (pformat (self.get_tags()))
-        self.log.info ("Env:")
-        self.log.info (pformat (self.parse_env()))
 
-        
+        self.log.notice ("Misc:")
+        self.log.notice (f"Path: {self.path}")
+        self.log.notice (pformat (self.config))
+
+        self.log.notice ("Env:")
+        self.log.notice (pformat (self.parse_env()))
+
+        self.log.notice ("Tags:")
+        tags = self.tags
+        #self.log.info (pformat (tags))
+
+
+        self.log.notice ("Docker-compose config:")
+        stores =  ["cand_composefile"]
+        for tag in tags:
+            self.log.notice (f"  - Name: {tag.name}")
+
+            for sub_item in stores:
+                candidates = tag.get_candidates(sub_item)
+                if len(candidates) > 0:
+                    self.log.notice (f"    {sub_item}: ({len(candidates)} candidates)")
+                    for cand in candidates:
+                        self.log.notice(f"      - {cand}")
+
+        self.log.notice ("Processor config:")
+        stores =  ["cand_jsonnet_script", "cand_jsonnet_vars"]
+        for tag in tags:
+            self.log.notice (f"  - Name: {tag.name}")
+
+            for sub_item in stores:
+                candidates = tag.get_candidates(sub_item)
+                if len(candidates) > 0:
+                    self.log.notice (f"    {sub_item}: ({len(candidates)} candidates)")
+                    for cand in candidates:
+                        self.log.notice(f"      - {cand}")
 
     
     # Misc
     # ----------------------
 
-    def get_tags(self):
-        "Return stack tags"
+    def _get_raw_tag_config(self):
+        "Return the list of tags after merge"
 
         # Merge global and local tags
         default_tags = {
@@ -338,14 +355,53 @@ class Stack(ClassClassifier):
         }
         global_tags = { k: v for k, v in self.root.project.items() if k.startswith("tags") and v}
         local_tags = { k: v for k, v in self.user_config.items() if k.startswith("tags") and v}
+
         default_tags.update(global_tags)
         default_tags.update(local_tags)
 
         tags = default_tags["tags_prefix"] + default_tags["tags_auto"] + default_tags["tags"] + default_tags["tags_suffix"]
+        return tags
 
-        # Remove exclusions
-        exclude = [ tag[1:] for tag in tags if tag.startswith('-') or tag.startswith('~') or tag.startswith('!') ]
-        tags = [ StackTag(self, name=tag) for tag in tags if tag not in exclude ]
+
+    def _get_tags(self, tags_names):
+        "Create and return a list of StackTags objects"
+
+        # Preparse tag structure
+        tags = []
+        for tag_def in tags_names:
+
+            tag_name = tag_def
+            tag_conf = {}
+
+            # Long form config
+            if isinstance(tag_def, dict):
+                # Assume the name of the first key
+                tag_name = list(tag_def.keys())[0]
+                tag_conf = tag_def[tag_name]
+
+
+            #print ("ADD TAG", tag_name, tag_conf)
+
+            # Check if not already present ?
+            cand =  [ x for x in tags if x["name"] == tag_name ]
+            if len(cand) > 0:
+                cand = cand[0]
+                if tag_conf:
+                    cand["local_config"].update(tag_conf)
+            else:
+                new_tag = {
+                    "name": tag_name,
+                    "local_config": tag_conf,
+                }
+                tags.append(new_tag)
+
+
+        # Remove exclusions ["name"][1:]
+        exclude = [ tag["name"][1:] for tag in tags if tag["name"].startswith('-') or tag["name"].startswith('~') or tag["name"].startswith('!') ]
+        tags = [ tag for tag in tags if tag["name"] not in exclude ]
+
+        # Create tags instances
+        tags = [ StackTag(self, name=tag["name"], user_config=new_tag) for tag in tags ]
         return tags
 
 
@@ -596,6 +652,33 @@ class Stack(ClassClassifier):
         self.log.notice (f"Docker-compose file has been generated: {output_file}")
 
 
+        ### WIPPPP: jsonnet support
+        self.jsonnet_postprocess()
+
+
+
+    def jsonnet_postprocess(self, compose_file="docker-compose.run.yml"):
+        "Postprocess jsonnet tags and update docker-compose.run.yml"
+
+        # OR: tags = self.tags
+        tags = self.tags
+
+        # Apply all jsonnet processing tag after tag
+        docker_data = anyconfig.load(compose_file)
+        for tag in tags:
+            if tag.has_jsonnet_support():
+                self.log.info (f"Processing jsonnet for tag: {tag.name}")
+                docker_data = tag.process_jsonnet(docker_data)
+
+        # Update docker-compose file:
+        # TOFIX: Make output consistent, reparse -it with docker-compose config
+        compose_file = os.path.join(self.path, compose_file)
+        file_content = yaml.dump(docker_data)
+        with open(compose_file, 'w') as writer:
+            writer.write(file_content)
+        log.debug (f"File updated via tag: {self.name}")
+        return docker_data
+
 
     def docker_up(self, compose_file="docker-compose.run.yml"):
         "Start docker stack"
@@ -657,13 +740,232 @@ class StackTag(ClassClassifier):
     def _init(self, lookup_mode='public'):
 
         self.lookup_mode = lookup_mode
+        self._exec = self.parent._exec
+
+
+        # Init config, features
+        self.cand_jsonnet_script, self.cand_jsonnet_vars = self.lookup_jsonnet()
+        self.cand_composefile = self.lookup_docker_files()
+
+
+    def get_candidates(self, store):
+        "Return the list of all candidates"
+
+        store = getattr(self, store, None)
+        assert isinstance(store, list), f"Not a list :("
+
+        result = []
+        for item in store:
+
+            candidates = [ x for x in item["matches"] if len(item["matches"]) > 0 ]
+            result.extend(candidates)
+
+        return result
+
+
+    def has_jsonnet_support(self):
+        "Return true if this tag can run jsonnet processing"
+        if len(self.get_candidates("cand_jsonnet_script")) > 0:
+            return True
+        return False
 
 
     # Docker file lookup management
     # =============================
 
-    def lookup_docker_compose_files(self):
+    def process_jsonnet(self, docker_data):
+        "Transform docker-compose with jsonnet filter"
+
+        # Select first jsonnet script candidate        
+        jsonnet_src_path = self.get_candidates("cand_jsonnet_script")
+        if len(jsonnet_src_path) < 1:
+            raise Exception("Can't run jsonnet on this tag")
+        jsonnet_src_path = jsonnet_src_path[0]
+
+        # Fetch data
+        vendor_config_files = self.get_candidates("cand_jsonnet_vars")
+        
+
+        
+        vendor_config = anyconfig.load(vendor_config_files, ac_merge=anyconfig.MS_DICTS_AND_LISTS) if vendor_config_files else {}
+        project_config = self.root.project.tags_config.get(self.name, {})
+        user_config = self.user_config["local_config"]
+
+        # prepare ext_vars
+        user_data = {}
+        user_data.update(vendor_config)
+        user_data.update(project_config)
+        user_data.update(user_config)
+        ext_vars = {
+            "user_data": user_data, # overrides possible from paasify.yml only
+            "docker_data": docker_data, # Current state of the compose file
+        }    
+        self.log.trace(f"Jsonnet vars:  (script:{jsonnet_src_path})")
+        self.log.trace(pformat (ext_vars))
+
+        # Execute jsonnet
+        ext_vars = {k: json.dumps(v) for k, v in ext_vars.items() }
+        docker_data = _jsonnet.evaluate_file(
+            jsonnet_src_path, # The actual jsonnet file
+            ext_vars = ext_vars,
+        )
+        docker_data = json.loads(docker_data)
+
+        self.log.trace("Tag jsonnet result:")
+        self.log.trace(pformat (docker_data))
+
+        return docker_data
+
+        # Deprecated
+        cli_args = [
+            "--ext-str-file", f"user_data=$target/paasify.yml",
+            "--ext-str-file", f"vendor_data=$target/vendor.yml",
+            "--ext-str-file", f"docker_data=$target/docker-compose.yml",
+            jsonnet_src_path
+        ]
+        self._exec("jsonnet", cli_args, _fg=True)
+
+        print (f"Exec jsonnet --ext-str-file user_data=DOCKER_FILE --ext-str-file vendor_data=VENDOR.yml docker_data  JSONNET.jsonnet")
+
+
+
+
+    def lookup_jsonnet(self):
+        "Generate candidates for jsonnet parsing"
+
+        stack = self.parent
+        tag = self.name
+
+        # Prepare main config
+        lookup_config_jsonnet = [
+            {
+                "path": stack.path,
+                "pattern": [
+                    f"paasify.{tag}.jsonnet",
+                    f"paasify/{tag}.jsonnet",
+                ],
+            },
+            {
+                "path": stack.app_path,
+                "pattern": [
+                    f"paasify.{tag}.jsonnet",
+                    f"paasify/{tag}.jsonnet",
+                ],
+            },
+            {
+                "path": self.runtime['top_project_dir'],
+                "pattern": [
+                    f"{tag}.jsonnet",
+                    #f"paasify/{tag}.jsonnet",
+                ],
+            },
+            {
+                "path": self.runtime['plugins_dir'],
+                "pattern": [
+                    f"{tag}.jsonnet",
+                    #f"paasify/{tag}.jsonnet",
+                ],
+            },
+        ]
+
+        # Generate vars lookups
+        lookup_config_jsonnet_vars = []
+        for path_config in lookup_config_jsonnet:
+            patterns = path_config["pattern"]
+            new_config = dict(path_config)
+            new_config["pattern"] = [x.replace(f"{tag}.jsonnet", f"{tag}.vars.yml") for x in patterns]
+            lookup_config_jsonnet_vars.append(new_config)
+        
+
+       # Generate output result
+        result = []
+        for lookups in [lookup_config_jsonnet, lookup_config_jsonnet_vars]:
+            lookup_result = []
+            for lookup in lookups:
+
+                if lookup["path"]:
+                    cand = filter_existing_files(
+                        lookup["path"],
+                        lookup["pattern"])
+
+
+                    lookup["matches"] = cand
+                    lookup_result.append(lookup)
+
+            result.append(lookup_result)
+            
+        return result[0], result[1]
+
+
+
+    def lookup_docker_files(self):
+        "Generate candidates for jsonnet parsing"
+
+        stack = self.parent
+        tag = self.name
+
+        # Prepare main config
+        lookup_config_dfile = [
+            {
+                "path": stack.path,
+                "pattern": [
+                    f"docker-compose.{tag}.yml",
+                    f"docker-compose.{tag}.yaml",
+                    f"paasify/{tag}.yml",
+                    f"paasify/{tag}.yaml",
+                ],
+            },
+            {
+                "path": stack.app_path,
+                "pattern": [
+                    f"docker-compose.{tag}.yml",
+                    f"docker-compose.{tag}.yaml",
+                    f"paasify/{tag}.yml",
+                    f"paasify/{tag}.yaml",
+                ],
+            },
+            {
+                "path": self.runtime['plugins_dir'],
+                "pattern": [
+                    f"{tag}.yml",
+                    f"{tag}.yaml",
+                ],
+            },
+        ]
+
+        # # Generate vars lookups
+        # lookup_config_jsonnet_vars = []
+        # for path_config in lookup_config_jsonnet:
+
+        #     patterns = path_config["pattern"]
+        #     new_config = dict(path_config)
+        #     new_config["pattern"] = [x.replace(f"{tag}.jsonnet", f"{tag}.vars.yml") for x in patterns]
+        #     lookup_config_jsonnet_vars.append(new_config)
+        
+       # Generate output result
+        result = []
+        for lookups in [lookup_config_dfile]:
+            lookup_result = []
+            for lookup in lookups:
+                if lookup["path"]:
+                    cand = filter_existing_files(
+                        lookup["path"],
+                        lookup["pattern"])
+
+
+                    lookup["matches"] = cand
+                    lookup_result.append(lookup)
+
+            result.append(lookup_result)
+            
+        return result[0] #, result[1]
+
+
+
+
+    def lookup_docker_compose_files(self): # DEPRECATED, replaced by: lookup_docker_files
         "This method return the list of files to add to docker-compose build"
+        "Generate candidates for docker-compose file merging"
         stack = self.parent
         tag = self.name
         # Lookup dirs:
@@ -822,7 +1124,8 @@ class Project(ClassClassifier):
             'project_dir': project_dir,
             #'collections_dir': f"{Path.home()}/.config/paasify/collections",
             'collections_dir': os.path.join(project_dir, '.collections'),
-            'plugins_dir': f"{Path.home()}/.config/paasify/plugins",
+            'plugins_dir': os.path.join(project_dir, '.plugins'),
+            # Not a good idea: 'plugins_dir': f"{Path.home()}/.config/paasify/plugins",
 
             'parent_configs_paths': project_root_configs[1:],
             'top_project_dir': os.path.dirname(project_root_configs[-1]),
@@ -942,8 +1245,6 @@ class Project(ClassClassifier):
 
 
     def cmd_stacks_list(self):
-
-        print ("Hello")
 
         stacks = self.stacks.get_all_stacks()
 
