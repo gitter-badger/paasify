@@ -43,7 +43,6 @@ from paasify.common import get_logger
 log, log_level = get_logger(logger_name="paasify")
 
 
-
 class OutputFormat(str, Enum):
     yaml = "yaml"
     json = "json"
@@ -201,6 +200,20 @@ def logs(
     """Show stack logs"""
     prj = ctx.obj["prj"]
     prj.cmd_logs(stack=stack, follow=follow)
+
+
+@app.command()
+def schema(
+    ctx: typer.Context,
+    format: OutputFormat = OutputFormat.json,
+
+    stack: Optional[str] = typer.Argument(None,
+        help="Stack to target, current cirectory or all",)
+    ):
+    """Show paasify config schema"""
+    prj = ctx.obj["prj"]
+    print(prj.cmd_config_schema(format=format))
+
 
 
 
