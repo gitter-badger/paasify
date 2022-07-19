@@ -92,6 +92,16 @@ class Project(ClassClassifier):
         "$defs": {
             "Stacks": StackManager.schema_def,
             "Project": schema_project_def,
+            "Sources": SourcesManager.schema_def,
+            # {
+            #     "type": "object",
+            #     "items": Source.schema_def,
+            #     "patternProperties": {
+            #         '.*': {
+            #             "type": Source.schema_def,
+            #         }
+            #     },
+            # }
         },
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",

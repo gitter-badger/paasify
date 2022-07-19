@@ -9,26 +9,62 @@ log = logging.getLogger(__name__)
 # =====================================================================
 
 class ClassClassifier():
+    "Structural Python Helper Class"
 
-    default_user_config = {}
+    
+    # Private object
+    # ---------------------
 
     # Objects can have names
     name = "UNNAMMED"
 
-    # Define initial user_configuration
-    user_config = {}
-
-    # Define live shared runtime data
-    runtime = {}
-
-    # Define live object config (can map as attributes)
-    config = {}
-
-    # Define live store, for containers
-    store = None
+    # Object kind, nice name to replace raw class name, should be a string
+    kind = None
 
     # Define class schema_def
+    # To be renamed: conf_schema
     schema_def = None
+
+    # Define default instaace config
+    # To be renammed: conf_defaults
+    default_user_config = {}
+
+    # Define initial user_configuration, allow loose modes
+    # To be renamed: conf_user
+    user_config = {}
+
+    # Define live object config (can map as attributes, usually taken from user_config)
+    # Shoud be exportable and reinjectable as user_config, conf is just the formal one
+    # To be renamed: conf
+    config = {}
+
+    # Define live runtime data
+    # To be renamed: runtime
+    runtime = {}
+
+    # Define live store, for containers, can be a list or a dict, to list children
+    # To be renamed: store
+    store = None
+
+    # Autyomatic objects:
+    # ---------------------
+
+    # Object personal logger
+    log = None
+
+    # Shared objects:
+    # ---------------------
+    # Parent object of all
+    root = None
+
+    # Parent link
+    parent = None
+
+    # Shared glob data, with multiple access
+    # glob = None
+    # glob_prj = 
+    # glob_stack = 
+
 
 
     def __init__(self, parent, user_config=None, name=None, *args, **kwargs):
@@ -40,12 +76,14 @@ class ClassClassifier():
         else:
             self.parent = self
             self.root = self
+
+        self.kind = self.kind or self.__class__.__name__
         self.name = name or self.__class__.__name__
-        self.log = logging.getLogger(f"paasify.{self.__class__.__name__}.{self.name}")
+        self.log = logging.getLogger(f"paasify.{self.kind or self.__class__.__name__}.{self.name}")
 
         #log, _ = get_logger(logger_name=f"paasify.{self.__class__.__name__}.{self.name}")
 
-
+        
         self.runtime = getattr(parent, 'runtime', {})
         self.user_config = user_config
         self._init_attr_from_dict(self.default_user_config)
@@ -58,7 +96,7 @@ class ClassClassifier():
         return f"Instance {id(self)}: {self.__class__.__name__}:{self.name}"
 
     def _init_attr_from_dict(self, conf):
-        "Init object attribute from dict"
+        "Init object attributes from dict"
         keys = []
 
         for k, v in conf.items():

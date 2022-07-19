@@ -77,7 +77,9 @@ class SourcesManager(ClassClassifier):
         "additionalProperties": False,
         "type": "object",
         "patternProperties": {
-            "type": Source.schema_def,
+            '.*': {
+                "type": Source.schema_def,
+            }
         },
 
     }

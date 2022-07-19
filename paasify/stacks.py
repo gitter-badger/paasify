@@ -144,7 +144,7 @@ class StackTag(ClassClassifier):
         
         vendor_config = anyconfig.load(vendor_config_files, ac_merge=anyconfig.MS_DICTS_AND_LISTS) if vendor_config_files else {}
         project_config = self.root.project.tags_config.get(self.name, {})
-        user_config = self.user_config["local_config"]
+        user_config = self.user_config["local_config"] or {}
 
         # prepare ext_vars
         user_data = {}
@@ -155,7 +155,7 @@ class StackTag(ClassClassifier):
             "user_data": user_data, # overrides possible from paasify.yml only
             "docker_data": docker_data, # Current state of the compose file
         }    
-        self.log.trace(f"Jsonnet vars:  (script:{jsonnet_src_path})")
+        self.log.trace(f"Jsonnet script:  (script:{jsonnet_src_path})")
         self.log.trace(pformat (ext_vars))
 
         # Execute jsonnet
@@ -558,8 +558,9 @@ class Stack(ClassClassifier):
         exclude = [ tag["name"][1:] for tag in tags if tag["name"].startswith('-') or tag["name"].startswith('~') or tag["name"].startswith('!') ]
         tags = [ tag for tag in tags if tag["name"] not in exclude ]
 
+
         # Create tags instances
-        tags = [ StackTag(self, name=tag["name"], user_config=new_tag) for tag in tags ]
+        tags = [ StackTag(self, name=tag["name"], user_config=tag) for tag in tags ]
         return tags
 
 
