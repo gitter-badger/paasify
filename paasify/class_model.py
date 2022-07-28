@@ -86,10 +86,17 @@ class ClassClassifier():
         
         self.runtime = getattr(parent, 'runtime', {})
         self.user_config = user_config
-        self._init_attr_from_dict(self.default_user_config)
-
+        self.config = dict(self.default_user_config)
+        if isinstance(user_config, dict):
+            # Special dict object
+            self.config.update(user_config)
+            self._init_attr_from_dict(self.config)
+        elif user_config:
+            self.config = user_config
+        
         # Init objects
-        self._init(*args, **kwargs)
+        if callable(getattr(self, '_init', None)):
+            self._init(*args, **kwargs)
 
 
     def __repr__(self):
@@ -130,12 +137,15 @@ class ClassClassifier():
         #pprint (self.runtime)
 
         #print ("-"*20)
-        self.log.info ("User config:")
+        self.log.info ("Instance User config:")
         self.log.info (pformat (self.user_config))
-        self.log.info ("Instance Store:")
-        self.log.info (pformat (self.store))
         self.log.info ("Instance Config:")
         self.log.info (pformat (self.config))
+        self.log.info ("Instance Runtime:")
+        self.log.info (pformat (self.runtime))
+        self.log.info ("Instance Store:")
+        self.log.info (pformat (self.store))
+
 
 
 

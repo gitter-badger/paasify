@@ -25,7 +25,7 @@ from pprint import pprint
 #from paasify.app import DirectoryItem, Namespace
 #from paasify.app2 import Project
 
-from paasify.app import Project
+from paasify.app import App
 
 import os
 import os.path
@@ -76,17 +76,14 @@ def main(
     log_lvl = 24 - (verbose * 5)
     log.setLevel(level=log_lvl)
 
-    prj = Project(
+    paasify = App(
         config_path=str(config_file.resolve()),
         collections_dir=str(collections_dir.resolve()),
     )
 
     # Prepare shared context
     ctx.obj = {
-        "prj": prj,
-        # "paasify": {
-        #     "config": config,
-        # }
+        "paasify": paasify,
     }
 
 
@@ -96,8 +93,8 @@ def info(
     ctx: typer.Context,
     ):
     """Show context infos"""
-    prj = ctx.obj["prj"]
-    prj.cmd_info()
+    paasify = ctx.obj["paasify"]
+    paasify.cmd_info()
 
 
 @app.command()
@@ -105,7 +102,8 @@ def ls(
     ctx: typer.Context,
     ):
     """List all stacks"""
-    prj = ctx.obj["prj"]
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
     prj.cmd_stacks_list()
 
 
@@ -118,7 +116,8 @@ def apply(
         help="Stack to target, current cirectory or all",)
     ):
     """Build and apply stack"""
-    prj = ctx.obj["prj"]
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
 
     log.notice("Rebuild docker-compose ...")
     prj.cmd_build(stack=stack)
@@ -134,7 +133,9 @@ def recreate(
         help="Stack to target, current cirectory or all",)
     ):
     """Stop, rebuild and create stack"""
-    prj = ctx.obj["prj"]
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
+
     log.notice("Remove stack")
     prj.cmd_down(stack=stack)
 
@@ -153,7 +154,8 @@ def build(
         help="Stack to target, current cirectory or all",)
     ):
     """Build docker-files"""
-    prj = ctx.obj["prj"]
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
     prj.cmd_build(stack=stack)
 
 
@@ -164,7 +166,8 @@ def up(
         help="Stack to target, current cirectory or all",)
     ):
     """Start docker stack"""
-    prj = ctx.obj["prj"]
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
     prj.cmd_up(stack=stack)
 
 
@@ -175,7 +178,8 @@ def down(
         help="Stack to target, current cirectory or all",)
     ):
     """Stop docker stack"""
-    prj = ctx.obj["prj"]
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
     prj.cmd_down(stack=stack)
 
 
@@ -186,7 +190,8 @@ def ps(
         help="Stack to target, current cirectory or all",)
     ):
     """Show docker stack instances"""
-    prj = ctx.obj["prj"]
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
     prj.cmd_ps(stack=stack)
 
 @app.command()
@@ -198,7 +203,8 @@ def logs(
         help="Stack to target, current cirectory or all",)
     ):
     """Show stack logs"""
-    prj = ctx.obj["prj"]
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
     prj.cmd_logs(stack=stack, follow=follow)
 
 
@@ -211,8 +217,8 @@ def schema(
         help="Stack to target, current cirectory or all",)
     ):
     """Show paasify config schema"""
-    prj = ctx.obj["prj"]
-    print(prj.cmd_config_schema(format=format))
+    paasify = ctx.obj["paasify"]
+    print(paasify.cmd_config_schema(format=format))
 
 
 
@@ -267,46 +273,46 @@ if __name__ == "__main__":
 #     ctx: typer.Context,
 #     ):
 #     """start"""
-#     prj = ctx.obj["prj"]
-#     prj.forward_stacks('up')
+#     paasify = ctx.obj["paasify"]
+#     paasify.forward_stacks('up')
 
 # @app.command()
 # def down(
 #     ctx: typer.Context,
 #     ):
 #     """Down"""
-#     prj = ctx.obj["prj"]
-#     prj.forward_stacks('down')
+#     paasify = ctx.obj["paasify"]
+#     paasify.forward_stacks('down')
 
 # @app.command()
 # def apply(
 #     ctx: typer.Context,
 #     ):
 #     """Assemble and start"""
-#     prj = ctx.obj["prj"]
-#     prj.forward_stacks('assemble')
-#     prj.forward_stacks('up')
+#     paasify = ctx.obj["paasify"]
+#     paasify.forward_stacks('assemble')
+#     paasify.forward_stacks('up')
 
 # @app.command()
 # def restart(
 #     ctx: typer.Context,
 #     ):
 #     """Assemble and restart"""
-#     prj = ctx.obj["prj"]
-#     prj.forward_stacks('assemble')
-#     prj.forward_stacks('down')
-#     prj.forward_stacks('up')
+#     paasify = ctx.obj["paasify"]
+#     paasify.forward_stacks('assemble')
+#     paasify.forward_stacks('down')
+#     paasify.forward_stacks('up')
 
 # @app.command()
 # def recreate(
 #     ctx: typer.Context,
 #     ):
 #     """Assemble, rm and restart"""
-#     prj = ctx.obj["prj"]
-#     prj.forward_stacks('assemble')
-#     prj.forward_stacks('down')
-#     prj.forward_stacks('rm')
-#     prj.forward_stacks('up')
+#     paasify = ctx.obj["paasify"]
+#     paasify.forward_stacks('assemble')
+#     paasify.forward_stacks('down')
+#     paasify.forward_stacks('rm')
+#     paasify.forward_stacks('up')
 
 
 
@@ -315,25 +321,25 @@ if __name__ == "__main__":
 #     ctx: typer.Context,
 #     ):
 #     """Remove"""
-#     prj = ctx.obj["prj"]
-#     prj.forward_stacks('down')
-#     prj.forward_stacks('rm')
+#     paasify = ctx.obj["paasify"]
+#     paasify.forward_stacks('down')
+#     paasify.forward_stacks('rm')
 
 # @app.command()
 # def ps(
 #     ctx: typer.Context,
 #     ):
 #     """Processes"""
-#     prj = ctx.obj["prj"]
-#     prj.forward_stacks('ps')
+#     paasify = ctx.obj["paasify"]
+#     paasify.forward_stacks('ps')
 
 # @app.command()
 # def logs(
 #     ctx: typer.Context,
 #     ):
 #     """Logs"""
-#     prj = ctx.obj["prj"]
-#     prj.forward_stacks('logs')
+#     paasify = ctx.obj["paasify"]
+#     paasify.forward_stacks('logs')
 
 
 # @app.command()
@@ -341,8 +347,8 @@ if __name__ == "__main__":
 #     ctx: typer.Context,
 #     ):
 #     """List stacks"""
-#     prj = ctx.obj["prj"]
-#     for i in prj.stacks:
+#     paasify = ctx.obj["paasify"]
+#     for i in paasify.stacks:
 #         print ( i.rel_path, i.get_tags())
 
 # @app.command()
@@ -350,11 +356,11 @@ if __name__ == "__main__":
 #     ctx: typer.Context,
 #     ):
 #     """List vars"""
-#     prj = ctx.obj["prj"]
+#     paasify = ctx.obj["paasify"]
 
 #     console = Console()
 #     ret = {}
-#     for i in prj.stacks:
+#     for i in paasify.stacks:
 #         v = {
 #                 #i.name: i.get_vars()
 #                 'vars': i.get_vars()
@@ -377,8 +383,8 @@ if __name__ == "__main__":
 #     config = Project.find_config()
 
 #     # Action
-#     prj = Project(config=config)
-#     prj.forward_stacks('up')
+#     paasify = Project(config=config)
+#     paasify.forward_stacks('up')
 
 
 

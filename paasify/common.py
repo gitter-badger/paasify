@@ -164,14 +164,11 @@ def list_parent_dirs(path):
     """
     Return a list of the parents paths
     """
-
     result = [path]
     val = path
     while val != os.sep:
         val = os.path.split(val)[0]
-        result.append(val)
-        #print (f"LAST VAL= |{val}|")
-        
+        result.append(val)        
     return result
 
 
@@ -192,3 +189,24 @@ def find_file_up(names, paths):
 
 def filter_existing_files(root_path, candidates):
     return [os.path.join(root_path, cand) for cand in candidates if os.path.isfile( os.path.join(root_path, cand) ) ]
+
+
+
+def lookup_candidates(lookup_config):
+    "List all available candidates of files for given folders"
+
+    result = []
+    for lookup in lookup_config:
+        if lookup["path"]:
+            cand = filter_existing_files(
+                lookup["path"],
+                lookup["pattern"])
+
+            lookup["matches"] = cand
+            result.append(lookup)
+        
+    return result
+
+
+
+

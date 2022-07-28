@@ -27,23 +27,55 @@ class StackEnv(ClassClassifier):
 
     schema_def={
         "$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "StackEnv configuration",
+        "title": "Environment configuration",
+        "description": "Environment configuration. Paasify leave two choices for the configuration, either use the native dict configuration or use the docker-compatible format",
 
         "oneOf": [
             {
+                "title": "Env configuration (dict)",
+                "examples": [{ 
+                    'env': {
+                    'MYSQL_ADMIN_USER': 'MyUser',
+                    'MYSQL_ADMIN_DB': 'MyDB',
+                    } 
+                }]
+                ,
                 "type": "object",
                 "patternProperties": {
                     '.*': {
                         "oneOf": [
-                            {"type": "string"},
-                            {"type": "null"},
+                            {
+                                "title": "Environment Key value",
+                                "description": "Value must be a string",
+                                
+                                "oneOf": [
+                                    {"type": "string"},
+                                    {"type": "boolean"},
+                                    {"type": "integer"},
+                                ],
+                            },
+                            {
+                                "title": "Ignored value",
+                                "description": "If empty, value is ignored",
+                                "type": "null"
+                            },
                         ],
                     }
                 },
             },
             {
+                "title": "Env configuration (list)",
+                "examples": [{ 
+                    'env': [
+                    'MYSQL_ADMIN_USER=MyUser',
+                    'MYSQL_ADMIN_DB=MyDB',
+                ]
+                }],
+
                 "type": "array",
                 "items": {
+                    "title": "Environment list",
+                    "description": "Value must be a string, under the form of: KEY=VALUE",
                     "type": "string"
                 }
             },
@@ -94,6 +126,8 @@ class StackTag(ClassClassifier):
     
     def _init(self, lookup_mode='public'):
 
+        self.obj_prj = self.parent.obj_prj
+
         self.lookup_mode = lookup_mode
         self._exec = self.parent._exec
 
@@ -143,7 +177,7 @@ class StackTag(ClassClassifier):
 
         
         vendor_config = anyconfig.load(vendor_config_files, ac_merge=anyconfig.MS_DICTS_AND_LISTS) if vendor_config_files else {}
-        project_config = self.root.project.tags_config.get(self.name, {})
+        project_config = self.obj_prj.project.tags_config.get(self.name, {})
         user_config = self.user_config["local_config"] or {}
 
         # prepare ext_vars
@@ -151,10 +185,33 @@ class StackTag(ClassClassifier):
         user_data.update(vendor_config)
         user_data.update(project_config)
         user_data.update(user_config)
+
+        svc_stack = self.obj_prj.runtime["stack"]
+        svc_names = list(docker_data.get("services", {}).keys())
+        main_svc = svc_names[0] if len(svc_names) > 0 else svc_stack
+
+        paasify_config = {
+            "PAASIFY_STACK_NS": self.obj_prj.runtime["namespace"],
+            "PAASIFY_STACK_NAME": svc_stack,
+            "PAASIFY_STACK_SVC": main_svc,
+            "PAASIFY_STACK_DOMAIN": "dev.toto", # TOFIXXX
+        }
+
+        local_env = {}
+        local_env.update(paasify_config)
+        local_env.update(self.parent.env_get())
+        local_env.update(user_data)
+
         ext_vars = {
-            "user_data": user_data, # overrides possible from paasify.yml only
+            "stack_data": {} , #self.obj_prj.runtime,
+            "env_data": {} , #self.parent.env_get(),
+
+            "user_data": local_env, # overrides possible from paasify.yml only
             "docker_data": docker_data, # Current state of the compose file
-        }    
+        }
+
+
+
         self.log.trace(f"Jsonnet script:  (script:{jsonnet_src_path})")
         self.log.trace(pformat (ext_vars))
 
@@ -191,7 +248,7 @@ class StackTag(ClassClassifier):
         stack = self.parent
         tag = self.name
 
-        # Prepare main config
+        # Generate jsonnet lookups
         lookup_config_jsonnet = [
             {
                 "path": stack.path,
@@ -226,31 +283,14 @@ class StackTag(ClassClassifier):
         # Generate vars lookups
         lookup_config_jsonnet_vars = []
         for path_config in lookup_config_jsonnet:
-            patterns = path_config["pattern"]
             new_config = dict(path_config)
-            new_config["pattern"] = [x.replace(f"{tag}.jsonnet", f"{tag}.vars.yml") for x in patterns]
+            new_config["pattern"] = [x.replace(f"{tag}.jsonnet", f"{tag}.vars.yml") for x in new_config["pattern"]]
             lookup_config_jsonnet_vars.append(new_config)
         
 
-       # Generate output result
-        result = []
-        for lookups in [lookup_config_jsonnet, lookup_config_jsonnet_vars]:
-            lookup_result = []
-            for lookup in lookups:
-
-                if lookup["path"]:
-                    cand = filter_existing_files(
-                        lookup["path"],
-                        lookup["pattern"])
-
-
-                    lookup["matches"] = cand
-                    lookup_result.append(lookup)
-
-            result.append(lookup_result)
-            
-        return result[0], result[1]
-
+        r1 = lookup_candidates(lookup_config_jsonnet)
+        r2 = lookup_candidates(lookup_config_jsonnet_vars)
+        return r1, r2
 
 
     def lookup_docker_files(self):
@@ -260,7 +300,7 @@ class StackTag(ClassClassifier):
         tag = self.name
 
         # Prepare main config
-        lookup_config_dfile = [
+        lookup_config = [
             {
                 "path": stack.path,
                 "pattern": [
@@ -288,83 +328,7 @@ class StackTag(ClassClassifier):
             },
         ]
 
-        # # Generate vars lookups
-        # lookup_config_jsonnet_vars = []
-        # for path_config in lookup_config_jsonnet:
-
-        #     patterns = path_config["pattern"]
-        #     new_config = dict(path_config)
-        #     new_config["pattern"] = [x.replace(f"{tag}.jsonnet", f"{tag}.vars.yml") for x in patterns]
-        #     lookup_config_jsonnet_vars.append(new_config)
-        
-       # Generate output result
-        result = []
-        for lookups in [lookup_config_dfile]:
-            lookup_result = []
-            for lookup in lookups:
-                if lookup["path"]:
-                    cand = filter_existing_files(
-                        lookup["path"],
-                        lookup["pattern"])
-
-
-                    lookup["matches"] = cand
-                    lookup_result.append(lookup)
-
-            result.append(lookup_result)
-            
-        return result[0] #, result[1]
-
-
-
-
-    def lookup_docker_compose_files(self): # DEPRECATED, replaced by: lookup_docker_files
-        "This method return the list of files to add to docker-compose build"
-        "Generate candidates for docker-compose file merging"
-        stack = self.parent
-        tag = self.name
-        # Lookup dirs:
-        # - local dir
-        # - app collection dir (optional)
-        # - internal plugin search
-
-        std_lookup_order = [
-            #f"/docker-compose.{tag}.jsonnet",
-            f"docker-compose.{tag}.yml",
-            f"docker-compose.{tag}.yaml",
-
-            #f"{root_path}/paasify/{tag}.jsonnet",
-            f"paasify/{tag}.yml",
-            f"paasify/{tag}.yaml",
-
-            # Useful when moving files ...
-            #f"/docker-compose.{tag}.jsonnet",
-            f"paasify/docker-compose.{tag}.yml",
-            f"paasify/docker-compose.{tag}.yaml",
-        ]
-
-        internal_lookup_order = [
-            f"{tag}.yml",
-            f"{tag}.yaml",
-        ]
-
-        # self.log.debug (stack.path)
-        # self.log.debug (stack.app_path)
-        # self.log.debug (self.runtime['plugins_dir'])
-
-        r1 = filter_existing_files(stack.path,
-            std_lookup_order)
-
-        r2 = filter_existing_files(stack.app_path,
-            std_lookup_order) if stack.app_path else []
-
-        r3 = filter_existing_files(
-            self.runtime['plugins_dir'],
-            internal_lookup_order)
-
-        result = r1 + r2 + r3
-
-        return result
+        return lookup_candidates(lookup_config)
 
 
 
@@ -412,9 +376,16 @@ class Stack(ClassClassifier):
             "app": None,
             "tags": [],
             "env": [],
+
+            # Extra parameters
+            "docker_file": "docker-compose.run.yml",
+            "env_file": ".env",
         }
 
     def _init(self):
+
+        # Create links
+        self.obj_prj = self.parent.obj_prj
 
         # Generate config
         config = dict(self.default_user_config)
@@ -444,10 +415,10 @@ class Stack(ClassClassifier):
         self.short_path = config.get('path')
         self.name = config["name"]
 
-        self.project_dir = self.root.runtime['project_dir']
-        self.ns = self.root.runtime['namespace']
+        self.prj_dir = self.obj_prj.runtime['prj_dir']
+        self.ns = self.obj_prj.runtime['namespace']
         self.project_name = f"{self.ns}_{self.name}"
-        self.path = os.path.join(self.project_dir, self.short_path)
+        self.path = os.path.join(self.prj_dir, self.short_path)
         
 
 
@@ -456,9 +427,10 @@ class Stack(ClassClassifier):
 
         # if fail_on_app
         self.app_path = self.resolve_app(config['app'])
-        self.tags_names = self._get_raw_tag_config()
-        self.tags = self._get_tags(self.tags_names)
+        self.tags = self.tags_get()
         
+
+
     def _dump(self):
 
         self.log.notice ("Misc:")
@@ -466,7 +438,7 @@ class Stack(ClassClassifier):
         self.log.notice (pformat (self.config))
 
         self.log.notice ("Env:")
-        self.log.notice (pformat (self.parse_env()))
+        self.log.notice (pformat (self.env_get()))
 
         self.log.notice ("Tags:")
         tags = self.tags
@@ -497,34 +469,48 @@ class Stack(ClassClassifier):
                     for cand in candidates:
                         self.log.notice(f"      - {cand}")
 
+
+
+
+
+
+    def resolve_app(self, app_def):
+        "Find the associated source"
+
+        if not app_def:
+            return None
+
+        # Parse format
+        if ':' in app_def:
+            app_src = app_def.split(':')[0]
+            app_target = app_def.split(':')[1]
+
+            source = self.obj_prj.sources.get_source(app_src)
+            assert source, f"Could not find source: {app_src} for {stack_def}"
+            app_path = os.path.join( source.path, app_target)
+        else:
+            app_src = None
+            app_target = app_def
+            app_path = os.path.join( self.runtime["cwd"], app_target)
+
+        return app_path
+
+
+
+
+
+
+
+
+
     
-    # Misc
+    # Tag management
     # ----------------------
-
-    def _get_raw_tag_config(self):
-        "Return the list of tags after merge"
-
-        # Merge global and local tags
-        default_tags = {
-            "tags": [],
-            "tags_auto": ["user", self.root.project.namespace ],
-            "tags_prefix": [],
-            "tags_suffix": [],
-        }
-        global_tags = { k: v for k, v in self.root.project.items() if k.startswith("tags") and v}
-        local_tags = { k: v for k, v in self.user_config.items() if k.startswith("tags") and v}
-
-        default_tags.update(global_tags)
-        default_tags.update(local_tags)
-
-        tags = default_tags["tags_prefix"] + default_tags["tags_auto"] + default_tags["tags"] + default_tags["tags_suffix"]
-        return tags
-
-
-    def _get_tags(self, tags_names):
+    def tags_get(self):
         "Create and return a list of StackTags objects"
 
         # Preparse tag structure
+        tags_names = self._tags_parse()
         tags = []
         for tag_def in tags_names:
 
@@ -564,32 +550,33 @@ class Stack(ClassClassifier):
         return tags
 
 
-    def resolve_app(self, app_def):
-        "Find the associated source"
+    def _tags_parse(self):
+        "Return the list of tags after merge"
 
-        if not app_def:
-            return None
+        # Merge global and local tags
+        default_tags = {
+            "tags": [],
+            "tags_auto": ["user", self.obj_prj.project.namespace ],
+            "tags_prefix": [],
+            "tags_suffix": [],
+        }
+        global_tags = { k: v for k, v in self.obj_prj.project.items() if k.startswith("tags") and v}
+        local_tags = { k: v for k, v in self.user_config.items() if k.startswith("tags") and v}
 
-        # Parse format
-        if ':' in app_def:
-            app_src = app_def.split(':')[0]
-            app_target = app_def.split(':')[1]
+        default_tags.update(global_tags)
+        default_tags.update(local_tags)
 
-            source = self.root.sources.get_source(app_src)
-            assert source, f"Could not find source: {app_src} for {stack_def}"
-            app_path = os.path.join( source.path, app_target)
-        else:
-            app_src = None
-            app_target = app_def
-            app_path = os.path.join( self.runtime["cwd"], app_target)
+        tags = default_tags["tags_prefix"] + default_tags["tags_auto"] + default_tags["tags"] + default_tags["tags_suffix"]
+        return tags
 
-        return app_path
 
-    # Environment related tasks
+
+    # Environment related tasks (required by docker)
     # ----------------------
-    def parse_env(self):
+
+    def env_get(self) -> dict:
         "Return a dict of the environment variables"
-        global_env = self.root.project.env
+        global_env = self.obj_prj.project.env
         local_env = self.config["env"]
 
         r0 = {}
@@ -599,9 +586,9 @@ class Stack(ClassClassifier):
                 r0 = anyconfig.load(app_env_file, ac_parser="shellvars")
 
 
-        r1 = self._parse_env_struct(global_env)
+        r1 = self._env_parse(global_env)
         r2 = self._env_inject()
-        r3 = self._parse_env_struct(local_env)
+        r3 = self._env_parse(local_env)
 
 
         result = {}
@@ -620,18 +607,15 @@ class Stack(ClassClassifier):
 
         return result
 
-    def _env_read_in_parents(self):
-        "Read env_file in parent app if exists"
-        result={}
-        return
 
-    def _env_inject(self):
+    def _env_inject(self) -> dict:
+        "Inject environment vars and return a dict of it"
         ns = self.runtime["namespace"]
 
         result = {
             "APP_NAME": self.name,
             "APP_NAMESPACE": ns,
-            "APP_PROJECT_DIR": self.runtime["project_dir"],
+            "APP_PROJECT_DIR": self.runtime["prj_dir"],
             "APP_COLLECTION_DIR": self.runtime["collections_dir"],
 
             # front_network
@@ -641,14 +625,15 @@ class Stack(ClassClassifier):
             # Expose Tag
             "APP_EXPOSE_IP": "127.0.0.1",
 
-            "APP_PROJECT_DIR": self.runtime["project_dir"],
-            "APP_PROJECT_DIR": self.runtime["project_dir"],
-            "APP_PROJECT_DIR": self.runtime["project_dir"],
+            "APP_PROJECT_DIR": self.runtime["prj_dir"],
+            "APP_PROJECT_DIR": self.runtime["prj_dir"],
+            "APP_PROJECT_DIR": self.runtime["prj_dir"],
 
         }
         return result
 
-    def _parse_env_struct(self, payload):
+    def _env_parse(self, payload) -> dict:
+        "Accept any user configuration and return a dict"
 
         if isinstance(payload, list):
             result = {}
@@ -664,45 +649,117 @@ class Stack(ClassClassifier):
             return {}
 
 
-    # Docker related tasks
-    # ----------------------
 
-    def list_docker_compose_files_from_tags(self, tags=None):
-        "Return stack tags"
 
-        tags = tags or self.tags
 
-        runbook = []
+    # Command Execution framework
+    # ==================================
+    def _exec(self, command, cli_args=None, _log=True, **kwargs):
+        "Execute any command"
 
-        # Insert default docker-config
-        cand = filter_existing_files(
-            self.path,
-            [f"docker-compose.yml",
-            f"docker-compose.yaml",
-            ]) 
-        if self.app_path:
-            cand.append(filter_existing_files(
-                self.app_path,
-                [f"docker-compose.yml",
-                f"docker-compose.yaml",
-            ]))
+        # Check arguments
+        cli_args = cli_args or []
+        assert isinstance(cli_args, list), f"_exec require a list, not: {type(cli_args)}"
 
-        if len(cand) > 0:
-            runbook.append({'tag': None, 'candidates': cand})
+        # Prepare context
+        sh_opts = {
+            '_in': sys.stdin,
+            '_out': sys.stdout,
+        }
+        sh_opts = kwargs or sh_opts
+
+        # Bake command
+        cmd = sh.Command(command)
+        cmd = cmd.bake(*cli_args)
+
+        # Log command
+        if _log:
+            cmd_line = [cmd.__name__ ] + [ x.decode('utf-8') for x in cmd._partial_baked_args]
+            cmd_line = ' '.join(cmd_line)
+            self.log.exec (cmd_line)
+
+        # Execute command via sh
+        try:
+            output = cmd(**sh_opts)
+        except sh.ErrorReturnCode as err:
+            raise Exception(err)
+            #self.log.critical (f"Command failed with message:\n{err.stderr.decode('utf-8')}")
+            #sys.exit(1)
+
+        return output
+
+
+
+
+
+
+    # Compose Commands
+    # ==================================
+
+    def docker_compose_get_files(self, tags=None):
+        "List all tag candidates"
+        
+        result = [self._docker_compose_base_file()]
+        result.extend(self._docker_compose_tags_file(tags=tags))
+
+        return result
+
+
+    def _docker_compose_base_file(self):
+        "Return first docker-compose candidates"
+
+        # Lookup docker-compose file locations
+        lookup_config = [
+            {
+                "path": self.path,
+                "pattern": [
+                    "docker-compose.yml",
+                    "docker-compose.yaml",
+                ],
+            },
+            {
+                "path": self.app_path,
+                "pattern": [
+                    "docker-compose.yml",
+                    "docker-compose.yaml",
+                ],
+            },
+        ]
+        for x in lookup_config:
+            x["tag"] = None
+        result = lookup_candidates(lookup_config)
+
+        # Return best docker-compose file candidate
+        result = [ x for x in result if len(x["matches"]) > 0 ]
+        if len(result) < 1:
+            raise Exception (f"Can't find any valid docker-compose.yml file in this stack")
             
+        return result[0]
 
-        # Insert tags docker-files
+
+    def _docker_compose_tags_file(self, tags=None):
+        "Return tagged docker-compose candidates"
+
+        results = []
         for tag in tags:
-            cand = tag.lookup_docker_compose_files()
-            if len(cand) > 0:
-                runbook.append({'tag': tag, 'candidates': cand})
 
-        return runbook
+            # Retrieve docker-compose files
+            result = tag.lookup_docker_files()
 
-    def docker_generate_envfile(self, env=None):
+            # Return only metched files
+            result = [ x for x in result if len(x["matches"]) > 0 ]
+            if len(result) > 0:
+                for x in result:
+                    x["tag"] = tag
+                results.extend(result)
+
+        return results
+
+
+    def _docker_compose_write_envfile(self, env=None):
         "Generate .env file focker docker-compose"
 
-        env = env or self.parse_env()
+        env = env or self.env_get()
         dst_file = os.path.join(self.path, '.env')
 
         file_content = []
@@ -723,70 +780,43 @@ class Stack(ClassClassifier):
 
 
 
-    # Docker Execution framework
 
-    def _exec(self, command, cli_args=None, _log=True, **kwargs):
-        "Execute a command"
+    # Docker High Level Commands
+    # ==================================
 
-        # Check arguments
-        cli_args = cli_args or []
-        assert isinstance(cli_args, list), f"_exec require a list, not: {type(cli_args)}"
-
-        # Prepare context
-        sh_opts = {
-            '_in': sys.stdin,
-            '_out': sys.stdout,
-        }
-        sh_opts = kwargs or sh_opts
-
-        # Bake command
-        dc = sh.Command(command)
-        dc = dc.bake(*cli_args)
-
-        # Log command
-        if _log:
-            cmd = ' '.join([dc.__name__ ] + [ x.decode('utf-8') for x in dc._partial_baked_args])
-            self.log.exec (cmd)
-
-        # Execute command
-        try:
-            output = dc (**sh_opts)
-        except sh.ErrorReturnCode as err:
-            raise Exception(err)
-            #self.log.critical (f"Command failed with message:\n{err.stderr.decode('utf-8')}")
-            #sys.exit(1)
-
-        return output
-
-
-
-
-    def docker_assemble(self, output="docker-compose.run.yml"):
+    def docker_assemble(self, output=None):
         "Generate docker-compose.run.yml"
 
-        self.docker_generate_envfile()
-        output_file = os.path.join(self.path, self.runtime['docker_compose_output'])
+        # Split this function in:
+        # - docker-assemble
+        # - docker-jsonnet
 
-        args_docker_compose_list = []
-        candidates = self.list_docker_compose_files_from_tags()
+        tags = self.tags
+        output = output or self.runtime['docker_compose_output']
+        output_file = os.path.join(self.path, output)
+
+        # Build command line argument
         self.log.trace("List of tags and files:")
+        candidates = self.docker_compose_get_files(tags=tags)
+        args_docker_compose_list = []
+        for cand in candidates:
+            # Keep only first match of all candidates, we overrides here !
+            docker_file = cand["matches"][0]
+            args_docker_compose_list.extend(["--file", docker_file])
 
-        for tag_match in candidates:
-            tag = tag_match['tag']
-            tag_name = tag.name if tag else __name__
+            tag_name = getattr(cand["tag"], "name", "DEFAULT")
+            self.log.trace(f" - {tag_name :>16}: {docker_file}")
 
-            for cand in tag_match['candidates']:
-                args_docker_compose_list.extend(["--file", cand])
-
-                self.log.trace(f" - {tag_name :>16}: {cand}")
-            #args_docker_compose_list.extend(tag['candidates'])
-
+        # Manage environment file
+        # TOFIX: Actually this file is almost useful only during build time
+        # Solution: Remove this file once generated ...
+        self._docker_compose_write_envfile()
         args_env_file = filter_existing_files(
             self.path,
             [".env",
             ])[0] or None
 
-        # Exec:
+        # Prepare command
         dc = sh.Command("docker-compose")
         cli_args = [
           #  "compose", 
@@ -796,10 +826,11 @@ class Stack(ClassClassifier):
         if args_env_file:
             cli_args.extend(["--env-file", args_env_file]) 
         cli_args.extend(args_docker_compose_list)
-        cli_args.extend({
-            "config", 
-          #  "--no-interpolate"
-        })
+        cli_args.extend([
+            "convert", 
+            # "--no-interpolate",
+            # "--no-normalize",
+        ])
 
         # Execute generation of docker-compose
         output = self._exec("docker-compose", cli_args, _out=None)
@@ -811,32 +842,23 @@ class Stack(ClassClassifier):
         self.log.notice (f"Docker-compose file has been generated: {output_file}")
 
 
-        ### WIPPPP: jsonnet support
-        self.jsonnet_postprocess()
-
-
-
-    def jsonnet_postprocess(self, compose_file="docker-compose.run.yml"):
-        "Postprocess jsonnet tags and update docker-compose.run.yml"
-
-        # OR: tags = self.tags
-        tags = self.tags
-
-        # Apply all jsonnet processing tag after tag
-        docker_data = anyconfig.load(compose_file)
+        # Loop over jsonnet processing tag after tag
+        docker_data = anyconfig.load(output_file)
         for tag in tags:
             if tag.has_jsonnet_support():
-                self.log.info (f"Processing jsonnet for tag: {tag.name}")
+                self.log.info (f"Processing jsonnet tag: {tag.name}")
                 docker_data = tag.process_jsonnet(docker_data)
 
-        # Update docker-compose file:
-        # TOFIX: Make output consistent, reparse -it with docker-compose config
-        compose_file = os.path.join(self.path, compose_file)
+
+        # Update docker-compose file
+        output_file = os.path.join(self.path, output_file)
         file_content = yaml.dump(docker_data)
-        with open(compose_file, 'w') as writer:
+        with open(output_file, 'w') as writer:
             writer.write(file_content)
         log.debug (f"File updated via tag: {self.name}")
         return docker_data
+
+
 
 
     def docker_up(self, compose_file="docker-compose.run.yml"):
@@ -902,6 +924,8 @@ class StackManager(ClassClassifier):
     }
 
     def _init(self):
+
+        self.obj_prj = self.parent
 
         assert isinstance(self.user_config, list), f"Stack def is not a list"
         store = []

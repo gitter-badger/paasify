@@ -29,7 +29,7 @@ class Source(ClassClassifier):
     schema_def={
         "$schema": "http://json-schema.org/draft-07/schema#",
         
-        "title": "Paasify Sources configuration",
+        "title": "Paasify Source configuration",
         "additionalProperties": False,
         "type": "object",
         "properties": {
@@ -47,6 +47,8 @@ class Source(ClassClassifier):
 
 
     def _init(self):
+
+        self.obj_prj = self.parent.obj_prj
 
         config = {
             "name": self.name,
@@ -85,6 +87,8 @@ class SourcesManager(ClassClassifier):
     }
 
     def _init(self):
+
+        self.obj_prj = self.parent
 
         assert isinstance(self.user_config, dict), f"Source def is not a dict"
 
