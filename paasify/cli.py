@@ -136,13 +136,13 @@ def recreate(
     paasify = ctx.obj["paasify"]
     prj = paasify.get_project()
 
-    log.notice("Remove stack")
+    #log.notice("Remove stacks")
     prj.cmd_down(stack=stack)
 
-    log.notice("Rebuild docker-compose ...")
+    #log.notice("Rebuild docker-compose ...")
     prj.cmd_build(stack=stack)
 
-    log.notice("Apply stack")
+    #log.notice("Apply stack")
     prj.cmd_up(stack=stack)
 
 

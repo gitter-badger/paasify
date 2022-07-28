@@ -127,6 +127,7 @@ class StackTag(ClassClassifier):
     def _init(self, lookup_mode='public'):
 
         self.obj_prj = self.parent.obj_prj
+        self.obj_stack = self.parent
 
         self.lookup_mode = lookup_mode
         self._exec = self.parent._exec
@@ -186,7 +187,15 @@ class StackTag(ClassClassifier):
         user_data.update(project_config)
         user_data.update(user_config)
 
-        svc_stack = self.obj_prj.runtime["stack"]
+        docker_env = self.parent.env_get()
+
+        app_domain = docker_env.get("PAASIFY_STACK_DOMAIN", None)
+        svc_stack = self.obj_stack.name
+
+        app_default_fqdn = f"{svc_stack}.{app_domain}" if app_domain else svc_stack
+
+        app_fqdn = docker_env.get("PAASIFY_STACK_FQDN", app_default_fqdn)
+
         svc_names = list(docker_data.get("services", {}).keys())
         main_svc = svc_names[0] if len(svc_names) > 0 else svc_stack
 
@@ -194,12 +203,19 @@ class StackTag(ClassClassifier):
             "PAASIFY_STACK_NS": self.obj_prj.runtime["namespace"],
             "PAASIFY_STACK_NAME": svc_stack,
             "PAASIFY_STACK_SVC": main_svc,
-            "PAASIFY_STACK_DOMAIN": "dev.toto", # TOFIXXX
+            "PAASIFY_STACK_SVCS": ','.join(svc_names),
+            "PAASIFY_STACK_FQDN": app_fqdn,
+            "PAASIFY_STACK_DOMAIN": app_domain,
+
+            # COMPAT
+            "APP_FQDN": app_fqdn,
+            "APP_DOMAIN": app_fqdn, # TOFIX ?
+            "APP_TOP_DOMAIN": app_domain,
         }
 
         local_env = {}
         local_env.update(paasify_config)
-        local_env.update(self.parent.env_get())
+        local_env.update(docker_env)
         local_env.update(user_data)
 
         ext_vars = {
@@ -623,7 +639,7 @@ class Stack(ClassClassifier):
             "APP_NETWORK": f"{ns}_{self.name}",
 
             # Expose Tag
-            "APP_EXPOSE_IP": "127.0.0.1",
+            #"APP_EXPOSE_IP": "127.0.0.1",
 
             "APP_PROJECT_DIR": self.runtime["prj_dir"],
             "APP_PROJECT_DIR": self.runtime["prj_dir"],
@@ -637,10 +653,12 @@ class Stack(ClassClassifier):
 
         if isinstance(payload, list):
             result = {}
-            for stmt in payload:
-                stmt = stmt.split("=", 2)
+            for stmt_str in payload:
+                stmt = stmt_str.split("=", 2)
+                if len(stmt) < 2:
+                    raise Exception(f"Could not parse value: {stmt_str}, missing '='")
                 key = stmt[0]
-                value = stmt[1]
+                value = '='.join(stmt[1:])
                 result[key] = value
             return result
         elif isinstance(payload, dict):
@@ -770,6 +788,11 @@ class Stack(ClassClassifier):
         self.log.trace(pformat(file_content))
 
         file_content = '\n'.join(file_content) + '\n'
+        file_folder = os.path.dirname(dst_file)
+        if not os.path.exists(file_folder):
+            print ("VALUE  ", file_folder)
+            os.makedirs(file_folder)
+
         with open(dst_file, 'w') as writer:
             writer.write(file_content)
 
@@ -890,8 +913,39 @@ class Stack(ClassClassifier):
             "--project-name", self.project_name,
             "ps",
             "--all",
+            "--format", "json",
         ]
-        self._exec("docker-compose", cli_args)
+        result = self._exec("docker-compose", cli_args, _out=None)
+
+        # Report output from json
+        stdout = result.stdout.decode("utf-8") 
+        payload = json.loads(stdout)
+        for svc in payload:
+
+            # Get and filter interesting ports
+            published = svc["Publishers"]
+            published = [ x for x in published if x.get('PublishedPort') > 0 ]
+
+            # Reduce duplicates
+            for x in published:
+                if x.get('URL') == '0.0.0.0':
+                    x['URL']='::'
+
+            # Format port strings
+            exposed = []
+            for port in published:
+                src_ip = port["URL"]
+                src_port = port["PublishedPort"]
+                dst_port = port["TargetPort"]
+                prot = port["Protocol"]
+
+                r = f"{src_ip}:{src_port}->{dst_port}/{prot}"
+                exposed.append(r)
+
+            # Remove duplicates ports and show
+            exposed = list(set(exposed))
+            print (f"  {svc['Project'] :<32} {svc['Name'] :<32} {svc['Service'] :<16} {svc['State'] :<10} {', '.join(exposed)}")
+    
 
     def docker_logs(self, follow=False):
         "Show stack logs"

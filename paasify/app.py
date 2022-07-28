@@ -232,6 +232,7 @@ class Project(ClassClassifier):
         stacks = self.stacks.get_one_or_all(stack_name)
         
         for stack in stacks:
+            log.notice(f"Building stack {stack.name}")
             stack.docker_assemble()
 
 
@@ -241,6 +242,7 @@ class Project(ClassClassifier):
         stacks = self.stacks.get_one_or_all(stack_name)
         
         for stack in stacks:
+            log.notice(f"Starting stack {stack.name}")
             stack.docker_up()
 
 
@@ -249,7 +251,8 @@ class Project(ClassClassifier):
         stack_name = stack or self.runtime['stack']
         stacks = self.stacks.get_one_or_all(stack_name)
         
-        for stack in stacks:
+        for stack in reversed(stacks):
+            log.notice(f"Stopping stack {stack.name}")
             stack.docker_down()
 
     # Monitoring commands
@@ -259,7 +262,11 @@ class Project(ClassClassifier):
         stack_name = stack or self.runtime['stack']
         stacks = self.stacks.get_one_or_all(stack_name)
         
+        #log.notice(f"Stack processes:")
+        print(f"{'Project' :<32}   {'Name' :<32} {'Service' :<16} {'State' :<10} Ports")
+
         for stack in stacks:
+            #log.notice(f"Stack processes: {stack.name}")
             stack.docker_ps()
 
     def cmd_logs(self, stack=None, follow=False):
@@ -271,6 +278,7 @@ class Project(ClassClassifier):
             raise Exception (f"Impossible to log follow on many stacks.")
 
         for stack in stacks:
+            log.notice(f"Stack logs: {stack.name}")
             stack.docker_logs(follow=follow)
 
 
@@ -323,10 +331,10 @@ class App(ClassClassifier):
 
         # Find closest paasify.yml
 
+        prj_path = self.get_project_path()
         user_config = {
-            "config_file_path": self.get_project_path(),
+            "config_file_path": prj_path,
         }
-
 
         return Project(self, user_config=user_config)
 
