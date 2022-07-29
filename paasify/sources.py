@@ -5,12 +5,12 @@ import logging
 
 #import yaml
 import anyconfig
-#import sh
+import sh
 #import _jsonnet
 
 from pprint import pprint, pformat
 
-#from paasify.common import *
+from paasify.common import _exec
 from paasify.class_model import ClassClassifier
 
 
@@ -39,6 +39,9 @@ class Source(ClassClassifier):
             "path": {
                 "type": "string",
             },
+            "prefix": {
+                "type": "string",
+            },
             "alias": {
                 "type": "string",
             }
@@ -54,18 +57,77 @@ class Source(ClassClassifier):
             "name": self.name,
             "url": None,
             "alias": None,
+            "prefix": "https://github.com/%s.git",
+            #"prefix": "https://framagit.org/%s.git",
+            
         }
         config.update(self.user_config)
+        self.collection_dir = self.runtime['collections_dir']
 
         self.config = config
         self._init_attr_from_dict(config)
         self.path = self.get_path()
         
 
+        self._init_git_url()
+
+    def _init_git_url(self):        
+        # Determine what is the git_url
+        config = self.config
+        url = config["url"]
+        name = config["name"]
+        prefix = config["prefix"]
+
+        self.git_url = url if url else prefix % name
+
+
     def get_path(self):
-        return os.path.join(self.runtime['collections_dir'], self.name)
+        return os.path.join(self.collection_dir, self.name)
+
+    def is_git(self):
+        "Return true if git repo"
+        test_path = os.path.join(self.path, '.git')
+        return os.path.isdir(test_path)
+
+    def is_installed(self):
+        "Return true if installed"
+        return os.path.isdir(self.path)
 
 
+    def install(self):
+        "Install from remote"
+
+        # Check if install dir is already present
+        if os.path.isdir(self.path):
+            self.log.info("This source is already installed")
+            return
+
+        self.log.notice(f"Installing git source: {self.git_url}")
+
+        # Git clone that stuff
+        cli_args = [
+            "clone",
+            self.git_url,
+            self.path
+        ]
+        _exec("git", cli_args, _fg=True)
+
+
+    def update(self):
+        "Update from remote"
+
+        # Check if install dir is already present
+        if not os.path.isdir(self.path):
+            self.log.info("This source is not installed yet")
+            return
+
+        # Git clone that stuff
+        self.log.info(f"Updating git repo: {self.git_url}")
+        cli_args = [
+            "-C", self.path ,
+            "pull",
+        ]
+        _exec("git", cli_args, _fg=True)
 
 
 
@@ -90,6 +152,8 @@ class SourcesManager(ClassClassifier):
 
         self.obj_prj = self.parent
 
+        self.collection_dir = self.runtime['collections_dir']
+
         assert isinstance(self.user_config, dict), f"Source def is not a dict"
 
         store= []
@@ -99,6 +163,10 @@ class SourcesManager(ClassClassifier):
             store.append(source)
 
         self.store = store
+
+    def get_all(self):
+        "Return the list of all sources"
+        return list(self.store)
 
     def list_all_names(self) -> list:
         "Return a list of valid string names"

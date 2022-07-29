@@ -13,7 +13,7 @@ from copy import copy
 
 import anyconfig
 
-from paasify.common import *
+from paasify.common import _exec, list_parent_dirs, find_file_up
 from paasify.sources import SourcesManager
 from paasify.stacks import StackManager, StackTag, StackEnv
 from paasify.class_model import ClassClassifier
@@ -233,6 +233,7 @@ class Project(ClassClassifier):
         
         for stack in stacks:
             log.notice(f"Building stack {stack.name}")
+            stack.obj_source.install()
             stack.docker_assemble()
 
 
@@ -291,10 +292,41 @@ class Project(ClassClassifier):
             self.log.notice(f"- {stack.name}")
 
 
+    # Source commands
+    def cmd_src_list(self):
+        sources = self.sources.get_all()
 
+        print(f"{'Name' :<32}   {'Installed' :<14} {'git' :<14} {'URL' :<10}")
+        for src in sources:
+            is_installed = 'True' if src.is_installed() else 'False'
+            is_git = 'True' if src.is_git() else 'False'
+            print (f"  {src.name :<32} {is_installed :<14} {is_git :<14} {src.git_url :<10} ")
 
+    def cmd_src_install(self):
 
+        sources = self.sources.get_all()
+        for src in sources:
+            log.notice(f"Installing source: {src.name}")
+            src.install()
+            
+    def cmd_src_update(self):
 
+        sources = self.sources.get_all()
+        for src in sources:
+            log.notice(f"Updating source: {src.name}")
+            src.update()
+            
+    def cmd_src_tree(self):
+
+        path = self.sources.collection_dir
+        cli_args = [
+            '-a',
+            '-I', '.git',
+            '-L', '3',
+            path
+        ]
+        _exec('tree', cli_args, _fg=True)
+        
 
 
 class App(ClassClassifier):
@@ -346,8 +378,6 @@ class App(ClassClassifier):
 
         elif format == 'yaml':
             return yaml.dump(Project.schema_def)
-
-
 
 
 

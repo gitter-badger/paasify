@@ -106,6 +106,43 @@ def ls(
     prj = paasify.get_project()
     prj.cmd_stacks_list()
 
+# Source commands
+@app.command()
+def src_ls(
+    ctx: typer.Context,
+    ):
+    """List sources"""
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
+    prj.cmd_src_list()
+
+@app.command()
+def src_install(
+    ctx: typer.Context,
+    ):
+    """Install sources"""
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
+    prj.cmd_src_install()
+
+@app.command()
+def src_update(
+    ctx: typer.Context,
+    ):
+    """Install and update sources"""
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
+    prj.cmd_src_update()
+
+@app.command()
+def src_tree(
+    ctx: typer.Context,
+    ):
+    """Install and update sources"""
+    paasify = ctx.obj["paasify"]
+    prj = paasify.get_project()
+    prj.cmd_src_tree()
+
 
 # Stack commands
 

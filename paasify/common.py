@@ -1,4 +1,6 @@
 import os
+import sys
+import sh
 import logging
 log = logging.getLogger(__name__)
 
@@ -209,4 +211,38 @@ def lookup_candidates(lookup_config):
 
 
 
+# Command Execution framework
+# ==================================
+def _exec(command, cli_args=None, logger=None, **kwargs):
+    "Execute any command"
 
+    # Check arguments
+    cli_args = cli_args or []
+    assert isinstance(cli_args, list), f"_exec require a list, not: {type(cli_args)}"
+
+    # Prepare context
+    sh_opts = {
+        '_in': sys.stdin,
+        '_out': sys.stdout,
+    }
+    sh_opts = kwargs or sh_opts
+
+    # Bake command
+    cmd = sh.Command(command)
+    cmd = cmd.bake(*cli_args)
+
+    # Log command
+    if logger:
+        cmd_line = [cmd.__name__ ] + [ x.decode('utf-8') for x in cmd._partial_baked_args]
+        cmd_line = ' '.join(cmd_line)
+        logger.exec (cmd_line)     # Support exec level !!!
+
+    # Execute command via sh
+    try:
+        output = cmd(**sh_opts)
+    except sh.ErrorReturnCode as err:
+        raise Exception(err)
+        #_logger.critical (f"Command failed with message:\n{err.stderr.decode('utf-8')}")
+        #sys.exit(1)
+
+    return output

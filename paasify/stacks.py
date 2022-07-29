@@ -475,6 +475,15 @@ class Stack(ClassClassifier):
 
         self.app_path = app_path
          
+    def source_update(self):
+        "Update source"
+
+    # def source_ensure(self):
+    #     "Ensure source is present and installed"
+    #     src = self.obj_source
+
+    #     if not src.is_installed():
+    #         src.install()
 
 
     # def resolve_app(self, app_def):
@@ -874,7 +883,6 @@ class Stack(ClassClassifier):
             ])[0] or None
 
         # Prepare command
-        dc = sh.Command("docker-compose")
         cli_args = [
           #  "compose", 
             "--project-name", self.name,
