@@ -100,7 +100,8 @@ class SourcesManager(ClassClassifier):
 
         self.store = store
 
-    def list_all_names(self):
+    def list_all_names(self) -> list:
+        "Return a list of valid string names"
         r1 = [src.name for src in self.store ]
         r2 = [src.alias for src in self.store ]
         return r1 + r2
@@ -115,14 +116,16 @@ class SourcesManager(ClassClassifier):
     def resolve_ref_pattern(self, src_pat):
         "Return a resource from its name or alias"
 
-        for src_name_def in self.root.sources.list_all_names():
+        for src_name_def in self.list_all_names():
 
-            if src_name_def in src_pat:
-                split_len = len(src_name_def)
-                source_name = src_pat[:split_len]
-                source_path = src_pat[split_len:]
-                return source_name, source_path
-                break
+            if f"{src_name_def}:" in src_pat:
+                rsplit = src_pat.split(':', 2)
+                src_name = rsplit[0]
+                src_stack = rsplit[1]
+
+                return src_stack, src_name
+        
+        return src_pat, None
 
 
 

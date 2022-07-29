@@ -124,12 +124,10 @@ class StackTag(ClassClassifier):
     }
     
     
-    def _init(self, lookup_mode='public'):
+    def _init(self):
 
         self.obj_prj = self.parent.obj_prj
         self.obj_stack = self.parent
-
-        self.lookup_mode = lookup_mode
         self._exec = self.parent._exec
 
 
@@ -267,27 +265,30 @@ class StackTag(ClassClassifier):
         # Generate jsonnet lookups
         lookup_config_jsonnet = [
             {
+                # Look into the working dir stack
                 "path": stack.path,
                 "pattern": [
                     f"paasify.{tag}.jsonnet",
-                    f"paasify/{tag}.jsonnet",
+                    f"paasify/plugins/{tag}.jsonnet",
                 ],
             },
             {
-                "path": stack.app_path,
-                "pattern": [
-                    f"paasify.{tag}.jsonnet",
-                    f"paasify/{tag}.jsonnet",
-                ],
-            },
-            {
+                # Look into the project dir
                 "path": self.runtime['top_project_dir'],
                 "pattern": [
-                    f"{tag}.jsonnet",
+                    f".paasify/plugins/{tag}.jsonnet",
                     #f"paasify/{tag}.jsonnet",
                 ],
             },
             {
+                # Look in app source directory
+                "path": stack.src_path,
+                "pattern": [
+                    f".paasify/plugins/{tag}.jsonnet",
+                ],
+            },
+            {
+                # Look into local user dirs
                 "path": self.runtime['plugins_dir'],
                 "pattern": [
                     f"{tag}.jsonnet",
@@ -436,15 +437,71 @@ class Stack(ClassClassifier):
         self.project_name = f"{self.ns}_{self.name}"
         self.path = os.path.join(self.prj_dir, self.short_path)
         
-
-
-        # Resolve resource
         self.config = config
 
-        # if fail_on_app
-        self.app_path = self.resolve_app(config['app'])
+        # Fetch source configuration
+        # Require the source object to be inited !
+        self._init_source()
+
         self.tags = self.tags_get()
+
         
+
+    def _init_source(self):
+        "Resolve stack source and app"
+
+        query = self.config['app']
+
+        srcMgr = self.obj_prj.sources
+        app_rel_path, app_name = srcMgr.resolve_ref_pattern(query)
+
+        self.app_rel_path = app_rel_path
+        self.app_name = app_name
+        self.obj_source = None
+        self.src_path = None
+
+        if app_name:
+            src = srcMgr.get_source(app_name)
+            # TOFIX: Check if the target dir exists !
+            if src:
+                self.obj_source = src
+                self.src_path = src.get_path()
+            else:
+                raise Exception (f"Can't find source for: {query}")
+
+            app_path = os.path.join( src.path, app_rel_path)
+        else:
+            app_path = os.path.join( self.runtime["cwd"], app_rel_path)
+
+        self.app_path = app_path
+         
+
+
+    # def resolve_app(self, app_def):
+    #     "Find the associated source DEPRECATED by fetch_source()"
+
+    #     if not app_def:
+    #         return None
+
+    #     # Parse format
+    #     if ':' in app_def:
+    #         app_src = app_def.split(':')[0]
+    #         app_target = app_def.split(':', 2)[1]
+
+    #         source = self.obj_prj.sources.get_source(app_src)
+    #         assert source, f"Could not find source: {app_src} for {stack_def}"
+    #         app_path = os.path.join( source.path, app_target)
+    #     else:
+    #         app_src = None
+    #         app_target = app_def
+    #         app_path = os.path.join( self.runtime["cwd"], app_target)
+
+    #     return app_path
+
+
+
+
+
 
 
     def _dump(self):
@@ -487,29 +544,6 @@ class Stack(ClassClassifier):
 
 
 
-
-
-
-    def resolve_app(self, app_def):
-        "Find the associated source"
-
-        if not app_def:
-            return None
-
-        # Parse format
-        if ':' in app_def:
-            app_src = app_def.split(':')[0]
-            app_target = app_def.split(':')[1]
-
-            source = self.obj_prj.sources.get_source(app_src)
-            assert source, f"Could not find source: {app_src} for {stack_def}"
-            app_path = os.path.join( source.path, app_target)
-        else:
-            app_src = None
-            app_target = app_def
-            app_path = os.path.join( self.runtime["cwd"], app_target)
-
-        return app_path
 
 
 
