@@ -264,7 +264,7 @@ class Project(ClassClassifier):
         stacks = self.stacks.get_one_or_all(stack_name)
         
         #log.notice(f"Stack processes:")
-        print(f"{'Project' :<32}   {'Name' :<32} {'Service' :<16} {'State' :<10} Ports")
+        print(f"{'Project' :<32}   {'Name' :<40} {'Service' :<16} {'State' :<10} Ports")
 
         for stack in stacks:
             #log.notice(f"Stack processes: {stack.name}")

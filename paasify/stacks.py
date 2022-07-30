@@ -986,7 +986,7 @@ class Stack(ClassClassifier):
 
             # Remove duplicates ports and show
             exposed = list(set(exposed))
-            print (f"  {svc['Project'] :<32} {svc['Name'] :<32} {svc['Service'] :<16} {svc['State'] :<10} {', '.join(exposed)}")
+            print (f"  {svc['Project'] :<32} {svc['Name'] :<40} {svc['Service'] :<16} {svc['State'] :<10} {', '.join(exposed)}")
     
 
     def docker_logs(self, follow=False):

@@ -129,7 +129,7 @@ def src_install(
 def src_update(
     ctx: typer.Context,
     ):
-    """Install and update sources"""
+    """Update sources"""
     paasify = ctx.obj["paasify"]
     prj = paasify.get_project()
     prj.cmd_src_update()
@@ -138,7 +138,7 @@ def src_update(
 def src_tree(
     ctx: typer.Context,
     ):
-    """Install and update sources"""
+    """Show source tree"""
     paasify = ctx.obj["paasify"]
     prj = paasify.get_project()
     prj.cmd_src_tree()
