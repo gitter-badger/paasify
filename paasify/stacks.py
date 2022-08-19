@@ -20,9 +20,13 @@ from paasify.common import merge_env_vars, filter_existing_files, read_file
 import paasify.errors as error
 from paasify.class_model import ClassClassifier
 from paasify.var_parser import BashVarParser
+from paasify.engines import ContainerEngine
 
 
 log = logging.getLogger(__name__)
+
+
+ENGINE = True
 
 # =====================================================================
 # StackEnv
@@ -444,6 +448,10 @@ class Stack(ClassClassifier):
 
         # Fetch source configuration
         # Require the source object to be inited !
+        self.cont_engine = ContainerEngine(
+            project_dir=self.path,
+            project_name=f"{self.ns}_{self.name}",
+            )
         self._init_source()
 
         self.tags = self.tags_get()
@@ -765,11 +773,13 @@ class Stack(ClassClassifier):
     def _exec(self, command, cli_args=None, _log=True, **kwargs):
         "Execute any command"
 
+        self.log.warning("DEPRECATED METHOD: _exec", command, cli_args)
+
         def bin2utf8(obj):
             if hasattr(obj, "stdout"):
                 obj.txtout = obj.stdout.decode("utf-8").rstrip('\n')
                 obj.txterr = obj.stderr.decode("utf-8").rstrip('\n')
-            return obj  
+            return obj
 
 
         # Check arguments
@@ -912,7 +922,8 @@ class Stack(ClassClassifier):
         # Build command line argument
         self.log.trace("List of tags and files:")
         candidates = self.docker_compose_get_files(tags=tags)
-        args_docker_compose_list = []
+        args_docker_compose_list = [] # DEPRECATED
+        args_docker_compose_files = []
         used_vars = []
 
         # Implementation switch:
@@ -950,7 +961,8 @@ class Stack(ClassClassifier):
 
 
             # Build CLI file list
-            args_docker_compose_list.extend(["--file", docker_file])
+            args_docker_compose_list.extend(["--file", docker_file]) # DEPRECATED
+            args_docker_compose_files.append(docker_file)
 
             # Log report
             tag_name = getattr(cand["tag"], "name", "DEFAULT")
@@ -1000,11 +1012,22 @@ class Stack(ClassClassifier):
         self.log.debug (pformat (stack_env))
 
         # Execute generation of docker-compose
+        
         if ENABLE_ENV_WRITE:
             output = self._exec("docker-compose", cli_args, _out=None)
         else:
-            env_string = { k: cast_docker_compose(v) for k, v in stack_env.items() if v is not None }
-            output = self._exec("docker-compose", cli_args, _out=None, _env=env_string) 
+            if ENGINE == False:
+                env_string = { k: cast_docker_compose(v) for k, v in stack_env.items() if v is not None }
+                output = self._exec("docker-compose", cli_args, _out=None, _env=env_string) # DEPRECATED
+            else:
+                output = self.cont_engine.assemble(
+                    args_docker_compose_files,
+                    #project_dir=self.path,
+                    #project_name=f"{self.ns}_{self.name}",
+                    env_file= args_env_file if ENABLE_ENV_WRITE else None,
+                    env= stack_env if ENABLE_ENV_WRITE == False else None
+                    
+                )
 
         if output.txterr:
             self.log.warn(output.txterr)
@@ -1102,29 +1125,43 @@ class Stack(ClassClassifier):
 
     def docker_up(self, compose_file="docker-compose.run.yml"):
         "Start docker stack"
-        
-        cli_args = [
-            "--project-name", self.project_name,
-            "--project-directory", self.path,
-            "--file", os.path.join(self.path, compose_file),
-            "up",
-            "--detach",
-        ]
-        self._exec("docker-compose", cli_args, _fg=True)
+
+
+        if ENGINE:
+            output = self.cont_engine.up(
+                _fg=True                
+            )
+        else:
+            cli_args = [
+                "--project-name", self.project_name,
+                "--project-directory", self.path,
+                "--file", os.path.join(self.path, compose_file),
+                "up",
+                "--detach",
+            ]
+            self._exec("docker-compose", cli_args, _fg=True)
 
     def docker_down(self):
         "Start docker stack"
         
-        cli_args = [
-            "--project-name", self.project_name,
-            "down",
-            "--remove-orphans",
-        ]
-        self._exec("docker-compose", cli_args)
+        if ENGINE:
+            output = self.cont_engine.down()
+        else:
+
+            cli_args = [
+                "--project-name", self.project_name,
+                "down",
+                "--remove-orphans",
+            ]
+            self._exec("docker-compose", cli_args)
 
     def docker_ps(self):
         "Start docker stack"
         
+        if ENGINE:
+            self.cont_engine.ps()
+            return
+
         cli_args = [
             "--project-name", self.project_name,
             "ps",
@@ -1134,8 +1171,7 @@ class Stack(ClassClassifier):
         result = self._exec("docker-compose", cli_args, _out=None)
 
         # Report output from json
-        #stdout = result.stdout.decode("utf-8") 
-        stdout = result.stdout
+        stdout = result.txtout
         payload = json.loads(stdout)
         for svc in payload:
 
@@ -1166,17 +1202,20 @@ class Stack(ClassClassifier):
 
     def docker_logs(self, follow=False):
         "Show stack logs"
-        
-        sh_options = {}
-        cli_args = [
-            "--project-name", self.project_name,
-            "logs",
-        ]
-        if follow:
-            cli_args.append("-f")
-            sh_options["_fg"]=True
-            
-        self._exec("docker-compose", cli_args, **sh_options)
+
+        if ENGINE:
+            output = self.cont_engine.logs(follow=follow)
+        else:
+            sh_options = {}
+            cli_args = [
+                "--project-name", self.project_name,
+                "logs",
+            ]
+            if follow:
+                cli_args.append("-f")
+                sh_options["_fg"]=True
+                
+            self._exec("docker-compose", cli_args, **sh_options)
 
 
 

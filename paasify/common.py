@@ -4,6 +4,7 @@ import re
 import sh
 import logging
 from pprint import pprint
+import paasify.errors as error
 log = logging.getLogger(__name__)
 
 
@@ -255,12 +256,18 @@ def _exec(command, cli_args=None, logger=None, **kwargs):
     # Execute command via sh
     try:
         output = cmd(**sh_opts)
-    except sh.PaasifyErrorReturnCode as err:
-        raise Exception(err)
-        #_logger.critical (f"Command failed with message:\n{err.stderr.decode('utf-8')}")
-        #sys.exit(1)
+        return output
 
-    return output
+    except sh.ErrorReturnCode as err:
+        #log.error(f"Error while running command: {command} {' '.join(cli_args)}")
+        #log.critical (f"Command failed with message:\n{err.stderr.decode('utf-8')}")
+        
+        #pprint (err.__dict__)
+        #raise error.ShellCommandFailed(err)
+        #sys.exit(1)
+        raise err
+
+    
 
 def read_file(file):
     "Read file content"
