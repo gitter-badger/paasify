@@ -11,6 +11,7 @@ import yaml
 import anyconfig
 import sh
 import _jsonnet
+import shutil
 
 from pprint import pprint, pformat
 
@@ -765,8 +766,9 @@ class Stack(ClassClassifier):
         "Execute any command"
 
         def bin2utf8(obj):
-            obj.txtout = obj.stdout.decode("utf-8").rstrip('\n')
-            obj.txterr = obj.stderr.decode("utf-8").rstrip('\n')
+            if hasattr(obj, "stdout"):
+                obj.txtout = obj.stdout.decode("utf-8").rstrip('\n')
+                obj.txterr = obj.stderr.decode("utf-8").rstrip('\n')
             return obj  
 
 
@@ -1010,6 +1012,10 @@ class Stack(ClassClassifier):
         # Write outfile
         #stdout = output.stdout.decode("utf-8") 
         stdout = output.txtout
+        dest_dir = os.path.dirname(output_file)
+        if not os.path.isdir(dest_dir):
+            self.log.notice(f"Create missing directory: {dest_dir}")
+            os.mkdir(dest_dir)
         with open(output_file, 'w') as writer:
            writer.write(stdout)
         self.log.notice (f"Docker-compose file has been generated: {output_file}")
@@ -1078,8 +1084,21 @@ class Stack(ClassClassifier):
         with open(output_file, 'w') as writer:
             writer.write(file_content)
         log.debug (f"File updated: {output_file}")
-        return docker_rewrite
+        
 
+
+        ## Part 3
+        # Import conf data from app
+        if self.app_path:
+            src_dir = os.path.join(self.app_path, 'conf')
+            dst_dir = os.path.join(self.path, 'conf')
+            if src_dir != dst_dir:
+                if os.path.isdir(src_dir) and not os.path.isdir(dst_dir):
+                    # Tofix: Support templating and file permissions !
+                    self.log.notice (f"Importing stack config from app: {src_dir}")
+                    shutil.copytree(src_dir, dst_dir)
+
+        return docker_rewrite
 
     def docker_up(self, compose_file="docker-compose.run.yml"):
         "Start docker stack"
@@ -1091,7 +1110,7 @@ class Stack(ClassClassifier):
             "up",
             "--detach",
         ]
-        self._exec("docker-compose", cli_args)
+        self._exec("docker-compose", cli_args, _fg=True)
 
     def docker_down(self):
         "Start docker stack"
