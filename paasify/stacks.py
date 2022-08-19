@@ -133,7 +133,6 @@ class StackTag(ClassClassifier):
         self.obj_stack = self.parent
         self._exec = self.parent._exec
 
-
         # Init config, features
         self.cand_jsonnet_script, self.cand_jsonnet_vars = self.lookup_jsonnet()
         self.cand_composefile = self.lookup_docker_files()
@@ -209,41 +208,19 @@ class StackTag(ClassClassifier):
         env = env or {}
         assert isinstance(env, dict), f"Error, env is not a dict, got: {type(env)}"
 
-        
         # Process tag
         ext_vars = {
             "action": "vars_docker",
             'user_data': env,
             'docker_data': {},
         }
-        if True:
-            # PROBE:
-            # pprint (ext_vars)
+
+        # PROBE:
+        # pprint (ext_vars)
+        
+        out = self._exec_jsonnet(cand, ext_vars=ext_vars)
+        return out
             
-            out = self._exec_jsonnet(cand, ext_vars=ext_vars)
-            return out
-        #     print ("TEST vars_docker RAW output v")
-            
-        #     print ("---")
-        #     pprint (out)
-        #     print ("TEST ^")
-
-
-        #     out_diff = out["diff"]
-        #     out_merged = out["merged"]
-
-        #     #self.log.info(f"Returned data: {out}")
-        #     return out_diff, out_merged
-        # # except Exception as err:
-        # #     print (err)
-        # #     print ("BUG: BROKEN ENV PLUGIN:", cand)
-        # #     sys.exit(1)
-        # #     #return {}
-
-
-        # #####
-
-
 
     # Docker file lookup management
     # =============================
@@ -257,15 +234,13 @@ class StackTag(ClassClassifier):
         if len(cand) < 1:
             return None     
         cand = cand[0]
-        #self.log.info(f"Jsonnet transform script: {cand}, {type(env)}")
 
         # Load env
-        # env = env or None
-        #DEPRECATED_TOFIX
-        user_data, user_data_diff = (env, {}) or self.tag_env_get(env)
-
         if not env:
-            env = self.tag_env_get(env).get("diff")
+            self.log.warning ("BUG HERE")
+            user_data = self.tag_env_get(env).get("diff")
+        else:
+            user_data = env
 
         # Process tag
         ext_vars = {
@@ -278,115 +253,11 @@ class StackTag(ClassClassifier):
         try:
             return self._exec_jsonnet(cand, ext_vars=ext_vars)
         except Exception as err:
-            print (20 * '!')
-            print (err)
+            print (20 * '!') 
             pprint (ext_vars)
+            print (err)
             print (20 * '!')
             sys.exit(1)
-
-        # env = env or {}
-
-        # # Select first jsonnet script candidate        
-        # jsonnet_src_path = self.get_candidates("cand_jsonnet_script")
-        # if len(jsonnet_src_path) < 1:
-        #     raise Exception("Can't run jsonnet on this tag")
-        # jsonnet_src_path = jsonnet_src_path[0]
-
-        
-        # # Load data stores TOFIX: Does not work, should fetch vars from jsonnet itself !!!!
-        # vendor_config_files = self.get_candidates("cand_jsonnet_vars")
-        # vendor_config = {}
-        # if vendor_config_files:
-        #     vendor_config = anyconfig.load(
-        #         vendor_config_files,
-        #         ac_merge=anyconfig.MS_DICTS_AND_LISTS)
-        # tag_env = self.env_get_user()
-
-        # # prepare ext_vars
-        # user_data = {}
-        # user_data.update(vendor_config)
-        # user_data.update(tag_env)
-        # user_data.update(env)
-
-        # #################
-
-        #docker_env = self.parent.env_get()
-
-        #app_domain = docker_env.get("PAASIFY_STACK_DOMAIN", None)
-        #svc_stack = self.obj_stack.name
-
-        #app_default_fqdn = f"{svc_stack}.{app_domain}" if app_domain else svc_stack
-
-        #app_fqdn = docker_env.get("PAASIFY_STACK_FQDN", app_default_fqdn)
-
-        # paasify_config = {
-        #     # DEPRECATED
-        #     "PAASIFY_STACK_NS": self.obj_prj.runtime["namespace"],
-        #     "PAASIFY_STACK_NAME": svc_stack,
-        #     #"PAASIFY_STACK_SVC": main_svc,
-        #     "PAASIFY_STACK_SVCS": ','.join(svc_names),
-        #     "PAASIFY_STACK_FQDN": app_fqdn,
-        #     "PAASIFY_STACK_DOMAIN": app_domain,
-
-
-        #     #"paasify_service": main_svc,
-        #     #"paasify_services": ','.join(svc_names),
- 
-
-        #     # # COMPAT
-        #     # "APP_FQDN": app_fqdn,
-        #     # "APP_DOMAIN": app_fqdn, # TOFIX ?
-        #     # "APP_TOP_DOMAIN": app_domain,
-        # }
-
-        # local_env = {}
-        
-        # #local_env.update(paasify_config)
-        # local_env.update(docker_env)
-        # local_env.update(user_data)
-        # local_env.update(env)
-
-
-        #####################################################################
-
-        # ext_vars = {
-        #     "action": "docker_transform",
-        #     #"stack_data": {} , #self.obj_prj.runtime,
-        #     #"env_data": {} , #self.parent.env_get(),
-
-        #     "user_data": user_data, # overrides possible from paasify.yml only
-        #     "docker_data": docker_data, # Current state of the compose file
-        # }
-
-
-        # self.log.trace(f"Jsonnet script:  (script:{jsonnet_src_path})")
-        # self.log.trace(pformat (ext_vars))
-
-        # # Execute jsonnet
-        # ext_vars = {k: json.dumps(v) for k, v in ext_vars.items() }
-        # docker_data = _jsonnet.evaluate_file(
-        #     jsonnet_src_path, # The actual jsonnet file
-        #     ext_vars = ext_vars,
-        # )
-        # docker_data = json.loads(docker_data)
-
-        # self.log.trace("Tag jsonnet result:")
-        # self.log.trace(pformat (docker_data))
-
-        # return docker_data
-
-        # # Deprecated
-        # cli_args = [
-        #     "--ext-str-file", f"user_data=$target/paasify.yml",
-        #     "--ext-str-file", f"vendor_data=$target/vendor.yml",
-        #     "--ext-str-file", f"docker_data=$target/docker-compose.yml",
-        #     jsonnet_src_path
-        # ]
-        # self._exec("jsonnet", cli_args, _fg=True)
-
-        # print (f"Exec jsonnet --ext-str-file user_data=DOCKER_FILE --ext-str-file vendor_data=VENDOR.yml docker_data  JSONNET.jsonnet")
-
-
 
 
     def lookup_jsonnet(self):
@@ -539,11 +410,9 @@ class Stack(ClassClassifier):
 
         # Generate config
         config = dict(self.default_user_config)
-        #config.update(default_config)
         config.update(self.user_config)
 
         # Sanity check
-        #pprint (config)
         fail_on_app=True
         app_name = config["app"] or config["name"] or config["path"] or None
         if not app_name:
@@ -561,7 +430,6 @@ class Stack(ClassClassifier):
 
 
         # Init object
-        #self.name = config["name"] or self.short_path.replace(os.sep, '_')
         self.short_path = config.get('path')
         self.name = config["name"]
 
@@ -608,43 +476,6 @@ class Stack(ClassClassifier):
 
         self.app_path = app_path
          
-    def source_update(self):
-        "Update source"
-
-    # def source_ensure(self):
-    #     "Ensure source is present and installed"
-    #     src = self.obj_source
-
-    #     if not src.is_installed():
-    #         src.install()
-
-
-    # def resolve_app(self, app_def):
-    #     "Find the associated source DEPRECATED by fetch_source()"
-
-    #     if not app_def:
-    #         return None
-
-    #     # Parse format
-    #     if ':' in app_def:
-    #         app_src = app_def.split(':')[0]
-    #         app_target = app_def.split(':', 2)[1]
-
-    #         source = self.obj_prj.sources.get_source(app_src)
-    #         assert source, f"Could not find source: {app_src} for {stack_def}"
-    #         app_path = os.path.join( source.path, app_target)
-    #     else:
-    #         app_src = None
-    #         app_target = app_def
-    #         app_path = os.path.join( self.runtime["cwd"], app_target)
-
-    #     return app_path
-
-
-
-
-
-
 
     def _dump(self):
         self.log.notice (f"Path: {self.path}")
@@ -655,22 +486,16 @@ class Stack(ClassClassifier):
         self.log.notice ("Env User:")
         self.log.notice (pformat (self.env_get_user()))
 
-        
-
         self.log.notice ("Env:")
         self.log.notice (pformat (self.env_get()))
 
-        WIPPP
-
         self.log.notice ("Tags:")
         tags = self.tags
-
 
         self.log.notice ("Docker-compose config:")
         stores =  ["cand_composefile"]
         for tag in tags:
             
-
             for sub_item in stores:
                 candidates = tag.get_candidates(sub_item)
                 if len(candidates) > 0:
@@ -709,18 +534,6 @@ class Stack(ClassClassifier):
                             self.log.notice(f"      - {cand}")
 
 
-
-
-
-
-
-
-
-
-
-
-
-
     
     # Tag management
     # ----------------------
@@ -741,36 +554,16 @@ class Stack(ClassClassifier):
                 tag_name = list(tag_def.keys())[0]
                 tag_conf = tag_def[tag_name]
 
-
-            #print ("ADD TAG", tag_name, tag_conf)
-
-            ALLOW_TAG_DUPLICATES = True
-            if ALLOW_TAG_DUPLICATES == True:
-                new_tag = {
-                    "name": tag_name,
-                    "local_config": tag_conf,
-                }
-                tags.append(new_tag)
-            else:
-                # DEPRECATED !!!! (in testing ...)
-                # Check if not already present ?
-                cand =  [ x for x in tags if x["name"] == tag_name ]
-                if len(cand) > 0:
-                    cand = cand[0]
-                    if tag_conf:
-                        cand["local_config"].update(tag_conf)
-                else:
-                    new_tag = {
-                        "name": tag_name,
-                        "local_config": tag_conf,
-                    }
-                    tags.append(new_tag)
-
+            # Create tag config
+            new_tag = {
+                "name": tag_name,
+                "local_config": tag_conf,
+            }
+            tags.append(new_tag)
 
         # Remove exclusions ["name"][1:]
         exclude = [ tag["name"][1:] for tag in tags if tag["name"].startswith('-') or tag["name"].startswith('~') or tag["name"].startswith('!') ]
         tags = [ tag for tag in tags if tag["name"] not in exclude ]
-
 
         # Create tags instances
         tags = [ StackTag(self, name=tag["name"], user_config=tag) for tag in tags ]
@@ -801,7 +594,6 @@ class Stack(ClassClassifier):
     # Environment related tasks (required by docker)
     # ----------------------
 
-
     def env_get_user(self):
         '''Return env config from user config'''
 
@@ -822,9 +614,9 @@ class Stack(ClassClassifier):
         result = {}
         result.update(r0)   # .env file
         result.update(r1)   # Global vars (paasify.yml/project/vars)
-        result.update(r3)   # Stack vars (paasify.yml/stack/vars)
         result.update(r2)   # Generated stack vars (internal paasify vars)
-
+        result.update(r3)   # Stack vars (paasify.yml/stack/vars)
+        
         return result
 
 
@@ -865,39 +657,28 @@ class Stack(ClassClassifier):
             if not tag.has_jsonnet_support:
                 continue
 
-            #PROBE: Environment data input
+            payload = tag.tag_env_get(env=result)
+            if not isinstance(payload, dict):
+                self.log.info (f"Plugin did not returned env data: {tag.name}, {payload}")
+                continue
+
+            env_data = payload["diff"]
             
+            # PROBE: Environment data output
+            # print ("INPUT ENV")
+            # pprint (result)
+            # print ("OUTPUT ENV")
+            # pprint (payload)
+            # #pprint(env_data)
 
+            self.log.info (f"Plugin returned env data: {tag.name} ({len(env_data)} items), _items will be merged!")
+            self.log.trace (pformat(env_data))
 
-            #env_data, _ = tag.tag_env_get(env=result)
-            payload = tag.tag_env_get(env=result)            
+            env_data, keys = merge_env_vars(env_data)
+            override_keys.append(keys)
 
-            
-
-            if payload is not None:
-                env_data = payload["diff"]
+            result.update(env_data)
                 
-                print ("INPUT ENV")
-                pprint (result)
-                # PROBE: Environment data output
-                print ("OUTPUT ENV")
-                pprint (payload)
-                # #pprint(env_data)
-
-                # self.log.info (f"Plugin returned env data: {tag.name} ({len(env_data)} items), _items will be merged!")
-                # self.log.trace (pformat(env_data))
-
-                env_data, keys = merge_env_vars(env_data)
-                override_keys.append(keys)
-
-                #env_data.update(result)
-                result.update(env_data)
-            else:
-                self.log.warn (f"Plugin did not returned env data: {tag.name}, {payload}")
-
-
-        # self.log.trace (f"Final docker-compose vars:")
-        # self.log.trace (pformat(result))
 
         if remove_overrides:
             # This remove overrided values
@@ -905,25 +686,10 @@ class Stack(ClassClassifier):
             for key in override_keys:
                 result.pop(key)
 
-        # if merge_dyn == True:
-        #     self.log.trace (f"Transform dynamic vars into static vars")
-        #     result = merge_env_vars(result)
+        # self.log.trace (f"Final docker-compose vars:")
+        # self.log.trace (pformat(result))
 
-
-        #sdfjlsdkjflsdf
         return result
-
-        ##########################
-
-
-        # overrides = {
-        #     "APP_DOMAIN": result["APP_NAME"] + '.' + result["APP_TOP_DOMAIN"]
-        # }
-        # for key, val in overrides.items():
-        #     if not key in result:
-        #         result[key]=val
-
-        # return result
 
 
     def _env_inject(self) -> dict:
@@ -931,8 +697,6 @@ class Stack(ClassClassifier):
         
         tag_names = [tag.name for tag in self.tags]
         ext_vars = {
-            "paasify_sep": "_",
-            "paasify_sep_dir": os.path.sep,
 
             "paasify_ns": self.runtime["namespace"],
             "paasify_ns_dir": self.runtime["prj_dir"],
@@ -941,41 +705,20 @@ class Stack(ClassClassifier):
             "paasify_stack_dir": self.path,
 
             "paasify_stack_ident": self.runtime["namespace"] + '_' + self.name,
-            #"paasify_stack_service": self.name,
-
             "paasify_cwd": os.getcwd(),
             "paasify_collections_dir": self.runtime["collections_dir"],
 
+            "paasify_sep": "_",
+            "paasify_sep_dir": os.path.sep,
 
-            # Only available once docker-compose file is parsed
-            # so we set them to default sane values
-            #'paasify_stack_service': "APP",
-            #'paasify_stack_services': "APP",
+            # These variables can be overrided !
+            'paasify_stack_service': self.name,
+            'paasify_stack_services': self.name,
             'paasify_stack_tags': ','.join(tag_names),
 
         }
         return ext_vars
 
-        # ns = self.runtime["namespace"]
-        # result = {
-        #     "APP_NAME": self.name,
-        #     "APP_NAMESPACE": ns,
-        #     "APP_PROJECT_DIR": self.runtime["prj_dir"],
-        #     "APP_COLLECTION_DIR": self.runtime["collections_dir"],
-
-        #     # front_network
-        #     #"APP_TRAEFIK_NETWORK": f"{ns}_traefik",
-        #     "APP_NETWORK": f"{ns}_{self.name}",
-
-        #     # Expose Tag
-        #     #"APP_EXPOSE_IP": "127.0.0.1",
-
-        #     # "APP_PROJECT_DIR": self.runtime["prj_dir"],
-        #     # "APP_PROJECT_DIR": self.runtime["prj_dir"],
-        #     # "APP_PROJECT_DIR": self.runtime["prj_dir"],
-
-        # }
-        # return result
 
     def _env_parse(self, payload) -> dict:
         "Accept any user configuration and return a dict"
@@ -1007,8 +750,6 @@ class Stack(ClassClassifier):
             return payload
         else:
             return {}
-
-
 
 
 
@@ -1047,9 +788,6 @@ class Stack(ClassClassifier):
             #sys.exit(1)
 
         return output
-
-
-
 
 
 
@@ -1116,37 +854,9 @@ class Stack(ClassClassifier):
         return results
 
 
-    def _docker_compose_write_envfile(self, allowed_vars=None, env=None):
-        "DEPRECATED Generate .env file focker docker-compose DEPRECATED"
-
-        
-        env = env or self.env_get()
-        allowed_vars = allowed_vars or list(env.keys())
-        dst_file = os.path.join(self.path, '.env')
-
-        file_content = []
-        for var, val in env.items():
-            if var in allowed_vars:
-                file_content.append(f'{var}="{val}"')
-
-        # self.log.trace(f"Preparing .env file: {dst_file}")
-        # self.log.trace(pformat(file_content))
-
-        file_content = '\n'.join(file_content) + '\n'
-        file_folder = os.path.dirname(dst_file)
-        if not os.path.exists(file_folder):
-            print ("VALUE  ", file_folder)
-            os.makedirs(file_folder)
-
-        with open(dst_file, 'w') as writer:
-            writer.write(file_content)
-
-        self.log.info (f"Environment file created/updated: {dst_file}")
-
     def _docker_compose_write_envfile2(self, env, allowed_vars=None):
         "Generate .env file focker docker-compose"
 
-        
         env = env or {}
         allowed_vars = allowed_vars or list(env.keys())
         dst_file = os.path.join(self.path, '.env')
@@ -1160,21 +870,9 @@ class Stack(ClassClassifier):
         # self.log.trace(pformat(file_content))
 
         file_content = '\n'.join(file_content) + '\n'
-
         write_file(dst_file, file_content)
 
-        # file_folder = os.path.dirname(dst_file)
-        # if not os.path.exists(file_folder):
-        #     print ("VALUE  ", file_folder)
-        #     os.makedirs(file_folder)
-
-        # with open(dst_file, 'w') as writer:
-        #     writer.write(file_content)
-
         self.log.info (f"Environment file created/updated: {dst_file}")
-
-
-
 
 
     # Docker High Level Commands
@@ -1182,6 +880,8 @@ class Stack(ClassClassifier):
 
     def docker_assemble(self, output=None):
         "Generate docker-compose.run.yml"
+
+        ## Part 1
 
         # Split this function in:
         # - docker-assemble
@@ -1197,6 +897,10 @@ class Stack(ClassClassifier):
         args_docker_compose_list = []
         used_vars = []
 
+        # Implementation switch:
+        # v1: Use basic regex, broken by design
+        # v2: Use lark parser, broken
+        # v3: Use regex, work but limited
         MODE='v3'
         ENABLE_ENV_WRITE=False
         rgx = re.compile('(?P<prefix>\$?\$)[\{]?(?P<name>[a-zA-Z_][a-zA-Z_0-9]*)(?P<opts>(:?[-?])?)')
@@ -1204,7 +908,6 @@ class Stack(ClassClassifier):
             # Keep only first match of all candidates, we overrides here !
             docker_file = cand["matches"][0]
 
-            
             if MODE == 'v1':
                 # Extract file's used vars
                 file_vars = extract_shell_vars(docker_file)
@@ -1237,21 +940,18 @@ class Stack(ClassClassifier):
 
 
         # Manage environment file
-        # TOFIX: Actually this file is almost useful only during build time
-        # Solution: Remove this file once generated ...
         stack_env = self.env_get()
         #pprint (stack_env)
 
         if MODE == 'v1':
             allowed_vars = list(set([x['name'] for x in used_vars]))
-            self._docker_compose_write_envfile(allowed_vars=allowed_vars)
+            self._docker_compose_write_envfile2(stack_env, allowed_vars=allowed_vars)
         else:
             if MODE == 'v2':
                 allowed_vars = list(set([x.name for x in used_vars]))
             else:
                 allowed_vars = list(set(used_vars))
 
-            #pprint (allowed_vars )
             if ENABLE_ENV_WRITE:
                 self._docker_compose_write_envfile2(stack_env, allowed_vars=allowed_vars)
 
@@ -1259,7 +959,6 @@ class Stack(ClassClassifier):
                     self.path,
                     [".env",
                     ])[0] or None
-
 
 
         # Prepare command
@@ -1286,7 +985,7 @@ class Stack(ClassClassifier):
         if ENABLE_ENV_WRITE:
             output = self._exec("docker-compose", cli_args, _out=None)
         else:
-            env_string = { k: str(v) for k, v in stack_env.items() if v is not None }
+            env_string = { k: cast_docker_compose(v) for k, v in stack_env.items() if v is not None }
             output = self._exec("docker-compose", cli_args, _out=None, _env=env_string) 
 
         # Write outfile
@@ -1296,10 +995,12 @@ class Stack(ClassClassifier):
         self.log.notice (f"Docker-compose file has been generated: {output_file}")
 
 
+        ## Part 2
+
         # Create extra paasify vars
         docker_data = anyconfig.load(output_file)
 
-        ### TO BE EXTRACTED !!!!
+        # Create global environment
         svc_names = list(docker_data.get("services", {}).keys())
         main_svc = svc_names[0] if len(svc_names) > 0 else svc_stack
         tag_names = [tag.name for tag in tags]
@@ -1314,7 +1015,6 @@ class Stack(ClassClassifier):
         
         
         self.log.debug ("Available extra vars for tranform filters:")
-        #self.log.debug (pformat (tag_env))
         self.log.debug (json.dumps(tag_env, indent=2, sort_keys=True))
 
         docker_rewrite = dict(docker_data)
@@ -1329,13 +1029,9 @@ class Stack(ClassClassifier):
                 tag_env.update(local_conf)
 
                 self.log.info (f"Processing jsonnet tag '{tag.name}' with local data: {pformat(local_conf)}")
-                #self.log.info ()
-                #self.log.trace (pformat(docker_env))
-
                 change_raw = tag.process_transform(docker_rewrite, env=tag_env)
 
-                #pprint (change_raw)
-
+                # TOFIX
                 try:
                     docker_diff = change_raw['diff']
                     docker_merged = change_raw['merged']
@@ -1347,16 +1043,13 @@ class Stack(ClassClassifier):
 
 
                 if isinstance(docker_diff, dict):
-                    #self.log.debug (pformat(docker_diff, indent=2, compact=True))
-                    #self.log.debug (yaml.dump(docker_diff))
                     self.log.debug (json.dumps(docker_diff, indent=2, sort_keys=True))
                 else:
-                    raise Exception("Broken plugin", docker_diff)
-
+                    raise Exception(f"TOFIX: Broken plugin {tag.name}:", docker_diff)
 
                 docker_rewrite = docker_merged
 
-        self.log.trace("Finale docker file:")
+        self.log.trace("Final docker file:")
         self.log.trace(json.dumps(docker_rewrite, indent=2, sort_keys=True))
 
         # Update docker-compose file
@@ -1366,8 +1059,6 @@ class Stack(ClassClassifier):
             writer.write(file_content)
         log.debug (f"File updated: {output_file}")
         return docker_rewrite
-
-
 
 
     def docker_up(self, compose_file="docker-compose.run.yml"):

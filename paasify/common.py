@@ -17,12 +17,6 @@ log = logging.getLogger(__name__)
 
 
 
-
-
-
-
-
-
 # Source: https://stackoverflow.com/questions/2183233/how-to-add-a-custom-loglevel-to-pythons-logging-facility/35804945#35804945
 def addLoggingLevel(levelName, levelNum, methodName=None):
     """
@@ -101,11 +95,8 @@ class MultiLineFormatter(logging.Formatter):
 def get_logger(logger_name=None, create_file=False, verbose=None):
     """Create CmdApp logger"""
 
-
     # Take default app name
     logger_name = logger_name or __name__
-
-
 
     # Manage logging level
     if not verbose:
@@ -137,7 +128,7 @@ def get_logger(logger_name=None, create_file=False, verbose=None):
        + "%(levelname)s: %(message)s"
     )
     tformat1 = "%H:%M:%S"
-    # tformat2 = "%Y-%m-%d %H:%M:%S"
+    #tformat2 = "%Y-%m-%d %H:%M:%S"
     #formatter = logging.Formatter(format4, tformat1)
     formatter = MultiLineFormatter(format1, tformat1)
     
@@ -160,8 +151,6 @@ def get_logger(logger_name=None, create_file=False, verbose=None):
     # Return objects
     return log, loglevel
 
-
-#log, log_level = get_logger(logger_name=__name__)
 
 
 def list_parent_dirs(path):
@@ -323,32 +312,8 @@ def parse_vars(match):
 
 
 
-# Broken
-# SHELL_REGEX =r'[^$]((\$(?P<name1>[0-9A-Z_]+))|(\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>(?R)))}))'
-
-
-# Test complex only v1
-#SHELL_REGEX =r'[^$](\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))?})'
-
-
-# Test complex only v2
-#SHELL_REGEX =r'[^$](\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*(?R)?.*))?})'
-
-
-
-#### WIPPP
-
-# OKK simple: v1 SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>[^}]*))})|(\$(?P<name2>[0-9A-Z_]+)))'
-# SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))})|(\$(?P<name2>[0-9A-Z_]+)))'
-
-
-# V2 testing
-SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))})|(\$(?P<name2>[0-9A-Z_]+)))'
-
-
-
+# BROKEN
 SHELL_REGEX = re.compile(SHELL_REGEX) #, flags=regex.DEBUG)
-
 def extract_shell_vars(file):
     "Extract all shell variables call in a file"
 
@@ -360,7 +325,6 @@ def extract_shell_vars(file):
 
     content = ''.join(lines)
 
-
     ### LEXER APPROACH
     import shlex
     lexer = shlex.shlex(content)
@@ -368,8 +332,7 @@ def extract_shell_vars(file):
     # for token in lexer:
     #     print ( repr(token))
         
-
-    sdfsdfsdf
+    return
 
     #### REGEX APPROACH
 
