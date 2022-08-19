@@ -30,12 +30,31 @@ class EngineCompose(ClassClassifier):
                     '20.10.17': {},
                 },
             'docker-compose': {
+                    '2.6.1': {},
                     '1.6.1': {},
                     '1.29.2': {},
                 },
             'podman-compose': {},
             }
 
+    def _detect(self):
+        
+        try:
+            cmd = sh.Command("docker-compose")
+            out = cmd('--version')
+            bin2utf8(out)
+        except Exception as err:
+            raise error.DockerUnsupportedVersion(f"Impossible to guess docker-compose version")
+
+        # SCan version
+        patt = 'version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))'
+        match = re.search(patt, out.txtout)
+        if match:
+            self.version = match.groupdict()
+        else:
+            raise error.DockerUnsupportedVersion(f"Version of docker-compose is not recognised: {out.txtout}")
+
+            
     def _init(self, docker_file='docker-compose.run.yml'):
 
         self.engine = 'docker-compose'
@@ -45,6 +64,8 @@ class EngineCompose(ClassClassifier):
             "--project-directory", f"{self.parent.project_dir}",
         ]
         self.docker_file_path = os.path.join(self.parent.project_dir, docker_file)
+
+        self._detect()
 
         #self.engine = 'docker'
         #self.engine = 'podman-compose'
