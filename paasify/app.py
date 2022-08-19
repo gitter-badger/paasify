@@ -14,6 +14,8 @@ from copy import copy
 import anyconfig
 
 from paasify.common import _exec, list_parent_dirs, find_file_up
+import paasify.errors as error
+
 from paasify.sources import SourcesManager
 from paasify.stacks import StackManager, StackTag, StackEnv
 from paasify.class_model import ClassClassifier
@@ -143,7 +145,7 @@ class Project(ClassClassifier):
         # Detect base settings
         prj_config_path = self.user_config["config_file_path"]
         if not prj_config_path:
-            raise Exception (f"Can't find 'paasify.yml' project")
+            raise error.ProjectNotFound (f"Can't find 'paasify.yml' project")
         prj_dir = os.path.dirname(prj_config_path)
         prj_namespace = os.path.basename(prj_dir)
         collections_dir = os.path.join(prj_dir, '.paasify/collections')
@@ -159,12 +161,11 @@ class Project(ClassClassifier):
             self.log.info(f"Code: {rc}, {rc_msg}")
             sys.exit(1)
             #pprint (rc_msg)
-            raise Exception(f"Failed to validate paasify.yml")
+            raise error.ProjectInvalidConfig(f"Failed to validate paasify.yml")
 
         # Inject project config
         namespace = project_config['project'].get('namespace', None) or prj_namespace
         collections_dir = project_config['project'].get('collections_dir', None) or collections_dir
-
 
         # Init runtime
         self.runtime["namespace"] = namespace

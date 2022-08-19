@@ -11,6 +11,7 @@ import sys
 #import logging
 import yaml
 import json
+import traceback
 
 from pathlib import Path
 
@@ -49,13 +50,13 @@ class OutputFormat(str, Enum):
     toml = "toml"
 
 
-app = typer.Typer(
+cli = typer.Typer(
     help="Paasify, build your compose-files",
     no_args_is_help=True)
 
 
 
-@app.callback()
+@cli.callback()
 def main(
     ctx: typer.Context,
     verbose: int = typer.Option(0, "--verbose", "-v", count=True, min=0, max=4),
@@ -94,7 +95,7 @@ def main(
 
 
 # Generic commands
-@app.command()
+@cli.command()
 def info(
     ctx: typer.Context,
     ):
@@ -104,7 +105,7 @@ def info(
     prj.cmd_info()
 
 
-@app.command()
+@cli.command()
 def ls(
     ctx: typer.Context,
     ):
@@ -114,7 +115,7 @@ def ls(
     prj.cmd_stacks_list()
 
 # Source commands
-@app.command()
+@cli.command()
 def src_ls(
     ctx: typer.Context,
     ):
@@ -123,7 +124,7 @@ def src_ls(
     prj = paasify.get_project()
     prj.cmd_src_list()
 
-@app.command()
+@cli.command()
 def src_install(
     ctx: typer.Context,
     ):
@@ -132,7 +133,7 @@ def src_install(
     prj = paasify.get_project()
     prj.cmd_src_install()
 
-@app.command()
+@cli.command()
 def src_update(
     ctx: typer.Context,
     ):
@@ -141,7 +142,7 @@ def src_update(
     prj = paasify.get_project()
     prj.cmd_src_update()
 
-@app.command()
+@cli.command()
 def src_tree(
     ctx: typer.Context,
     ):
@@ -153,13 +154,13 @@ def src_tree(
 
 # Stack commands
 
-@app.command()
+@cli.command()
 def apply(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(None,
         help="Stack to target, current cirectory or all",)
     ):
-    """Build and apply stack"""
+    """Build and clily stack"""
     paasify = ctx.obj["paasify"]
     prj = paasify.get_project()
 
@@ -170,7 +171,7 @@ def apply(
     prj.cmd_up(stack=stack)
 
 
-@app.command()
+@cli.command()
 def recreate(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(None,
@@ -191,7 +192,7 @@ def recreate(
 
 
 
-@app.command()
+@cli.command()
 def build(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(None,
@@ -203,7 +204,7 @@ def build(
     prj.cmd_build(stack=stack)
 
 
-@app.command()
+@cli.command()
 def up(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(None,
@@ -215,7 +216,7 @@ def up(
     prj.cmd_up(stack=stack)
 
 
-@app.command()
+@cli.command()
 def down(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(None,
@@ -227,7 +228,7 @@ def down(
     prj.cmd_down(stack=stack)
 
 
-@app.command()
+@cli.command()
 def ps(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(None,
@@ -238,7 +239,7 @@ def ps(
     prj = paasify.get_project()
     prj.cmd_ps(stack=stack)
 
-@app.command()
+@cli.command()
 def logs(
     ctx: typer.Context,
     follow: bool = typer.Option(False, "--follow", "-f"),
@@ -252,7 +253,7 @@ def logs(
     prj.cmd_logs(stack=stack, follow=follow)
 
 
-@app.command()
+@cli.command()
 def schema(
     ctx: typer.Context,
     format: OutputFormat = OutputFormat.json,
@@ -266,318 +267,31 @@ def schema(
 
 
 
+def app():
+    "Actually start the app"
+
+    try:
+        cli()
+    except Exception as err:
+        err_type = err.__class__.__name__
+        
+        if hasattr(err, 'paasify'):
+            #log.error (err)
+            
+            if isinstance(err.advice, str):
+                log.warn (err.advice)
+            log.critical (f"(Error {err.rc}: {err_type}) {err}")
+            sys.exit(err.rc)
+
+        else:
+            log.error(traceback.format_exc())
+            log.error (err)
+            log.critical ("Paasify exited with a BUG!")
+            sys.exit(128)
+
 
 if __name__ == "__main__":
-    
-    #typer.run(CmdApp)
     app()
 
 
-
-
-############################### EEEENNNNDDD OFFFF FILFFFFEEEE
-# Legacy below
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# @app.command()
-# def up(
-#     ctx: typer.Context,
-#     ):
-#     """start"""
-#     paasify = ctx.obj["paasify"]
-#     paasify.forward_stacks('up')
-
-# @app.command()
-# def down(
-#     ctx: typer.Context,
-#     ):
-#     """Down"""
-#     paasify = ctx.obj["paasify"]
-#     paasify.forward_stacks('down')
-
-# @app.command()
-# def apply(
-#     ctx: typer.Context,
-#     ):
-#     """Assemble and start"""
-#     paasify = ctx.obj["paasify"]
-#     paasify.forward_stacks('assemble')
-#     paasify.forward_stacks('up')
-
-# @app.command()
-# def restart(
-#     ctx: typer.Context,
-#     ):
-#     """Assemble and restart"""
-#     paasify = ctx.obj["paasify"]
-#     paasify.forward_stacks('assemble')
-#     paasify.forward_stacks('down')
-#     paasify.forward_stacks('up')
-
-# @app.command()
-# def recreate(
-#     ctx: typer.Context,
-#     ):
-#     """Assemble, rm and restart"""
-#     paasify = ctx.obj["paasify"]
-#     paasify.forward_stacks('assemble')
-#     paasify.forward_stacks('down')
-#     paasify.forward_stacks('rm')
-#     paasify.forward_stacks('up')
-
-
-
-# @app.command()
-# def rm(
-#     ctx: typer.Context,
-#     ):
-#     """Remove"""
-#     paasify = ctx.obj["paasify"]
-#     paasify.forward_stacks('down')
-#     paasify.forward_stacks('rm')
-
-# @app.command()
-# def ps(
-#     ctx: typer.Context,
-#     ):
-#     """Processes"""
-#     paasify = ctx.obj["paasify"]
-#     paasify.forward_stacks('ps')
-
-# @app.command()
-# def logs(
-#     ctx: typer.Context,
-#     ):
-#     """Logs"""
-#     paasify = ctx.obj["paasify"]
-#     paasify.forward_stacks('logs')
-
-
-# @app.command()
-# def ls(
-#     ctx: typer.Context,
-#     ):
-#     """List stacks"""
-#     paasify = ctx.obj["paasify"]
-#     for i in paasify.stacks:
-#         print ( i.rel_path, i.get_tags())
-
-# @app.command()
-# def vars(
-#     ctx: typer.Context,
-#     ):
-#     """List vars"""
-#     paasify = ctx.obj["paasify"]
-
-#     console = Console()
-#     ret = {}
-#     for i in paasify.stacks:
-#         v = {
-#                 #i.name: i.get_vars()
-#                 'vars': i.get_vars()
-#                 }
-#         ret[i.name] = v
-
-#     v = yaml.dump(ret, default_flow_style=False)
-#     v = Syntax(v, lexer='YamlLexer')
-#     console.print(f"Stack vars:")
-#     console.print(v)
-
-# @app.command()
-# def dev(
-#     ctx: typer.Context,
-#     ):
-#     """Debvelopment commands"""
-
-#     # Init
-#     file = ctx.obj["paasify"]["config"]
-#     config = Project.find_config()
-
-#     # Action
-#     paasify = Project(config=config)
-#     paasify.forward_stacks('up')
-
-
-
-
-
-
-
-##### STABLE
-#
-#@app.command()
-#def docker_build (
-#    ctx: typer.Context,
-#    ):
-#    """Build docker compose files"""
-#    
-#    file = ctx.obj["paasify"]["config"]
-#    print ("WIP")
-#
-#
-#@app.command()
-#def docker_start (
-#    ctx: typer.Context,
-#    ):
-#    """Start stacks"""
-#    
-#
-#    file = ctx.obj["paasify"]["config"]
-#    p = DirectoryItem.namespace(config_file=file)
-#    p.docker_start()
-#
-#    print ("Stack is started")
-#
-#
-#@app.command()
-#def docker_stop (
-#    ctx: typer.Context,
-#    ):
-#    """Stop stacks"""
-#    
-#    file = ctx.obj["paasify"]["config"]
-#    print ("WIP")
-#
-#@app.command()
-#def docker_restart (
-#    ctx: typer.Context,
-#    ):
-#    """Restart stacks"""
-#    
-#    file = ctx.obj["paasify"]["config"]
-#    print ("WIP")
-#
-#
-#@app.command()
-#def config(
-#    ctx: typer.Context,
-#    ):
-#    """Show project config"""
-#    
-#    file = ctx.obj["paasify"]["config"]
-#    p = Namespace(config_file=file, is_root=True)
-#    ret = p.config
-#    print (anyconfig.dumps(ret, ac_parser="yaml"))
-#
-#
-#@app.command()
-#def list(
-#    ctx: typer.Context,
-#    ):
-#    """Show stack list"""
-#    
-#    file = ctx.obj["paasify"]["config"]
-#    p = Namespace(config_file=file, is_root=True)
-#    ret = p.read_stacks_order()
-#    print (anyconfig.dumps(ret, ac_parser="yaml"))
-#  
-
-
-# class Paasify():
-
-
-#     def __init__(self, path_root="."):
-
-#         self.path_root = path_root
-
-#         subprojects = self.guess_subprojects(path_root)
-#         self.prjs = self.find_subpj_children(subprojects)
-
-
-#     def find_subpj_children(self, prjs):
-
-#         print ("helloo")
-
-#         for prj_name, prj_def in prjs.items():
-
-#             # Load docker compose
-#             file = prj_def["path"]
-#             ret = anyconfig.load(file, ac_parser="yaml")
-
-#             #prjs[prj_name]["compose"] = ret
-
-#             # SAve services
-#             prjs[prj_name]["services"] = list(ret.get("services").keys())
-
-
-
-#             pattern = re.compile('[^\$]?\${([A-Za-z_][A-Za-z0-9_]*)}')
-#             pattern2 = re.compile('[^\$]?\$([A-Za-z_][A-Za-z0-9_]*)')
-
-#             envars = []
-#             for line in open(file):
-#                 #print ("LINE ", line)
-#                 line = line.lstrip('\#')
-
-#                 try:
-#                     match = re.search(pattern, line).groups()
-#                     envars.append(match)
-#                 except AttributeError:
-#                     pass
-#                 try:
-#                     match = re.search(pattern2, line).groups()
-#                     envars.append(match)
-#                 except AttributeError:
-#                     pass
-
-
-#             prjs[prj_name]["env"] = list(set(envars))
-
-
-
-#         return prjs
-
-            
-
-
-#     def guess_subprojects(self, path=None):
-
-#         path = path or self.path_root
-#         ret = {}
-#         index = 0
-#         for dirpath, dirnames, filenames in os.walk(path):
-#             for filename in [f for f in filenames if f.startswith("docker-compose.y")]:
-#                 prj_path = os.path.join(dirpath, filename)
-#                 prj_name = dirpath[2:]
-#                 ret[prj_name] = {
-#                     "path": prj_path,
-#                     "project": prj_name,
-#                     "compose": filename ,
-#                     "index": index ,
-#                     }
-#                 index = index + 1
-#         return ret
 

@@ -16,6 +16,7 @@ from pprint import pprint, pformat
 
 from paasify.common import extract_shell_vars, lookup_candidates, write_file, cast_docker_compose
 from paasify.common import merge_env_vars, filter_existing_files, read_file
+import paasify.errors as error
 from paasify.class_model import ClassClassifier
 from paasify.var_parser import BashVarParser
 
@@ -416,7 +417,7 @@ class Stack(ClassClassifier):
         fail_on_app=True
         app_name = config["app"] or config["name"] or config["path"] or None
         if not app_name:
-            raise Exception(f"Missing 'app' or 'path' or 'name' option for stack: {self.default_user_config}")
+            raise StackMissingOrigin(f"Missing 'app' or 'path' or 'name' option for stack: {self.default_user_config}")
         if not config["app"]:
             fail_on_app=False
         default_name = re.sub(f'[^:]+:', '', app_name)
@@ -608,8 +609,8 @@ class Stack(ClassClassifier):
         #         r0 = anyconfig.load(app_env_file, ac_parser="shellvars")
 
         r1 = self._env_parse(global_env)
-        r2 = self._env_inject()
         r3 = self._env_parse(local_env)
+        r2 = self._env_inject({**r1, **r3})
 
         result = {}
         result.update(r0)   # .env file
@@ -692,8 +693,12 @@ class Stack(ClassClassifier):
         return result
 
 
-    def _env_inject(self) -> dict:
+    def _env_inject(self, current=None) -> dict:
         "Inject environment vars and return a dict of it"
+
+        current = current or {}
+        current_service = current.get('paasify_stack_service', self.name)
+        current_services = current.get('paasify_stack_services', current_service)
         
         tag_names = [tag.name for tag in self.tags]
         ext_vars = {
@@ -712,14 +717,15 @@ class Stack(ClassClassifier):
             "paasify_sep_dir": os.path.sep,
 
             # These variables can be overrided !
-            'paasify_stack_service': self.name,
-            'paasify_stack_services': self.name,
+            'paasify_stack_service': current_service,
+            'paasify_stack_services': current_services,
             'paasify_stack_tags': ','.join(tag_names),
 
         }
         return ext_vars
 
 
+    # TOFIX: Should be static method !!!
     def _env_parse(self, payload) -> dict:
         "Accept any user configuration and return a dict"
 
@@ -758,6 +764,12 @@ class Stack(ClassClassifier):
     def _exec(self, command, cli_args=None, _log=True, **kwargs):
         "Execute any command"
 
+        def bin2utf8(obj):
+            obj.txtout = obj.stdout.decode("utf-8").rstrip('\n')
+            obj.txterr = obj.stderr.decode("utf-8").rstrip('\n')
+            return obj  
+
+
         # Check arguments
         cli_args = cli_args or []
         assert isinstance(cli_args, list), f"_exec require a list, not: {type(cli_args)}"
@@ -782,12 +794,16 @@ class Stack(ClassClassifier):
         # Execute command via sh
         try:
             output = cmd(**sh_opts)
-        except sh.ErrorReturnCode as err:
-            raise Exception(err)
-            #self.log.critical (f"Command failed with message:\n{err.stderr.decode('utf-8')}")
-            #sys.exit(1)
+            bin2utf8(output)
+            return output
 
-        return output
+        except sh.ErrorReturnCode as err:
+            bin2utf8(err)
+            self.log.error (f"Command returned code {err.exit_code}: {err.full_cmd}")
+            if err.stdout:
+                self.log.notice ( err.txtout)
+
+            raise error.ShellCommandFailed(err.txterr)
 
 
 
@@ -988,8 +1004,12 @@ class Stack(ClassClassifier):
             env_string = { k: cast_docker_compose(v) for k, v in stack_env.items() if v is not None }
             output = self._exec("docker-compose", cli_args, _out=None, _env=env_string) 
 
+        if output.txterr:
+            self.log.warn(output.txterr)
+
         # Write outfile
-        stdout = output.stdout.decode("utf-8") 
+        #stdout = output.stdout.decode("utf-8") 
+        stdout = output.txtout
         with open(output_file, 'w') as writer:
            writer.write(stdout)
         self.log.notice (f"Docker-compose file has been generated: {output_file}")
@@ -1095,7 +1115,8 @@ class Stack(ClassClassifier):
         result = self._exec("docker-compose", cli_args, _out=None)
 
         # Report output from json
-        stdout = result.stdout.decode("utf-8") 
+        #stdout = result.stdout.decode("utf-8") 
+        stdout = result.stdout
         payload = json.loads(stdout)
         for svc in payload:
 
@@ -1192,7 +1213,11 @@ class StackManager(ClassClassifier):
             if match:
                 return match
             else:
-                raise Exception(f"Not such stack: '{name}'")
+                available_stacks = ', '.join([x.name for x in self.store])
+                raise error.PaasifyError(
+                    f"Impossible to find a stack called '{name}' under project: {self.runtime['top_project_dir']}",
+                    advice = f"Please choose one of: {available_stacks}"
+                )
         else:
             return self.store
 

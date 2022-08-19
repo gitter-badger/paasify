@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 
 
+
 # Source: https://stackoverflow.com/questions/2183233/how-to-add-a-custom-loglevel-to-pythons-logging-facility/35804945#35804945
 def addLoggingLevel(levelName, levelNum, methodName=None):
     """
@@ -30,7 +31,7 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
     used.
 
     To avoid accidental clobberings of existing attributes, this method will
-    raise an `AttributeError` if the level name is already an attribute of the
+    raise an `AttributePaasifyError` if the level name is already an attribute of the
     `logging` module or if the method name is already present 
 
     Example
@@ -47,11 +48,11 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
         methodName = levelName.lower()
 
     if hasattr(logging, levelName):
-       raise AttributeError('{} already defined in logging module'.format(levelName))
+       raise AttributePaasifyError('{} already defined in logging module'.format(levelName))
     if hasattr(logging, methodName):
-       raise AttributeError('{} already defined in logging module'.format(methodName))
+       raise AttributePaasifyError('{} already defined in logging module'.format(methodName))
     if hasattr(logging.getLoggerClass(), methodName):
-       raise AttributeError('{} already defined in logger class'.format(methodName))
+       raise AttributePaasifyError('{} already defined in logger class'.format(methodName))
 
     # This method was inspired by the answers to Stack Overflow post
     # http://stackoverflow.com/q/2183233/2988730, especially
@@ -109,7 +110,7 @@ def get_logger(logger_name=None, create_file=False, verbose=None):
                 2: logging.INFO,
                 3: logging.DEBUG,
             }[verbose]
-        except KeyError:
+        except KeyPaasifyError:
             loglevel = logging.DEBUG
 
     # Create logger for prd_ci
@@ -254,7 +255,7 @@ def _exec(command, cli_args=None, logger=None, **kwargs):
     # Execute command via sh
     try:
         output = cmd(**sh_opts)
-    except sh.ErrorReturnCode as err:
+    except sh.PaasifyErrorReturnCode as err:
         raise Exception(err)
         #_logger.critical (f"Command failed with message:\n{err.stderr.decode('utf-8')}")
         #sys.exit(1)
@@ -275,6 +276,8 @@ def write_file(file, content):
 
     with open(file, 'w') as f:
         f.write(content)
+
+
 
 # Beta libs (DEPRECATED)
 # ==================================
@@ -312,8 +315,32 @@ def parse_vars(match):
 
 
 
-# BROKEN
+# Broken
+# SHELL_REGEX =r'[^$]((\$(?P<name1>[0-9A-Z_]+))|(\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>(?R)))}))'
+
+
+# Test complex only v1
+#SHELL_REGEX =r'[^$](\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))?})'
+
+
+# Test complex only v2
+#SHELL_REGEX =r'[^$](\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*(?R)?.*))?})'
+
+
+
+#### WIPPP
+
+# OKK simple: v1 SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>[^}]*))})|(\$(?P<name2>[0-9A-Z_]+)))'
+SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))})|(\$(?P<name2>[0-9A-Z_]+)))'
+
+
+# V2 testing
+SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))})|(\$(?P<name2>[0-9A-Z_]+)))'
+
+
+
 SHELL_REGEX = re.compile(SHELL_REGEX) #, flags=regex.DEBUG)
+
 def extract_shell_vars(file):
     "Extract all shell variables call in a file"
 
@@ -325,6 +352,7 @@ def extract_shell_vars(file):
 
     content = ''.join(lines)
 
+
     ### LEXER APPROACH
     import shlex
     lexer = shlex.shlex(content)
@@ -332,7 +360,8 @@ def extract_shell_vars(file):
     # for token in lexer:
     #     print ( repr(token))
         
-    return
+
+    sdfsdfsdf
 
     #### REGEX APPROACH
 
@@ -372,3 +401,6 @@ def extract_shell_vars(file):
     print ("FINAL RESULT ============================")
     pprint (result)
     return result
+
+
+
