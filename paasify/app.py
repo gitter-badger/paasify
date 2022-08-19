@@ -303,16 +303,16 @@ class Project(ClassClassifier):
         self.log.info ("Paasify config:")
         self.log.info (json.dumps(self.runtime['project_config'], indent=4, sort_keys=True))
       
-        # Show stack list
-        self.log.notice(f"Stack list:")
-        for stack in self.stacks.get_all_stacks():
-            tag_list = ','.join([x.name for x in stack.tags])
-            self.log.notice(f"  {stack.name: >24}: {tag_list}")
-
         # Show current stack
         curr_stack = self.runtime["stack"]
         if not curr_stack:
             self.log.notice ("Paasify stack context: None")
+
+            # Show stack list instead
+            self.log.notice(f"Stack list:")
+            for stack in self.stacks.get_all_stacks():
+                tag_list = ','.join([x.name for x in stack.tags])
+                self.log.notice(f"  {stack.name: >24}: {tag_list}")
         else:
             self.log.notice (f"Paasify stack context: {curr_stack}")
             stack = self.stacks.get_stacks_by_name(curr_stack)
