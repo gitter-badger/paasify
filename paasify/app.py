@@ -172,6 +172,8 @@ class Project(ClassClassifier):
 
         # Detect base settings
         prj_config_path = self.user_config["config_file_path"]
+        if not prj_config_path:
+            raise Exception (f"Can't find 'paasify.yml' project")
         prj_dir = os.path.dirname(prj_config_path)
         prj_namespace = os.path.basename(prj_dir)
         collections_dir = os.path.join(prj_dir, '.paasify/collections')
@@ -327,6 +329,30 @@ class Project(ClassClassifier):
         ]
         _exec('tree', cli_args, _fg=True)
         
+    def cmd_info(self):
+        self.log.info ("Main informations:")
+        for k, v in self.runtime.items():
+            if k not in ['project_config']:
+                self.log.info (f"  {k: >20}: {str(v)}")
+
+        self.log.info ("Paasify config:")
+        self.log.info (pformat (self.runtime['project_config']))
+      
+        # Show current stack
+        curr_stack = self.runtime["stack"]
+        if not curr_stack:
+            self.log.info ("Paasify stack context: None")
+        else:
+            self.log.info (f"Paasify stack context: {curr_stack}")
+            stack = self.stacks.get_stacks_by_name(curr_stack)
+
+            if len(stack) != 1:
+                for x in self.root.stacks.store:
+                    pprint (x.__dict__)
+                raise Exception(f"Failed to find stack: {stack}")
+            stack = stack[0]
+            
+            stack.dump()
 
 
 class App(ClassClassifier):

@@ -14,8 +14,8 @@ import json
 
 from pathlib import Path
 
-from rich.console import Console
-from rich.syntax import Syntax
+# from rich.console import Console
+# from rich.syntax import Syntax
 
 import anyconfig
 #import paasify.app as Paasify
@@ -69,6 +69,12 @@ def main(
         envvar="PAASIFY_COLLECTIONS_DIR"),
 
     ):
+
+    # collections_dirs: list(Path) = typer.Option(f"{Path.home()}/.config/paasify/collections", "-l", "--collections_dir",
+    #     help="Path of paasify collections directory.", 
+    #     envvar="PAASIFY_COLLECTIONS_DIR"),
+
+    # ):
     """
     Manage users in the awesome CLI app.
     """
@@ -94,7 +100,8 @@ def info(
     ):
     """Show context infos"""
     paasify = ctx.obj["paasify"]
-    paasify.cmd_info()
+    prj = paasify.get_project()
+    prj.cmd_info()
 
 
 @app.command()

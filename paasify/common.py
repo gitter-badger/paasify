@@ -1,7 +1,9 @@
 import os
 import sys
+import re
 import sh
 import logging
+from pprint import pprint
 log = logging.getLogger(__name__)
 
 
@@ -137,7 +139,7 @@ def get_logger(logger_name=None, create_file=False, verbose=None):
     tformat1 = "%H:%M:%S"
     # tformat2 = "%Y-%m-%d %H:%M:%S"
     #formatter = logging.Formatter(format4, tformat1)
-    formatter = MultiLineFormatter(format4, tformat1)
+    formatter = MultiLineFormatter(format1, tformat1)
     
 
     # Create console handler for logger.
@@ -210,6 +212,29 @@ def lookup_candidates(lookup_config):
     return result
 
 
+    
+def cast_docker_compose(var):
+
+    if var is None:
+        return ''
+    elif isinstance(var, (bool)):
+        return 'true' if var else 'false'
+    elif isinstance(var, (str, int)):
+        return str(var)
+    else:
+        raise Exception(f"Impossible to cast value: {var}")
+
+
+def merge_env_vars(obj):
+    "Transform all keys of a dict starting by _ to their equivalent wihtout _"
+
+    override_keys = [ key.lstrip('_') for key in obj.keys() if key.startswith('_') ]
+    for key in override_keys:
+        old_key = '_' + key
+        obj[key] = obj[old_key]
+        obj.pop(old_key)
+    
+    return obj, override_keys
 
 # Command Execution framework
 # ==================================
@@ -246,3 +271,141 @@ def _exec(command, cli_args=None, logger=None, **kwargs):
         #sys.exit(1)
 
     return output
+
+def read_file(file):
+    "Read file content"
+    with open(file) as f:
+        return ''.join(f.readlines())
+
+def write_file(file, content):
+    "Write content to file"
+
+    file_folder = os.path.dirname(file)
+    if not os.path.exists(file_folder):
+        os.makedirs(file_folder)
+
+    with open(file, 'w') as f:
+        f.write(content)
+
+# Beta libs (DEPRECATED)
+# ==================================
+
+
+
+def parse_vars(match):
+
+    #print (type(match))
+
+    match = match.groupdict()
+
+    #pprint (match)
+    name = match.get("name1", None) or match.get("name2", None)
+
+    # Detect assignment method
+    mode = match['mode']
+    if mode == '-':
+        mode = 'unset_alt'
+    elif mode == ':-':
+        mode = 'empty_alt'
+    elif mode == '?':
+        mode = 'unset_err'
+    elif mode == ':?':
+        mode = 'empty_err'
+    else:
+        mode = 'simple'
+
+    r = {
+        'name': name,
+        'mode': mode,
+        'arg': match['arg'] or None
+    }
+    return r
+
+
+
+# Broken
+# SHELL_REGEX =r'[^$]((\$(?P<name1>[0-9A-Z_]+))|(\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>(?R)))}))'
+
+
+# Test complex only v1
+#SHELL_REGEX =r'[^$](\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))?})'
+
+
+# Test complex only v2
+#SHELL_REGEX =r'[^$](\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*(?R)?.*))?})'
+
+
+
+#### WIPPP
+
+# OKK simple: v1 SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>[^}]*))})|(\$(?P<name2>[0-9A-Z_]+)))'
+# SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))})|(\$(?P<name2>[0-9A-Z_]+)))'
+
+
+# V2 testing
+SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))})|(\$(?P<name2>[0-9A-Z_]+)))'
+
+
+
+SHELL_REGEX = re.compile(SHELL_REGEX) #, flags=regex.DEBUG)
+
+def extract_shell_vars(file):
+    "Extract all shell variables call in a file"
+
+    print (f"FILE MATCH: {file}")
+
+    # Open file
+    with open(file) as f:
+        lines = f.readlines()
+
+    content = ''.join(lines)
+
+
+    ### LEXER APPROACH
+    import shlex
+    lexer = shlex.shlex(content)
+    print (shlex.split(content))
+    # for token in lexer:
+    #     print ( repr(token))
+        
+
+    sdfsdfsdf
+
+    #### REGEX APPROACH
+
+    # Parse shell vars, first round
+    result = []
+    for match in re.finditer(SHELL_REGEX, content):
+
+        r = parse_vars(match)
+        print ("  NEW MATCH 1: ", r)
+        result.append(r)
+
+
+    # PArse shell vars second round
+    found = True
+    while found == True:
+
+        cand = [ x['arg'] for x in result if isinstance(x['arg'], str)]
+        cand = '\n'.join(cand)
+
+        #print (cand)
+        found = False
+        for match in re.finditer(SHELL_REGEX, cand):
+            
+            
+            r = parse_vars(match)
+            #print ("  NEW MATCH", match.groupdict())
+            print ("  NEW MATCH 2: ", r)
+            var_name = r['name']
+            if len([ x for x in result if x['name'] == var_name ]) == 0:
+                found = True
+                result.append(r)
+
+
+        # TEMP
+        #found = False
+        
+    print ("FINAL RESULT ============================")
+    pprint (result)
+    return result
