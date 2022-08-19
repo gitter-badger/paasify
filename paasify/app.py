@@ -295,25 +295,25 @@ class Project(ClassClassifier):
         _exec('tree', cli_args, _fg=True)
         
     def cmd_info(self):
-        self.log.info ("Main informations:")
+        self.log.notice ("Main informations:")
         for k, v in self.runtime.items():
             if k not in ['project_config']:
-                self.log.info (f"  {k: >20}: {str(v)}")
+                self.log.notice (f"  {k: >24}: {str(v)}")
 
         self.log.info ("Paasify config:")
-        self.log.info (pformat (self.runtime['project_config']))
+        self.log.info (json.dumps(self.runtime['project_config'], indent=4, sort_keys=True))
       
         # Show current stack
         curr_stack = self.runtime["stack"]
         if not curr_stack:
-            self.log.info ("Paasify stack context: None")
+            self.log.notice ("Paasify stack context: None")
         else:
-            self.log.info (f"Paasify stack context: {curr_stack}")
+            self.log.notice (f"Paasify stack context: {curr_stack}")
             stack = self.stacks.get_stacks_by_name(curr_stack)
 
             if len(stack) != 1:
                 for x in self.root.stacks.store:
-                    pprint (x.__dict__)
+                    self.log.notice (json.dumps(x.__dict__, indent=4, sort_keys=True))
                 raise Exception(f"Failed to find stack: {stack}")
             stack = stack[0]
             
