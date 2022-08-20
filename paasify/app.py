@@ -19,6 +19,7 @@ import paasify.errors as error
 from paasify.sources import SourcesManager
 from paasify.stacks import StackManager, StackTag, StackEnv
 from paasify.class_model import ClassClassifier
+from paasify.engines import EngineDetect
 
 from pprint import pprint, pformat
 
@@ -132,6 +133,9 @@ class Project(ClassClassifier):
 
     def _init(self, *args, **kwargs):
             
+
+        self.obj_app = self.parent
+
 
         # Process nested projects
         # project_level = len(project_root_configs)
@@ -339,6 +343,14 @@ class App(ClassClassifier):
     def _init(self, *args, **kwargs):
 
         self.runtime["cwd"] = os.getcwd()
+
+        # Detect docker engines
+        eng = EngineDetect(None)
+        version, obj = eng.detect()
+
+        self.cont_engine_cls = obj
+        self.cont_engine_version = version
+        self.log.info (f"Load docker-compose driver '{obj.__name__}' for version {version}")
 
 
     def get_project_path(self):

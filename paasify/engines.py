@@ -5,6 +5,9 @@ import logging
 import json
 import sh
 from pprint import pprint
+from distutils.version import StrictVersion
+
+import semver
 
 from paasify.common import _exec, cast_docker_compose
 import paasify.errors as error
@@ -23,49 +26,28 @@ def bin2utf8(obj):
 
 
 
+#####################
+
 class EngineCompose(ClassClassifier):
 
-    versions = {
-            'docker': {
-                    '20.10.17': {},
-                },
-            'docker-compose': {
-                    '2.6.1': {},
-                    '1.6.1': {},
-                    '1.29.2': {},
-                },
-            'podman-compose': {},
-            }
 
-    def _detect(self):
-        
-        try:
-            cmd = sh.Command("docker-compose")
-            out = cmd('--version')
-            bin2utf8(out)
-        except Exception as err:
-            raise error.DockerUnsupportedVersion(f"Impossible to guess docker-compose version")
 
-        # SCan version
-        patt = 'version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))'
-        match = re.search(patt, out.txtout)
-        if match:
-            self.version = match.groupdict()
-        else:
-            raise error.DockerUnsupportedVersion(f"Version of docker-compose is not recognised: {out.txtout}")
+    def _init(self, project_dir=None, project_name=None, docker_file='docker-compose.run.yml'):
 
-            
-    def _init(self, docker_file='docker-compose.run.yml'):
+        self.project_dir = project_dir
+        self.project_name = project_name
 
-        self.engine = 'docker-compose'
+        # DEPRECATED self.cont_engine = EngineDocker(self)
+        #self.compose_engine = EngineCompose(self)
+        #self.jsonnet_engine = EngineJsonnet(self)
+
 
         self.arg_prefix = [
-            "--project-name", f"{self.parent.project_name}",
-            "--project-directory", f"{self.parent.project_dir}",
+            "--project-name", f"{project_name}",
+            "--project-directory", f"{project_dir}",
         ]
-        self.docker_file_path = os.path.join(self.parent.project_dir, docker_file)
+        self.docker_file_path = os.path.join(project_dir, docker_file)
 
-        self._detect()
 
         #self.engine = 'docker'
         #self.engine = 'podman-compose'
@@ -78,11 +60,8 @@ class EngineCompose(ClassClassifier):
 
     def assemble(self, compose_files, env_file=None, env=None):
 
-        cli_args = [
-          #  "compose", 
-            "--project-name", f"{self.parent.project_name}",
-            "--project-directory", f"{self.parent.project_dir}",
-        ]
+        cli_args = list(self.arg_prefix)
+
         if env_file:
             cli_args.extend(["--env-file", env_file]) 
         for file in compose_files:
@@ -187,36 +166,28 @@ class EngineCompose(ClassClassifier):
             print (f"  {svc['Project'] :<32} {svc['Name'] :<40} {svc['Service'] :<16} {svc['State'] :<10} {', '.join(exposed)}")
     
 
-
-
-
-
-# class EngineDocker(ClassClassifier):
-
-#     versions = {
-#             'docker': {
-#                     '20.10.17': {},
-#                 },
-#             'podman': {},
-#             }
-
-#     def _init(self):
-#         self.engine = 'docker'
-#         #self.engine = 'docker-swarm'
-#         #self.engine = 'podman'
-#         pass
-#         # Check here if:
-#         # simple docker
-#         # swarm docker
-#         # podman
-
-
-#     def up(self):
-
-
-
-class EngineJsonnet(ClassClassifier):
+class EngineCompose_26(EngineCompose):
     pass
+
+
+class EngineCompose_129(EngineCompose):
+
+    def ps(self):
+        cli_args = [
+            "--file", self.docker_file_path,
+            "ps",
+            "--all",
+        ]
+
+        result = _exec("docker-compose", cli_args, _fg=True)
+
+
+class EngineCompose_16(EngineCompose):
+    pass
+
+
+#############################
+
 
 class ContainerEngine(ClassClassifier):
 
@@ -228,7 +199,7 @@ class ContainerEngine(ClassClassifier):
 
         # DEPRECATED self.cont_engine = EngineDocker(self)
         self.compose_engine = EngineCompose(self)
-        self.jsonnet_engine = EngineJsonnet(self)
+        #self.jsonnet_engine = EngineJsonnet(self)
 
     def assemble(self, compose_files, **kwargs):
         return self.compose_engine.assemble(compose_files, **kwargs)
@@ -243,4 +214,70 @@ class ContainerEngine(ClassClassifier):
         return self.compose_engine.logs(**kwargs)
     def ps(self, **kwargs):
         return self.compose_engine.ps(**kwargs)
+
+
+
+#############################
+
+class EngineDetect(ClassClassifier):
+
+    versions = {
+            'docker': {
+                    '20.10.17': {},
+                },
+            'docker-compose': {
+                    '2.6.1': EngineCompose_26,
+                    '1.29.0': EngineCompose_129,
+                    '1.6.3': EngineCompose_16,
+
+                },
+            'podman-compose': {},
+            }
+
+
+    def detect_docker_compose(self):
+        try:
+            cmd = sh.Command("docker-compose")
+            out = cmd('--version')
+            bin2utf8(out)
+        except Exception as err:
+            raise error.DockerUnsupportedVersion(f"Impossible to guess docker-compose version")
+
+        # Scan version
+        patt = 'version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))'
+        match = re.search(patt, out.txtout)
+        if match:
+            version = match.groupdict()
+        else:
+            raise error.DockerUnsupportedVersion(f"Version of docker-compose is not recognised: {out.txtout}")
+        curr_ver = version['version']
+
+        # Scan available versions
+        versions = [key for key in self.versions["docker-compose"].keys()]
+        versions.sort(key=StrictVersion)
+        versions.reverse()
+        match = None
+        for version in versions:
+            works = semver.match(curr_ver, f">={version}")
+            if works:
+                match = version
+                break
+
+        
+        if not match:
+            raise error.DockerUnsupportedVersion(f"Version of docker-compose is not supported: {curr_ver}")
+        return match, self.versions["docker-compose"][match]
+
+
+    def detect(self):
+        
+        version, obj = self.detect_docker_compose()
+        # if not result:
+        #     raise error.DockerUnsupportedVersion(f"Can;t find docker-compose") 
+
+        log.debug(f"Detected docker-compose version: {version}")
+
+        return version, obj
+
+
 

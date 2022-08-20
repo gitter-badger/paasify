@@ -413,6 +413,8 @@ class Stack(ClassClassifier):
 
         # Create links
         self.obj_prj = self.parent.obj_prj
+        self.obj_app = self.parent.obj_app
+
 
         # Generate config
         config = dict(self.default_user_config)
@@ -448,7 +450,14 @@ class Stack(ClassClassifier):
 
         # Fetch source configuration
         # Require the source object to be inited !
-        self.cont_engine = ContainerEngine(
+
+
+        # should be one of ContainerEngine Class (in engines.py)
+        # Like: paasify.engines.EngineCompose_26
+        self.log.trace (f"Loading docker-compose driver: {self.obj_app.cont_engine_cls}")
+        engine_cls = self.obj_app.cont_engine_cls
+        self.cont_engine = engine_cls(
+            self,
             project_dir=self.path,
             project_name=f"{self.ns}_{self.name}",
             )
@@ -1236,6 +1245,7 @@ class StackManager(ClassClassifier):
     def _init(self):
 
         self.obj_prj = self.parent
+        self.obj_app = self.parent.obj_app
 
         assert isinstance(self.user_config, list), f"Stack def is not a list"
         store = []
