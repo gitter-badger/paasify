@@ -454,7 +454,6 @@ class Stack(ClassClassifier):
 
         # should be one of ContainerEngine Class (in engines.py)
         # Like: paasify.engines.EngineCompose_26
-        self.log.trace (f"Loading docker-compose driver: {self.obj_app.cont_engine_cls}")
         engine_cls = self.obj_app.cont_engine_cls
         self.cont_engine = engine_cls(
             self,
