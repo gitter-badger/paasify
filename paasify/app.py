@@ -397,8 +397,13 @@ class Project(ClassClassifier):
                 },
                 'project': OrderedDict({
                     'namespace': project_name,
-                    'env': {},
-                    'tags_prefix': [],
+                    'env': {
+                        'app_domain': project_name,
+                        'app_expose_ip': '127.0.0.1'
+                    },
+                    'tags_prefix': [
+                        "_paasify",
+                    ],
                     'tags_suffix': [],
                 }),
                 'stacks': [],
