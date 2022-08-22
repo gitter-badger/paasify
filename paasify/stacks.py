@@ -12,6 +12,7 @@ import anyconfig
 import sh
 import _jsonnet
 import shutil
+import oschmod
 
 from pprint import pprint, pformat
 
@@ -180,10 +181,15 @@ class StackTag(ClassClassifier):
         # Process file
         self.log.exec(f"Parse {ext_vars['action']} jsonnet file: {file}")
         #self.log.trace(pformat(ext_vars))
-        result = _jsonnet.evaluate_file(
-            file,
-            ext_vars=ext_vars,
-        )
+        try:
+            result = _jsonnet.evaluate_file(
+                file,
+                ext_vars=ext_vars,
+            )
+        except RuntimeError as err:
+            self.log.critical(err)
+            raise error.JsonnetProcessError (f"Can't process jsonnet file: {file}")
+
 
         # Return json data
         return json.loads(result)
@@ -1118,8 +1124,8 @@ class Stack(ClassClassifier):
         
 
 
-        ## Part 3
-        # Import conf data from app
+        ## Part 3: Import conf data from app
+        # TODO: Add jinja templating !!!
         if self.app_path:
             src_dir = os.path.join(self.app_path, 'conf')
             dst_dir = os.path.join(self.path, 'conf')
@@ -1129,7 +1135,27 @@ class Stack(ClassClassifier):
                     self.log.notice (f"Importing stack config from app: {src_dir}")
                     shutil.copytree(src_dir, dst_dir)
 
+
+        ## Part 4: Create missing local volumes
+        self._docker_create_volumes(docker_rewrite)
+
         return docker_rewrite
+
+    def _docker_create_volumes(self, docker_compose):
+        "Create local docker volumes path to mimic 'create_host_path' legacy feature"
+
+
+        volumes = docker_compose.get("volumes",{})
+        for vol_name, vol_def in volumes.items():
+            _type = vol_def.get("driver")
+            device = vol_def.get("driver_opts", {}).get("device", None)
+            if device:
+                if not os.path.isdir(device):
+                    self.log.notice (f"Creating local volume directory '{device}'")
+                    os.makedirs(device)
+                    # TOFIX: This is awful !!!
+                    oschmod.set_mode(device, 0o777)
+                    
 
     def docker_up(self, compose_file="docker-compose.run.yml"):
         "Start docker stack"

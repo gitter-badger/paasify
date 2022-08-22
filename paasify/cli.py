@@ -95,6 +95,7 @@ def main(
 
 
 # Generic commands
+# ==============================
 @cli.command()
 def info(
     ctx: typer.Context,
@@ -114,7 +115,31 @@ def ls(
     prj = paasify.get_project()
     prj.cmd_stacks_list()
 
+@cli.command()
+def schema(
+    ctx: typer.Context,
+    format: OutputFormat = OutputFormat.json,
+
+    stack: Optional[str] = typer.Argument(None,
+        help="Stack to target, current cirectory or all",)
+    ):
+    """Show paasify config schema"""
+    paasify = ctx.obj["paasify"]
+    print(paasify.cmd_config_schema(format=format))
+
+
+@cli.command()
+def init(
+    ctx: typer.Context,
+    name: Optional[str] = typer.Argument(None,
+        help="Name of reference project to create",)
+    ):
+    """Create new project/namespace"""
+    paasify = ctx.obj["paasify"]
+    prj = paasify.init_project(name)
+
 # Source commands
+# ==============================
 @cli.command()
 def src_ls(
     ctx: typer.Context,
@@ -153,7 +178,7 @@ def src_tree(
 
 
 # Stack commands
-
+# ==============================
 @cli.command()
 def apply(
     ctx: typer.Context,
@@ -254,16 +279,20 @@ def logs(
 
 
 @cli.command()
-def schema(
+def reset(
     ctx: typer.Context,
-    format: OutputFormat = OutputFormat.json,
+    follow: bool = typer.Option(False, "--follow", "-f"),
 
     stack: Optional[str] = typer.Argument(None,
         help="Stack to target, current cirectory or all",)
     ):
-    """Show paasify config schema"""
+    """Reset presistent application volume data (destructive!)"""
     paasify = ctx.obj["paasify"]
-    print(paasify.cmd_config_schema(format=format))
+    prj = paasify.get_project()
+    raise Exception("Not implemented yet")
+
+
+
 
 
 
@@ -273,20 +302,28 @@ def app():
     try:
         cli()
     except Exception as err:
-        err_type = err.__class__.__name__
+        err_type = err.__class__.__module__ + '.' + err.__class__.__name__
         
         if hasattr(err, 'paasify'):
-            #log.error (err)
             
             if isinstance(err.advice, str):
                 log.warn (err.advice)
             log.critical (f"(Error {err.rc}: {err_type}) {err}")
             sys.exit(err.rc)
 
+        elif err_type.startswith("yaml"):
+            log.warning (f"While parsing YAML file: {err_type}")
+            log.critical (err)
+            sys.exit(1)  
+
+        elif err_type.startswith("sh"):
+            log.warning (f"While executing command: {err_type}")
+            log.critical (err)
+            sys.exit(1)  
         else:
             log.error(traceback.format_exc())
             log.error (err)
-            log.critical ("Paasify exited with a BUG!")
+            log.critical (f"Paasify exited with a BUG! ({type(err)}, {err_type})")
             sys.exit(128)
 
 

@@ -47,3 +47,7 @@ class JsonnetBuildTag(PaasifyError):
 class DockerUnsupportedVersion(PaasifyError):
     "Raised when docker-config failed"
     rc = 33
+
+class JsonnetProcessError(PaasifyError):
+    "Raised when jsonnet file can't be executed"
+    rc = 34

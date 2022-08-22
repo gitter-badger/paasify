@@ -7,13 +7,14 @@ import logging
 import json
 import yaml
 
+from collections import OrderedDict
 from dataclasses import dataclass, astuple, asdict
 from pathlib import Path
 from copy import copy
 
 import anyconfig
 
-from paasify.common import _exec, list_parent_dirs, find_file_up
+from paasify.common import _exec, list_parent_dirs, find_file_up, filter_existing_files
 import paasify.errors as error
 
 from paasify.sources import SourcesManager
@@ -330,6 +331,32 @@ class Project(ClassClassifier):
             stack.dump()
 
 
+    def cmd_init(self):
+        "Create a new paasify project"
+        pass
+
+        # Basically:
+        # Create paasify.yaml
+        # Add .gitignore
+            # .paasify/*
+            # */data/*
+            # */share/*
+            # */tmp/*
+            # */db_data/*
+
+
+        # Tutorial:
+        # Project namespace: PRJ (create PRJ dir)
+            # If exists scan for existing subdirs
+                # add stack to queue_local
+        # Add sources?
+            # Give some choices
+                # add stacks to queue_apps
+        # Report to user: User get a multi choice list, this will add them to paasify.yml
+            # Existing stacks: queue_local
+            # Available stacks: queue_app
+
+
 class App(ClassClassifier):
     "Application instance"
 
@@ -366,6 +393,47 @@ class App(ClassClassifier):
 
         return result
 
+    def init_project(self, hint=None):
+        "Create a new project"
+
+        hint = hint or ''
+        changes = False
+        project_name = os.path.split(hint)[-1]
+        project_path = os.path.join(os.getcwd(), hint)
+
+        if not os.path.isdir(project_path):
+            self.log.info(f"Creating directory: {project_path}")
+            changes = True
+            os.makedirs(project_path)
+            
+
+        cand = filter_existing_files(project_path, ["paasify.yml", "paasify.yaml"])
+
+        if not cand:
+            
+            changes = True
+            payload = OrderedDict({
+                'sources': {},
+                'stacks': [],
+                'project': OrderedDict({
+                    'namespace': project_name,
+                    'env': {},
+                    'tags_prefix': [],
+                    'tags_suffix': [],
+                })
+            })
+            conf_path = os.path.join(project_path, "paasify.yml")
+            self.log.notice(f"Creating project config: {conf_path}")
+
+            # TODO: Scan for existing stacks/sources
+            anyconfig.dump(payload, conf_path)
+        
+        if changes:
+            self.log.notice("Project has been created")
+        else:
+            self.log.notice("Project already exists")
+
+        return None
 
     def get_project(self):
         "Return closest project"
