@@ -414,7 +414,7 @@ class Project(ClassClassifier):
         else:
             log.notice("Project already exists")
 
-        return project_path
+        return os.path.join(project_path, "paasify.yml")
 
 
 
@@ -463,17 +463,16 @@ class App(ClassClassifier):
         prj_path = Project.cmd_init(hint)
 
         # Fetch the current project and install sources
-        prj = self.get_project(path=None)
+        prj = self.get_project(prj_path=prj_path)
         prj.cmd_src_install()
 
         return None
 
-    def get_project(self, path=None):
+    def get_project(self, prj_path=None, path=None):
         "Return closest project"
 
         # Find closest paasify.yml
-
-        prj_path = self.get_project_path(path)
+        prj_path = prj_path or self.get_project_path(path)
         user_config = {
             "config_file_path": prj_path,
         }
