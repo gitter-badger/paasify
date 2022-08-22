@@ -138,6 +138,14 @@ def init(
     paasify = ctx.obj["paasify"]
     prj = paasify.init_project(name)
 
+@cli.command()
+def help(
+    ctx: typer.Context,
+    ):
+    """Show this help message"""
+    print (ctx.parent.get_help())
+
+
 # Source commands
 # ==============================
 @cli.command()
