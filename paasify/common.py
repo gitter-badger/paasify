@@ -172,6 +172,8 @@ def find_file_up(names, paths):
     Find every files names in names list in
     every listed paths
     """
+    assert isinstance(names, list), f"Names must be array, not: {type(names)}"
+    assert isinstance(paths, list), f"Paths must be array, not: {type(names)}"
 
     result = []
     for path in paths:

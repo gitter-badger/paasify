@@ -51,3 +51,7 @@ class DockerUnsupportedVersion(PaasifyError):
 class JsonnetProcessError(PaasifyError):
     "Raised when jsonnet file can't be executed"
     rc = 34
+
+class PaasifyNestedProject(PaasifyError):
+    "Raised when a project is created into an existing project"
+    rc = 35

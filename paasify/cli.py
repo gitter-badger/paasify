@@ -305,20 +305,21 @@ def app():
         err_type = err.__class__.__module__ + '.' + err.__class__.__name__
         
         if hasattr(err, 'paasify'):
-            
+            err_name = err.__class__.__name__
             if isinstance(err.advice, str):
                 log.warn (err.advice)
-            log.critical (f"(Error {err.rc}: {err_type}) {err}")
+            log.error (err)
+            log.critical (f"Error {err.rc}: {err_name}")
             sys.exit(err.rc)
 
         elif err_type.startswith("yaml"):
-            log.warning (f"While parsing YAML file: {err_type}")
-            log.critical (err)
+            log.error (err)
+            log.critical (f"While parsing YAML file: {err_type}")
             sys.exit(1)  
 
         elif err_type.startswith("sh"):
-            log.warning (f"While executing command: {err_type}")
-            log.critical (err)
+            log.error (err)
+            log.critical (f"While executing command: {err_type}")
             sys.exit(1)  
         else:
             log.error(traceback.format_exc())
