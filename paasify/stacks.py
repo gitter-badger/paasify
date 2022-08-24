@@ -17,11 +17,12 @@ import oschmod
 from pprint import pprint, pformat
 
 from paasify.common import extract_shell_vars, lookup_candidates, write_file, cast_docker_compose
-from paasify.common import merge_env_vars, filter_existing_files, read_file
+from paasify.common import merge_env_vars, filter_existing_files, read_file, serialize
 import paasify.errors as error
-from paasify.class_model import ClassClassifier
+#from paasify.class_model import ClassClassifier, StoreListManager
+from paasify.class_model import *
 from paasify.var_parser import BashVarParser
-from paasify.engines import ContainerEngine
+#from paasify.engines import ContainerEngine
 
 
 log = logging.getLogger(__name__)
@@ -134,7 +135,7 @@ class StackTag(ClassClassifier):
     }
     
     
-    def _init(self):
+    def _init(self, **kwargs):
 
         self.obj_prj = self.parent.obj_prj
         self.obj_stack = self.parent
@@ -364,6 +365,94 @@ class StackTag(ClassClassifier):
         return lookup_candidates(lookup_config)
 
 
+# =====================================================================
+# NEWWWWWW
+# =====================================================================
+
+class StackTagManager(StoreListManager):
+
+
+
+    def create_tags(self, stack_conf, global_conf):
+
+        pprint(global_conf)
+        pprint(stack_conf)
+        
+        return
+        
+        # Merge global and local tags
+        default_tags = {
+            "tags": [],
+            "tags_default": ["user", self.obj_prj.project.namespace ],
+            "tags_prefix": [],
+            "tags_suffix": [],
+        }
+        global_tags = { k: v for k, v in self.obj_prj.project.items() if k.startswith("tags") and v}
+        local_tags = { k: v for k, v in self.user_config.items() if k.startswith("tags") and v}
+
+        default_tags.update(global_tags)
+        default_tags.update(local_tags)
+
+        tags = default_tags["tags_prefix"] + default_tags["tags_auto"] + default_tags["tags"] + default_tags["tags_suffix"]
+        return tags
+
+
+
+    # COPIED
+    def tags_get(self):
+        "Create and return a list of StackTags objects"
+
+        # Preparse tag structure
+        tags_names = self._tags_parse()
+        tags = []
+        for tag_def in tags_names:
+
+            tag_name = tag_def
+            tag_conf = {}
+
+            # Long form config
+            if isinstance(tag_def, dict):
+                # Assume the name of the first key
+                tag_name = list(tag_def.keys())[0]
+                tag_conf = tag_def[tag_name]
+
+            # Create tag config
+            new_tag = {
+                "name": tag_name,
+                "local_config": tag_conf,
+            }
+            tags.append(new_tag)
+
+        # Remove exclusions ["name"][1:]
+        exclude = [ tag["name"][1:] for tag in tags if tag["name"].startswith('-') or tag["name"].startswith('~') or tag["name"].startswith('!') ]
+        tags = [ tag for tag in tags if tag["name"] not in exclude ]
+
+        # Create tags instances
+        tags = [ StackTag(self, name=tag["name"], user_config=tag) for tag in tags ]
+        return tags
+
+
+    # COPIED
+    def _tags_parse(self):
+        "Return the list of tags after merge"
+
+        # Merge global and local tags
+        default_tags = {
+            "tags": [],
+            "tags_auto": ["user", self.obj_prj.project.namespace ],
+            "tags_prefix": [],
+            "tags_suffix": [],
+        }
+        global_tags = { k: v for k, v in self.obj_prj.project.items() if k.startswith("tags") and v}
+        local_tags = { k: v for k, v in self.user_config.items() if k.startswith("tags") and v}
+
+        default_tags.update(global_tags)
+        default_tags.update(local_tags)
+
+        tags = default_tags["tags_prefix"] + default_tags["tags_auto"] + default_tags["tags"] + default_tags["tags_suffix"]
+        return tags
+
+
 
 
 # =====================================================================
@@ -415,7 +504,7 @@ class Stack(ClassClassifier):
             "env_file": ".env",
         }
 
-    def _init(self):
+    def _init(self, **kwargs):
 
         # Create links
         self.obj_prj = self.parent.obj_prj
@@ -470,7 +559,34 @@ class Stack(ClassClassifier):
 
         self.tags = self.tags_get()
 
+        #pprint (self.obj_prj.project)
+        # FUTURE
+        conf_raw = {
+            "global_tags": { key: self.obj_prj.project[key] or {} if key == 'tags' else [] for key in ['tags', 'tags_prefix', 'tags_suffix']},
+            "stack_tags": { key: self.user_config.get(key) or [] for key in ['tags', 'tags_prefix', 'tags_suffix']},
+            # "global_env": self.obj_prj.project.env,
+            # "stack_env": self.user_config["env"],
+            #"global_env": { k: v for k, v in self.obj_prj.project.items() if k.startswith("tags") and v},
+            #"stack_env": { k: v for k, v in self.user_config.items() if k.startswith("tags") and v},
+            #"stack_env": { k: v for k, v in self.user_config.items() if k.startswith("tags") and v},
+        }
+        self.tags2 = StackTagManager(parent=self)
+
+        global_tags= { key: self.obj_prj.project[key] or {} if key == 'tags' else [] for key in ['tags', 'tags_prefix', 'tags_suffix']}
+        stack_tags= { key: self.user_config.get(key) or [] for key in ['tags', 'tags_prefix', 'tags_suffix']}
+        self.tags2.create_tags(stack_tags, global_tags)
+        self.tags2.dump2()
+
         
+        #     "tags_auto": ["user", self.obj_prj.project.namespace ],
+        #     "tags_prefix": [],
+        #     "tags_suffix": [],
+        # }
+
+        # global_tags = { k: v for k, v in self.obj_prj.project.items() if k.startswith("tags") and v}
+        # local_tags = { k: v for k, v in self.user_config.items() if k.startswith("tags") and v}
+
+
 
     def _init_source(self):
         "Resolve stack source and app"
@@ -1117,7 +1233,8 @@ class Stack(ClassClassifier):
 
         # Update docker-compose file
         output_file = os.path.join(self.path, output_file)
-        file_content = yaml.dump(docker_rewrite)
+        #pprint (docker_rewrite)
+        file_content = serialize(docker_rewrite, fmt='yml')
         with open(output_file, 'w') as writer:
             writer.write(file_content)
         log.debug (f"File updated: {output_file}")
@@ -1144,7 +1261,6 @@ class Stack(ClassClassifier):
     def _docker_create_volumes(self, docker_compose):
         "Create local docker volumes path to mimic 'create_host_path' legacy feature"
 
-
         volumes = docker_compose.get("volumes",{})
         for vol_name, vol_def in volumes.items():
             _type = vol_def.get("driver")
@@ -1161,95 +1277,95 @@ class Stack(ClassClassifier):
         "Start docker stack"
 
 
-        if ENGINE:
-            output = self.cont_engine.up(
-                _fg=True                
-            )
-        else:
-            cli_args = [
-                "--project-name", self.project_name,
-                "--project-directory", self.path,
-                "--file", os.path.join(self.path, compose_file),
-                "up",
-                "--detach",
-            ]
-            self._exec("docker-compose", cli_args, _fg=True)
+        #if ENGINE:
+        output = self.cont_engine.up(
+            _fg=True                
+        )
+        # else:
+        #     cli_args = [
+        #         "--project-name", self.project_name,
+        #         "--project-directory", self.path,
+        #         "--file", os.path.join(self.path, compose_file),
+        #         "up",
+        #         "--detach",
+        #     ]
+        #     self._exec("docker-compose", cli_args, _fg=True)
 
     def docker_down(self):
         "Start docker stack"
         
-        if ENGINE:
-            output = self.cont_engine.down()
-        else:
+        #if ENGINE:
+        output = self.cont_engine.down()
+        # else:
 
-            cli_args = [
-                "--project-name", self.project_name,
-                "down",
-                "--remove-orphans",
-            ]
-            self._exec("docker-compose", cli_args)
+        #     cli_args = [
+        #         "--project-name", self.project_name,
+        #         "down",
+        #         "--remove-orphans",
+        #     ]
+        #     self._exec("docker-compose", cli_args)
 
     def docker_ps(self):
         "Start docker stack"
         
-        if ENGINE:
-            self.cont_engine.ps()
-            return
+        #if ENGINE:
+        self.cont_engine.ps()
+        return
 
-        cli_args = [
-            "--project-name", self.project_name,
-            "ps",
-            "--all",
-            "--format", "json",
-        ]
-        result = self._exec("docker-compose", cli_args, _out=None)
+        # cli_args = [
+        #     "--project-name", self.project_name,
+        #     "ps",
+        #     "--all",
+        #     "--format", "json",
+        # ]
+        # result = self._exec("docker-compose", cli_args, _out=None)
 
-        # Report output from json
-        stdout = result.txtout
-        payload = json.loads(stdout)
-        for svc in payload:
+        # # Report output from json
+        # stdout = result.txtout
+        # payload = json.loads(stdout)
+        # for svc in payload:
 
-            # Get and filter interesting ports
-            published = svc["Publishers"]
-            published = [ x for x in published if x.get('PublishedPort') > 0 ]
+        #     # Get and filter interesting ports
+        #     published = svc["Publishers"]
+        #     published = [ x for x in published if x.get('PublishedPort') > 0 ]
 
-            # Reduce duplicates
-            for x in published:
-                if x.get('URL') == '0.0.0.0':
-                    x['URL']='::'
+        #     # Reduce duplicates
+        #     for x in published:
+        #         if x.get('URL') == '0.0.0.0':
+        #             x['URL']='::'
 
-            # Format port strings
-            exposed = []
-            for port in published:
-                src_ip = port["URL"]
-                src_port = port["PublishedPort"]
-                dst_port = port["TargetPort"]
-                prot = port["Protocol"]
+        #     # Format port strings
+        #     exposed = []
+        #     for port in published:
+        #         src_ip = port["URL"]
+        #         src_port = port["PublishedPort"]
+        #         dst_port = port["TargetPort"]
+        #         prot = port["Protocol"]
 
-                r = f"{src_ip}:{src_port}->{dst_port}/{prot}"
-                exposed.append(r)
+        #         r = f"{src_ip}:{src_port}->{dst_port}/{prot}"
+        #         exposed.append(r)
 
-            # Remove duplicates ports and show
-            exposed = list(set(exposed))
-            print (f"  {svc['Project'] :<32} {svc['Name'] :<40} {svc['Service'] :<16} {svc['State'] :<10} {', '.join(exposed)}")
+        #     # Remove duplicates ports and show
+        #     exposed = list(set(exposed))
+        #     print (f"  {svc['Project'] :<32} {svc['Name'] :<40} {svc['Service'] :<16} {svc['State'] :<10} {', '.join(exposed)}")
     
 
     def docker_logs(self, follow=False):
         "Show stack logs"
 
-        if ENGINE:
-            output = self.cont_engine.logs(follow=follow)
-        else:
-            sh_options = {}
-            cli_args = [
-                "--project-name", self.project_name,
-                "logs",
-            ]
-            if follow:
-                cli_args.append("-f")
-                sh_options["_fg"]=True
+        #if ENGINE:
+        output = self.cont_engine.logs(follow=follow)
+        # else:
+        #     sh_options = {}
+        #     cli_args = [
+        #         "--project-name", self.project_name,
+        #         "logs",
+        #     ]
+        #     if follow:
+        #         cli_args.append("-f")
+        #         sh_options["_fg"]=True
                 
-            self._exec("docker-compose", cli_args, **sh_options)
+        #     self._exec("docker-compose", cli_args, **sh_options)
 
 
 
@@ -1267,7 +1383,7 @@ class StackManager(ClassClassifier):
         "items": Stack.schema_def,
     }
 
-    def _init(self):
+    def _init(self, **kwargs):
 
         self.obj_prj = self.parent
         self.obj_app = self.parent.obj_app

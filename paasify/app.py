@@ -32,8 +32,13 @@ class ProjectConfig(ClassClassifier):
     Class to hold config data
     """
 
-    def __getattr__(self, name):
+    config = {}
 
+    def __getitem__(self, name):
+        return self.config.get(name, None)
+
+
+    def __getattr__(self, name):
         return self.config.get(name, None)
 
     def items(self):
@@ -43,6 +48,7 @@ class ProjectConfig(ClassClassifier):
 
         for k in self.keys:
             yield (k, getattr(self, k))
+
 
 
 
@@ -428,7 +434,14 @@ class Project(ClassClassifier):
 class App(ClassClassifier):
     "Application instance"
 
+    name = 'apppppp'
 
+
+    def __str__(self):
+        return f"Instance {id(self)}: {self.__class__.__name__}:{self.name}"
+
+    def __repr__(self):
+        return f"Instance {id(self)}: {self.__class__.__name__}:{self.name}"
 
     def __init__(self, **kwargs):
 

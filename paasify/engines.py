@@ -32,7 +32,7 @@ class EngineCompose(ClassClassifier):
 
 
 
-    def _init(self, project_dir=None, project_name=None, docker_file='docker-compose.run.yml'):
+    def _init(self, project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
 
         self.project_dir = project_dir
         self.project_name = project_name
@@ -47,6 +47,11 @@ class EngineCompose(ClassClassifier):
             "--project-directory", f"{project_dir}",
         ]
         self.docker_file_path = os.path.join(project_dir, docker_file)
+
+
+        self.docker_file_exists = False
+        if os.path.isfile(self.docker_file_path):
+            self.docker_file_exists = True
 
 
         #self.engine = 'docker'
@@ -80,6 +85,11 @@ class EngineCompose(ClassClassifier):
         return result
 
     def up(self, **kwargs):
+
+        if not self.docker_file_exists:
+            self.log.notice(f"Stack {self.parent.project_name} is not built yet")
+            return None
+
         cli_args = list(self.arg_prefix)
         cli_args = [
             "--file", self.docker_file_path,
@@ -92,6 +102,11 @@ class EngineCompose(ClassClassifier):
             log.notice(out.txtout)
 
     def down(self, **kwargs):
+
+        if not self.docker_file_exists:
+            self.log.notice(f"Stack {self.parent.project_name} is not built yet")
+            return None
+
         cli_args = list(self.arg_prefix)
         cli_args = [
             "--file", self.docker_file_path,
@@ -113,6 +128,11 @@ class EngineCompose(ClassClassifier):
 
 
     def logs(self, follow=False):
+
+        if not self.docker_file_exists:
+            self.log.notice(f"Stack {self.parent.project_name} is not built yet")
+            return None
+
         sh_options = {}
         cli_args = [
             "--file", self.docker_file_path,
@@ -126,6 +146,11 @@ class EngineCompose(ClassClassifier):
 
 
     def ps(self):
+
+        if not self.docker_file_exists:
+            self.log.notice(f"Stack {self.parent.project_name} is not built yet")
+            return None
+
         cli_args = [
             "--file", self.docker_file_path,
             "ps",
@@ -189,31 +214,35 @@ class EngineCompose_16(EngineCompose):
 #############################
 
 
-class ContainerEngine(ClassClassifier):
+# # DEPRECATED ?
+# class ContainerEngine(ClassClassifier):
 
 
-    def __init__(self, project_dir=None, project_name=None):
+#     def __init__(self, project_dir=None, project_name=None):
 
-        self.project_dir = project_dir
-        self.project_name = project_name
+#         self.project_dir = project_dir
+#         self.project_name = project_name
 
-        # DEPRECATED self.cont_engine = EngineDocker(self)
-        self.compose_engine = EngineCompose(self)
-        #self.jsonnet_engine = EngineJsonnet(self)
+#         # DEPRECATED self.cont_engine = EngineDocker(self)
+#         self.compose_engine = EngineCompose(self)
+#         #self.jsonnet_engine = EngineJsonnet(self)
 
-    def assemble(self, compose_files, **kwargs):
-        return self.compose_engine.assemble(compose_files, **kwargs)
+#     def assemble(self, compose_files, **kwargs):
+#         return self.compose_engine.assemble(compose_files, **kwargs)
 
-    def up(self, **kwargs):
-        return self.compose_engine.up(**kwargs)
+#     def up(self, **kwargs):
+#         return self.compose_engine.up(**kwargs) if self.compose_engine.docker_file_exists else None
 
-    def down(self, **kwargs):
-        return self.compose_engine.down(**kwargs)
+#     def down(self, **kwargs):
+#         return self.compose_engine.down(**kwargs) if self.compose_engine.docker_file_exists else None
 
-    def logs(self, **kwargs):
-        return self.compose_engine.logs(**kwargs)
-    def ps(self, **kwargs):
-        return self.compose_engine.ps(**kwargs)
+#     def logs(self, **kwargs):
+#         return self.compose_engine.logs(**kwargs) if self.compose_engine.docker_file_exists else None
+
+#     def ps(self, **kwargs):
+#         print ("YOOOOOOOOOOO")
+#         print (self.compose_engine.docker_file_exists)
+#         return self.compose_engine.ps(**kwargs) if self.compose_engine.docker_file_exists else None
 
 
 

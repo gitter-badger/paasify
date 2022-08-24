@@ -24,6 +24,8 @@ PyYAML = "^6.0"
 lark = "^1.1.2"
 semver = "^2.13.0"
 oschmod = "^0.3.12"
+"ruamel.yaml" = "^0.17.21"
+ez-yaml = "^1.2.0"
 
 [tool.poetry.dev-dependencies]
 json-schema-for-humans = "^0.41.6"

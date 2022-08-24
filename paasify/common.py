@@ -1,12 +1,22 @@
+import io
 import os
 import sys
+
+import logging
+import json
+from pprint import pprint
+from pathlib import Path
+
 import re
 import sh
-import logging
-from pprint import pprint
-import paasify.errors as error
-log = logging.getLogger(__name__)
+import ruamel.yaml
 
+import paasify.errors as error
+
+
+# =====================================================================
+# Init
+# =====================================================================
 
 # Usage of get_logger:
 # # In main app:
@@ -16,8 +26,21 @@ log = logging.getLogger(__name__)
 #   import logging
 #   log = logging.getLogger(__name__)
 
+log = logging.getLogger(__name__)
 
 
+# Setup YAML object
+yaml = ruamel.yaml.YAML()
+yaml.version = (1, 1)
+yaml.default_flow_style = False
+#yaml.indent(mapping=3, sequence=2, offset=0)
+yaml.allow_duplicate_keys = True
+yaml.explicit_start = True
+
+
+# =====================================================================
+# Logging helpers
+# =====================================================================
 
 # Source: https://stackoverflow.com/questions/2183233/how-to-add-a-custom-loglevel-to-pythons-logging-facility/35804945#35804945
 def addLoggingLevel(levelName, levelNum, methodName=None):
@@ -93,7 +116,6 @@ class MultiLineFormatter(logging.Formatter):
         return head + ''.join(indent + line for line in trailing)
 
 
-
 def get_logger(logger_name=None, create_file=False, verbose=None):
     """Create CmdApp logger"""
 
@@ -154,6 +176,9 @@ def get_logger(logger_name=None, create_file=False, verbose=None):
     return log, loglevel
 
 
+# =====================================================================
+# Misc functions
+# =====================================================================
 
 def list_parent_dirs(path):
     """
@@ -184,9 +209,9 @@ def find_file_up(names, paths):
 
     return result
 
+
 def filter_existing_files(root_path, candidates):
     return [os.path.join(root_path, cand) for cand in candidates if os.path.isfile( os.path.join(root_path, cand) ) ]
-
 
 
 def lookup_candidates(lookup_config):
@@ -204,9 +229,9 @@ def lookup_candidates(lookup_config):
         
     return result
 
-
     
 def cast_docker_compose(var):
+    "Convert any types to strings"
 
     if var is None:
         return ''
@@ -214,6 +239,10 @@ def cast_docker_compose(var):
         return 'true' if var else 'false'
     elif isinstance(var, (str, int)):
         return str(var)
+    elif isinstance(var, list):
+        return ','.join(var)
+    elif isinstance(var, dict):
+        return ','.join([ f"{key}={str(val)}" for key, val in var.items() ])
     else:
         raise Exception(f"Impossible to cast value: {var}")
 
@@ -229,8 +258,59 @@ def merge_env_vars(obj):
     
     return obj, override_keys
 
+
+def serialize(obj, fmt='json'):
+    "Serialize anything, output json like compatible (destructive)"
+    
+    if fmt in ['yaml', 'yml']:
+        # Serialize object in json first
+        obj = json.dumps(obj, default=lambda o: str(o), indent=2)
+        obj = json.loads(obj)
+
+        # Convert json to yaml
+        string_stream = io.StringIO()
+        yaml.dump(obj, string_stream)
+        output_str = string_stream.getvalue()
+        string_stream.close()
+
+        # Remove 2 first lines of output
+        output_str = output_str.split("\n", 2)[2]
+        return output_str
+    else:
+        obj = json.dumps(obj, default=lambda o: str(o), indent=2)
+        return obj
+
+
+def read_file(file):
+    "Read file content"
+    with open(file) as f:
+        return ''.join(f.readlines())
+
+
+def write_file(file, content):
+    "Write content to file"
+
+    file_folder = os.path.dirname(file)
+    if not os.path.exists(file_folder):
+        os.makedirs(file_folder)
+
+    with open(file, 'w') as f:
+        f.write(content)
+
+
+def flatten(S):
+    "Flatten any arrays nested arrays"
+    if S == []:
+        return S
+    if isinstance(S[0], list):
+        return flatten(S[0]) + flatten(S[1:])
+    return S[:1] + flatten(S[1:])
+
+
+# =====================================================================
 # Command Execution framework
-# ==================================
+# =====================================================================
+
 def _exec(command, cli_args=None, logger=None, **kwargs):
     "Execute any command"
 
@@ -269,29 +349,10 @@ def _exec(command, cli_args=None, logger=None, **kwargs):
         #sys.exit(1)
         raise err
 
-    
 
-def read_file(file):
-    "Read file content"
-    with open(file) as f:
-        return ''.join(f.readlines())
-
-def write_file(file, content):
-    "Write content to file"
-
-    file_folder = os.path.dirname(file)
-    if not os.path.exists(file_folder):
-        os.makedirs(file_folder)
-
-    with open(file, 'w') as f:
-        f.write(content)
-
-
-
+# =====================================================================
 # Beta libs (DEPRECATED)
-# ==================================
-
-
+# =====================================================================
 
 def parse_vars(match):
 

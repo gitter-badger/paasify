@@ -326,8 +326,17 @@ def app():
             sys.exit(1)  
 
         elif err_type.startswith("sh"):
-            log.error (err)
-            log.critical (f"While executing command: {err_type}")
+            # pprint (dir(err))
+            # pprint (err.__dict__)
+            log.error(traceback.format_exc())
+            msg = []
+            if err.stdout:
+                msg.extend(["stdout:", err.stdout])
+            if err.stderr:
+                msg.extend(["stderr:", err.stderr])
+            if msg:
+                log.error (msg)
+            log.critical (f"Error '{err_type}' while executing command: {err.full_cmd}")
             sys.exit(1)  
         else:
             log.error(traceback.format_exc())

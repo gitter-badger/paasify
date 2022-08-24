@@ -49,8 +49,10 @@ class Source(ClassClassifier):
     }
 
 
-    def _init(self):
+    def _init(self, **kwargs):
 
+        print (self)
+        print (self.parent)
         self.obj_prj = self.parent.obj_prj
 
         config = {
@@ -148,7 +150,7 @@ class SourcesManager(ClassClassifier):
 
     }
 
-    def _init(self):
+    def _init(self, **kwargs):
 
         self.obj_prj = self.parent
 
