@@ -1,0 +1,81 @@
+- stack_app:
+    app: custom_source:custom_app
+    app_name: custom_app
+    app_path: custom_app
+    app_source: custom_source
+  stack_config: custom_source:custom_app
+  stack_name: custom_app
+  stack_path: custom_app
+- stack_app: null
+  stack_config: my_local_app
+  stack_name: my_local_app
+  stack_path: my_local_app
+- stack_app: null
+  stack_config: my/local/app
+  stack_name: my_local_app
+  stack_path: my/local/app
+- stack_app:
+    app: custom_source:custom_app
+    app_name: custom_app
+    app_path: custom_app
+    app_source: custom_source
+  stack_config:
+    app: custom_source:custom_app
+  stack_name: custom_app
+  stack_path: custom_app
+- stack_app: null
+  stack_config:
+    name: my_local_app
+  stack_name: my_local_app
+  stack_path: my_local_app
+- stack_app: null
+  stack_config:
+    path: local/app/path
+  stack_name: local_app_path
+  stack_path: local/app/path
+- stack_app:
+    app: custom_source:custom_app
+    app_name: custom_app
+    app_path: custom_app
+    app_source: custom_source
+  stack_config:
+    app: custom_source:custom_app
+    name: custom_name
+  stack_name: custom_name
+  stack_path: custom_name
+- stack_app:
+    app: default:default_source_app
+    app_name: default_source_app
+    app_path: default_source_app
+    app_source: default
+  stack_config:
+    app: default_source_app
+    name: tutu
+  stack_name: tutu
+  stack_path: tutu
+- stack_app:
+    app: custom_source:custom_app
+    app_name: custom_app
+    app_path: custom_app
+    app_source: custom_source
+  stack_config:
+    app: custom_source:custom_app
+    path: nested/path
+  stack_name: nested_path
+  stack_path: nested/path
+- stack_app:
+    app: default:default_source_app
+    app_name: default_source_app
+    app_path: default_source_app
+    app_source: default
+  stack_config:
+    app: default_source_app
+    path: nested/path
+  stack_name: nested_path
+  stack_path: nested/path
+- stack_app: null
+  stack_config:
+    name: my_local_app
+    path: nested/path
+  stack_name: my_local_app
+  stack_path: nested/path
