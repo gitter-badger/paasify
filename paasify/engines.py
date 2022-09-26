@@ -1,17 +1,23 @@
 import os
 import sys
+
 import re
 import logging
 import json
-import sh
+
 from pprint import pprint
 from distutils.version import StrictVersion
+from pprint import pprint
 
 import semver
+import sh
 
-from paasify.common import _exec, cast_docker_compose
+from cafram.utils import _exec
+from cafram.nodes import NodeList, NodeMap, NodeDict
+
 import paasify.errors as error
-from paasify.class_model import ClassClassifier
+from paasify.common import cast_docker_compose
+from paasify.framework import PaasifyObj
 
 
 log = logging.getLogger(__name__)
@@ -20,33 +26,52 @@ log = logging.getLogger(__name__)
 def bin2utf8(obj):
     if hasattr(obj, "stdout"):
         obj.txtout = obj.stdout.decode("utf-8").rstrip('\n')
+    else:
+        obj.txtout = None
     if hasattr(obj, "stderr"):
         obj.txterr = obj.stderr.decode("utf-8").rstrip('\n')
+    else:
+        obj.txterr = None
     return obj
 
 
 
 #####################
 
-class EngineCompose(ClassClassifier):
+class EngineCompose(NodeMap,PaasifyObj):
+
+    version = None
+
+    conf_default = {
+        "project_dir": "<project_dir>",
+        "project_name": "<project_name>",
+        "docker_file": "docker-compose.yml",
+    }
+
+    def node_hook_children(self): #, project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
 
 
-
-    def _init(self, project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
-
-        self.project_dir = project_dir
-        self.project_name = project_name
+        # self.project_dir = project_dir
+        # self.project_name = project_name
 
         # DEPRECATED self.cont_engine = EngineDocker(self)
         #self.compose_engine = EngineCompose(self)
         #self.jsonnet_engine = EngineJsonnet(self)
 
 
+        # pprint (self.conf_default)
+        # pprint (self.__dict__)
+
+        prj = self.get_parent()
+        project_name = prj.namespace
+        project_dir = prj.prj_dir
+
         self.arg_prefix = [
             "--project-name", f"{project_name}",
             "--project-directory", f"{project_dir}",
         ]
-        self.docker_file_path = os.path.join(project_dir, docker_file)
+        #print ((project_dir, self.docker_file))
+        self.docker_file_path = os.path.join(project_dir, self.docker_file)
 
 
         self.docker_file_exists = False
@@ -61,7 +86,7 @@ class EngineCompose(ClassClassifier):
         # docker-compose (legacy) (support all)
         # docker compose (new) (support docker only)
         # podman compose (new) (support podman only)
-        pass
+
 
     def assemble(self, compose_files, env_file=None, env=None):
 
@@ -80,7 +105,7 @@ class EngineCompose(ClassClassifier):
         env_string = env or {}
         env_string = { k: cast_docker_compose(v) for k, v in env.items() if v is not None }
 
-        result = _exec("docker-compose", cli_args, _out=None, _env=env_string)
+        result = _exec("docker-compose", cli_args, _out=None, _env=env_string, logger=self.log)
         bin2utf8(result)
         return result
 
@@ -215,7 +240,7 @@ class EngineCompose_16(EngineCompose):
 
 
 # # DEPRECATED ?
-# class ContainerEngine(ClassClassifier):
+# class ContainerEngine(PaasifyObj):
 
 
 #     def __init__(self, project_dir=None, project_name=None):
@@ -248,7 +273,9 @@ class EngineCompose_16(EngineCompose):
 
 #############################
 
-class EngineDetect(ClassClassifier):
+class EngineDetect(PaasifyObj):
+
+    ident = "EngineDetector"
 
     versions = {
             'docker': {
@@ -266,11 +293,15 @@ class EngineDetect(ClassClassifier):
 
     def detect_docker_compose(self):
         try:
-            cmd = sh.Command("docker-compose")
-            out = cmd('--version')
+            
+            #cmd = sh.Command("docker-compose", _log_msg='paasify')
+            log.notice("This can take age when debugger is enabled...")
+            out = _exec("docker-compose", ["--version"])
+            # TOFIX: This takes ages in debugger, when above _log_msg is unset ?
+            #out = cmd('--version')
             bin2utf8(out)
-        except Exception as err:
-            raise error.DockerUnsupportedVersion(f"Impossible to guess docker-compose version")
+        except sh.ErrorReturnCode as err:
+            raise error.DockerUnsupportedVersion(f"Impossible to guess docker-compose version") from err
 
         # Scan version
         patt = 'version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))'
@@ -295,18 +326,28 @@ class EngineDetect(ClassClassifier):
         
         if not match:
             raise error.DockerUnsupportedVersion(f"Version of docker-compose is not supported: {curr_ver}")
-        return match, self.versions["docker-compose"][match]
-
-
-    def detect(self):
         
-        version, obj = self.detect_docker_compose()
+        cls = self.versions["docker-compose"][match]
+        cls.version = match
+        cls.name = "docker-compose"
+        cls.ident = match
+        return cls
+     
+
+
+    def detect(self, engine=None):
+        
+        if not engine:
+            obj = self.detect_docker_compose()
+        else:
+            assert engine in self.versions["docker-compose"], f"Unknown docker-engine version: {engine}"
+            obj = self.versions["docker-compose"][engine]
         # if not result:
         #     raise error.DockerUnsupportedVersion(f"Can;t find docker-compose") 
 
-        log.debug(f"Detected docker-compose version: {version}")
+        log.debug(f"Detected docker-compose version: {obj.version}")
 
-        return version, obj
+        return obj
 
 
 

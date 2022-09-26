@@ -1,5 +1,6 @@
 
 
+
 class PaasifyError(Exception):
     """Base class for other exceptions"""
 
@@ -52,6 +53,11 @@ class JsonnetProcessError(PaasifyError):
     "Raised when jsonnet file can't be executed"
     rc = 34
 
+class InvalidConfig(PaasifyError):
+    "Raised when invalid syntax for config"
+    rc = 36
+
 class PaasifyNestedProject(PaasifyError):
     "Raised when a project is created into an existing project"
     rc = 35
+

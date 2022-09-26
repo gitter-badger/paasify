@@ -11,7 +11,9 @@ import sh
 from pprint import pprint, pformat
 
 from paasify.common import _exec
-from paasify.class_model import ClassClassifier
+#from paasify.class_model import ClassClassifier
+from cafram.nodes import NodeList, NodeMap, NodeDict
+from paasify.framework import *
 
 
 log = logging.getLogger(__name__)
@@ -22,7 +24,7 @@ log = logging.getLogger(__name__)
 # =====================================================================
 
 
-class Source(ClassClassifier):
+class Source(NodeMap, PaasifyObj):
     """ A Source instance
     """
 
@@ -133,7 +135,7 @@ class Source(ClassClassifier):
 
 
 
-class SourcesManager(ClassClassifier):
+class SourcesManager(NodeDict, PaasifyObj):
 
 
     schema_def={
