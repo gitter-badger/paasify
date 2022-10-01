@@ -43,10 +43,12 @@ class EngineCompose(NodeMap,PaasifyObj):
     version = None
 
     conf_default = {
-        "project_dir": "<project_dir>",
-        "project_name": "<project_name>",
+        "project_dir": ".",
+        "project_name": "default",
         "docker_file": "docker-compose.yml",
     }
+
+    ident = "default"
 
     def node_hook_children(self): #, project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
 
@@ -62,9 +64,11 @@ class EngineCompose(NodeMap,PaasifyObj):
         # pprint (self.conf_default)
         # pprint (self.__dict__)
 
-        prj = self.get_parent()
-        project_name = prj.namespace
-        project_dir = prj.prj_dir
+        # stack = self.get_parent()
+        # prj = stack.get_parent().get_parent()
+        # print (">>>>>>> STACK, PROJECT", stack, prj)
+        project_name = self.project_name
+        project_dir = self.project_dir
 
         self.arg_prefix = [
             "--project-name", f"{project_name}",
@@ -217,10 +221,13 @@ class EngineCompose(NodeMap,PaasifyObj):
     
 
 class EngineCompose_26(EngineCompose):
-    pass
+    
+    ident = "docker-compose-2.6"
 
 
 class EngineCompose_129(EngineCompose):
+
+    ident = "docker-compose-1.29"
 
     def ps(self):
         cli_args = [
@@ -233,7 +240,8 @@ class EngineCompose_129(EngineCompose):
 
 
 class EngineCompose_16(EngineCompose):
-    pass
+    
+    ident = "docker-compose-1.6"
 
 
 #############################
@@ -273,9 +281,9 @@ class EngineCompose_16(EngineCompose):
 
 #############################
 
-class EngineDetect(PaasifyObj):
+#class EngineDetect(PaasifyObj):
+class EngineDetect():
 
-    ident = "EngineDetector"
 
     versions = {
             'docker': {
@@ -338,9 +346,14 @@ class EngineDetect(PaasifyObj):
     def detect(self, engine=None):
         
         if not engine:
+            log.info("Guessing best docker engine ...")
             obj = self.detect_docker_compose()
         else:
-            assert engine in self.versions["docker-compose"], f"Unknown docker-engine version: {engine}"
+
+            if engine not in self.versions["docker-compose"]:
+                versions = list(self.versions["docker-compose"].keys())
+                log.warning(f"Please select engine one of: {versions}")
+                raise error.DockerUnsupportedVersion(f"Unknown docker-engine version: {engine}")
             obj = self.versions["docker-compose"][engine]
         # if not result:
         #     raise error.DockerUnsupportedVersion(f"Can;t find docker-compose") 
