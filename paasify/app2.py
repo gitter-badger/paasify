@@ -177,18 +177,16 @@ class PaasifyApp(NodeMap, PaasifyObj):
             print (f"  {msg}")
         
     
-    def load_project(self, prj_path=None, path=None):
+    def load_project(self, path=None):
         "Return closest project"
         
         # Auto discover project path
-        discover = {
-            "path": path or self.config.working_dir,
-            "filenames": self.config.filenames,
-        }
-        payload = PaasifyProject.discover(**discover)
-        
-        # Instanciate project and add it to child
-        prj = PaasifyProject(parent=self, payload=payload)
+        prj = PaasifyProject.discover_project(
+            parent=None,
+            path= path or self.config.working_dir,
+            filenames= self.config.filenames,
+            runtime = dict(self.config.get_value()),
+        )
         self.add_child("project", prj)
 
         return prj

@@ -152,6 +152,8 @@ class SourcesManager(NodeDict, PaasifyObj):
 
     }
 
+    conf_children = Source
+
     def _init(self, **kwargs):
 
         self.obj_prj = self.parent

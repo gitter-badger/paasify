@@ -193,7 +193,32 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
 
         return result
 
+class PaasifySource(NodeDict, PaasifyObj):
+    "Paasify source configuration"
+
+
+    def install(self, update=False):
+        "Install a source if not updated"
+
+        # Check if the source if installed or install latest
+
+        prj = self.get_parent().get_parent()
+        coll_dir = prj.runtime.project_collection_dir
+        src_dir = os.path.join(coll_dir, self.ident)
+        git_dir = os.path.join(src_dir, '.git')
+
+        if os.path.isdir(git_dir) and not update:
+            self.log.debug(f"Collection '{self.ident}' is already installed in: {git_dir}")
+            return
+
+        self.log.info(f"Install source '{self.ident}' in: {git_dir}")
+        raise NotImplemented
+
+
+
+
 class PaasifySources(NodeDict, PaasifyObj):
-    pass
+    "Sources manager"
+    conf_children = PaasifySource
 
 

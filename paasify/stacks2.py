@@ -4,166 +4,22 @@ import os
 import sys
 
 import textwrap
+import _jsonnet
+import json
 from pprint import pprint
+import anyconfig
 
 
 from cafram.nodes import NodeList, NodeMap, NodeDict, NodeVal
-from cafram.utils import serialize, flatten, json_validate, duplicates, write_file
+from cafram.utils import from_yaml, first, serialize, flatten, json_validate, duplicates, write_file
 
 from paasify.common import lookup_candidates # serialize, , json_validate, duplicates
 from paasify.framework import PaasifyObj, PaasifyConfigVars, PaasifySimpleDict
 from paasify.engines import bin2utf8
+from paasify.stack_tags import PaasifyStackTagManager, PaasifyStackTag
 import paasify.errors as error
 
 
-
-
-class PaasifyStackTag(NodeMap, PaasifyObj):
-
-    conf_schema={
-        #"$schema": "http://json-schema.org/draft-07/schema#",
-        "title": "StackTag configuration",
-
-        "oneOf":[
-            {
-                "type": "string",
-                "oneOf": [
-                    {
-                        "title": "Reference sourced app",
-                        "pattern": "^.*:.*$",
-                    },
-                    {
-                        "title": "Direct or absolute app path",
-                        "pattern": "^.*$",
-                    },
-                ],
-            },
-            {
-                "type": "object",
-                "additionalProperties": False,
-                "patternProperties": {
-                    '.*': {
-                        "oneOf": [
-                            {"type": "object"},
-                            {"type": "null"},
-                        ],
-                    }
-                },
-            },
-
-        ],
-    }
-
-
-    conf_ident = "{self.name}={self.vars}"
-
-    conf_children = [
-        {
-            "key": "name",
-            "cls": str,
-        },
-        {
-            "key": "vars",
-            #"cls": dict,
-        },
-    ]
-    #     {
-    #     "name": str,
-    #     "vars": dict,
-    # }
-
-    def node_hook_transform(self, payload):
-
-        result = {
-            'name': None,
-            'vars': {},
-        }
-        if isinstance(payload, str):
-            result["name"] = payload
-
-        elif isinstance(payload, dict):
-
-            keys = list(payload.keys())
-            if len(keys) == 1:
-
-                for key, val in payload.items():
-                    result["name"] = key
-                    result["vars"] = val
-            elif len(keys) == 0:
-                raise Exception(f"Missing tag name: {payload}")
-            else:
-                result.update(payload)
-            
-        else:
-            raise Exception(f"Not supported type: {payload}")
-
-        return result
-
-
-    def node_hook_children(self):
-        "Self init object after loading of app"
-
-        self.prj = self.get_parent()
-        self.app = self.get_parents()
-
-        #print("TAG", self, self.get_parents())
-        #totooo
-
-        # self.app_dir = os.path.join(
-        #     self.prj.runtime.project_root_dir, 
-        #     '.paasify', 'collections', 
-        #     self.app_source, self.app_path)
-
-
-    def lookup_docker_files_tag(self, dirs):
-        """Lookup docker-compose files in app directory"""
-        #return []
-
-        lookup =  []
-        for dir_ in dirs:
-            lookup_def = {
-                "path": dir_,
-                "pattern": [
-                    f"docker-compose.{self.name}.yml", 
-                    f"docker-compose.{self.name}.yml"],
-            }
-            lookup.append(lookup_def)
-
-        #pprint(lookup)
-
-        local_cand = lookup_candidates(lookup)
-        local_cand = flatten([ x['matches'] for x in local_cand ])
-
-        return local_cand
-
-
-    # def lookup_docker_files_tag(self):
-
-    #     return [f"TAG docker-compose.{self.name}.yml"]
-
-class PaasifyStackTags(NodeList, PaasifyObj):
-
-    conf_schema={
-        #"$schema": "http://json-schema.org/draft-07/schema#",
-
-        "title": "Paasify Stack Tags configuration",
-        "default": [],
-        "oneOf":[
-            {
-                "type": "array",
-                "items": PaasifyStackTag.conf_schema,
-            },
-            {
-                "type": "null",
-            },
-        ],
-
-    }
-
-    conf_children = PaasifyStackTag
-
-    def list_tags(self):
-        return self._nodes
 
 
 class PaasifyStackApp (NodeMap, PaasifyObj):
@@ -215,13 +71,28 @@ class PaasifyStackApp (NodeMap, PaasifyObj):
         "Self init object after loading of app"
 
         self.prj = self.get_parents()[2]
-        self.app_dir = os.path.join(
-            self.prj.runtime.project_root_dir, 
-            '.paasify', 'collections', 
-            self.app_source, self.app_path)
+        self.collection_dir = os.path.join(
+            self.prj.runtime.project_collection_dir, 
+            self.app_source)
+        self.app_dir = os.path.join(self.collection_dir, self.app_path)
+        self.tags_dir = os.path.join(self.collection_dir, '.paasify', 'plugins')
+
+
 
 
     def lookup_docker_files_app(self):
+        """Lookup docker-compose files in app directory"""
+
+        lookup = [{
+            "path": self.app_dir,
+            "pattern": ["docker-compose.yml", "docker-compose.yml"],
+        }]
+        local_cand = lookup_candidates(lookup)
+        local_cand = flatten([ x['matches'] for x in local_cand ])
+
+        return local_cand
+
+    def lookup_jsonnet_files_app(self):
         """Lookup docker-compose files in app directory"""
 
         lookup = [{
@@ -245,8 +116,10 @@ class PaasifyStack(NodeMap, PaasifyObj):
         "name": None,
         "app": None,
         "tags": [],
+        "tags_suffix": [],
+        "tags_prefix": [],
         "vars": [],
-        "_runtime": {},
+        #"_runtime": {},
         #"TEST": "DEFAULT BUUUG",
     }
 
@@ -260,12 +133,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         #     "cls": str,
         # },
         {
-            "key": "_runtime",
-            "cls": PaasifySimpleDict,
-            "attr": "runtime",
-            "default": {},
-        },
-        {
             "key": "app",
             "cls": PaasifyStackApp,
             "action": "unset",
@@ -274,7 +141,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         },
         {
             "key": "tags",
-            "cls": PaasifyStackTags,
+            #"cls": PaasifyStackTagManager,
         },
         {
             "key": "vars",
@@ -303,9 +170,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
             "app": {
                 "type": "string",
             },
-            "tags": PaasifyStackTags.conf_schema,
-            "tags_prefix": PaasifyStackTags.conf_schema,
-            "tags_suffix": PaasifyStackTags.conf_schema,
+            "tags": PaasifyStackTagManager.conf_schema,
+            "tags_prefix": PaasifyStackTagManager.conf_schema,
+            "tags_suffix": PaasifyStackTagManager.conf_schema,
             "vars": PaasifyConfigVars.conf_schema,
         },
     }
@@ -315,7 +182,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
     #     "path": str,
     #     #"path": None,
     #     "app": PaasifyStackApp,
-    #     "tags": PaasifyStackTags,
+    #     "tags": PaasifyStackTagManager,
     #     "vars": PaasifyConfigVars,
     # }
 
@@ -324,6 +191,11 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
     def node_hook_transform(self, payload):
 
+        # Internal attributes
+        self.prj = self.get_parent().get_parent()
+        assert self.prj.__class__.__name__ == 'PaasifyProject', f"Expected PaasifyProject, got: {self.prj}"
+
+        # Ensure payload is a dict
         if isinstance(payload, str):
             if ':' in payload:
                 payload = {
@@ -334,7 +206,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
                     "path": payload,
                     #"name": payload,
                 }
-        
+
+
         return payload
 
     def node_hook_children(self):
@@ -342,23 +215,33 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
 
         # Config update
-        self.name = self.get_name()
-        self.path = self.get_path()
-        assert self.name, f"Bug here, should not be empty"
+        self.stack_name = self.get_name()
+        self.name = self.stack_name   # Legacy code
+        self.path = self.get_path()   # legacy code
+        assert self.stack_name, f"Bug here, should not be empty"
 
-        # Internal attributes
-        self.prj = self.get_parents()[1]
-        self.prj_dir = self.prj.runtime.project_root_dir
-        self.namespace = self.prj.config.namespace or os.path.basename( self.prj_dir)  
+
+        self.prj_dir = self.prj.runtime.root_path
+        self.stack_dir = os.path.join(self.prj.runtime.root_path, self.stack_name)
+        self.namespace = self.prj.config.namespace or os.path.basename( self.stack_name)  
 
         assert os.path.isdir(self.prj_dir)
 
-        #pprint (self.prj.runtime.get_value())
-        #self.runtime.deserialize(self.prj.runtime.get_value())
-        #self.runtime = dict(self.prj.runtime.get_value())
 
-        #pprint(self.prj.__dict__)
+        # Create engine instance
+        prj_name = f"{os.path.basename(self.prj_dir)}_{self.get_name()}"
+        payload = {
+            "project_dir": self.prj_dir,
+            "project_name": prj_name,
+            "docker_file": os.path.join(self.prj_dir, "docker-compose.run.yml"),
+        }
+        self.engine = self.prj.engine_cls(parent=self, payload=payload)
 
+        # Build tag list
+        tag_list = self.tags_prefix or self.prj.config.tags_prefix + \
+            self.tags or self.prj.config.tags + \
+            self.tags_suffix or self.prj.config.tags_suffix        
+        self.tag_manager = PaasifyStackTagManager(parent=self, ident="StackTagMgr", payload=tag_list)
 
 
     # Local functions
@@ -369,7 +252,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         result = self.path or self.name
         if self.app:
-            #pprint (self.app)
             result =  result or self.app.app_name        
 
         return result
@@ -386,38 +268,75 @@ class PaasifyStack(NodeMap, PaasifyObj):
     # Local functions
     # ---------------------
 
-    def lookup_docker_files(self):
+
+    def resolve_docker_file(self):
         "Return all docker-files candidates: local, app and tags"
+
+        # Search in:
+        # <local>/docker-compose.yml
+        # <app>/docker-compose.yml
+        # <local>/docker-compose.<tags>.yml
+        # <app>/docker-compose.<tags>.yml
 
         # Get local docker compose
         lookup = [{
-            "path": self.prj_dir,
-            # TOFIX: Use project config setting !
-            "pattern": ["docker-compose.yml", "docker-compose.yml"],
-        }]
+                "path": self.stack_dir,
+                "pattern": ["docker-compose.yml", "docker-compose.yml"],
+            }
+        ]
         local_cand = lookup_candidates(lookup)
         local_cand = flatten([ x['matches'] for x in local_cand ])
 
-        # Get app cand
-        app_cand = []
+        # Get app cand as fallback
+        if len(local_cand) < 1 and self.app:
+            local_cand = self.app.lookup_docker_files_app()
+
+        # Filter result
+        if len(local_cand) > 0:
+            return local_cand[0]
+        else:
+            raise Exception ("Docker compose main file not found")
+
+    def resolve_all_tags(self):
+        "Resolve all tags"
+
+        results = []
+
+        # Generate base
+        base = {
+            "tag": None,
+            "jsonnet_file":  None,
+            "docker_file": self.resolve_docker_file(),
+        }
+        results.append(base)
+
+        # Generate directory lookup for tags
+        dirs = [
+            self.stack_dir,
+            self.prj.runtime.project_jsonnet_dir,
+        ]
         if self.app:
-            app_cand = self.app.lookup_docker_files_app()
+            dirs.append(self.app.app_dir)
+            dirs.append(self.app.tags_dir)
 
-       
-        # Get tags candidates
-        tags_cand = []
-        for tag in self.tags:
-            cand = tag.lookup_docker_files_tag(dirs=[self.prj_dir, self.app.app_dir, self.prj.runtime.project_collection_dir])
-            tags_cand.append(cand)
+        # Actually find best candidates
+        for tag in self.tag_manager.get_children():
 
+            jsonnet_file = None
+            docker_file = tag.lookup_docker_files_tag(dirs)
+            if not docker_file:
+                jsonnet_file = tag.lookup_jsonnet_files_tag(dirs)
 
-        result = []
-        result.append(local_cand)
-        result.append(app_cand)
-        result.append(tags_cand)
-        result = flatten(result)
+            results.append(
+                {
+                    "tag": tag,
+                    "jsonnet_file": first(jsonnet_file),
+                    "docker_file": first(docker_file),
+                }
+            )
 
-        return result
+        return results
+
 
 
     def gen_conveniant_vars(self):
@@ -440,6 +359,12 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         print (f"Build the stack: {self}")
 
+        # Update sources
+        # TOFIX: Be more selective on the source
+        assert len(self.prj.sources.get_children()) > 0, f"Missing default source!"
+        for src_name, src in self.prj.sources.get_children().items():
+            src.install(update=False)
+
         
         # Parse vars and find docker-compose files
         globvars = self.prj.config.vars
@@ -449,45 +374,92 @@ class PaasifyStack(NodeMap, PaasifyObj):
         vars_global = globvars.parse_vars(current=vars_base)
         vars_run = localvars.parse_vars(current=vars_global)
 
-        docker_files = self.lookup_docker_files()
-
         # Report to user
         self.log.info("Docker vars:")
         for key, val in vars_run.items():
             self.log.info (f"  {key}: {val}")
 
+        # Resolve all tags files
+        all_tags = self.resolve_all_tags()
+
+        # Build docker files list
         self.log.info("Docker files:")
-        for dfile in docker_files:
-            self.log.info (f"  Insert: {dfile}")
+        docker_files = []
+        for cand in all_tags:
+            docker_file = cand.get("docker_file")
+            if docker_file:
+                docker_files.append(docker_file)
+                self.log.info (f"  Insert: {docker_file}")
         
-        # Build docker file
-        engine = self.prj.engine(parent=self)
+        # Prepare docker-file output directory
+        outfile = os.path.join(self.path, 'docker-compose.run.yml')
+        if not os.path.isdir(self.path):
+            self.log.info(f"Create missing directory: {self.path}")
+            os.mkdir(self.path)
+
+        # Build final docker file
+        engine = self.engine
         try:
             out = engine.assemble(docker_files, env=vars_run)
         except Exception as err:
             err = bin2utf8(err)
             self.log.critical(err.txterr)
-            #sys.exit(1)
             raise err
             raise error.DockerBuildConfig(f"Impossible to build docker-compose files: ") from err
 
-        #write_file (dfile, out)
+        # Fetch output
+        docker_run_content = out.stdout.decode("utf-8")
+        docker_run_payload = anyconfig.loads(docker_run_content, ac_parser='yaml')
 
-        self.prj.dump()
-        pprint (self.prj.get_value())
-
-
-        #engine
-        print ("  Parse jsonnet")
+        # Build jsonnet files
+        self.log.info("Jsonnet files:")
 
 
+        for cand in all_tags:
+            docker_file = cand.get("docker_file")
+
+            # Fetch only jsonnet if docker_file is absent
+            if docker_file:
+                continue
+            jsonnet_file = cand.get("jsonnet_file")
+            if not jsonnet_file:
+                continue
+            self.log.info (f"  Insert: {jsonnet_file}")
+
+            # Create local environment vars
+            jsonnet_data = cand.get("tag").vars or {}
+            env_vars = dict(vars_run)
+            env_vars.update(jsonnet_data)
+
+            # Prepare jsonnet environment
+            assert isinstance(jsonnet_data, dict), f"Error, env is not a dict, got: {type(jsonnet_data)}"
+            ext_vars = {
+                # ALL VALUES MUST BE JSON STRINGS
+                "action": json.dumps("docker_transform"),
+                "user_data": json.dumps(jsonnet_data),
+                "docker_data": json.dumps(docker_run_payload),
+            }
+
+            # Process jsonnet tag
+            try:
+                result = _jsonnet.evaluate_file(
+                    jsonnet_file, 
+                    ext_vars=ext_vars,
+                )
+            except RuntimeError as err:
+                self.log.critical(f"Can't parse jsonnet file: {jsonnet_file}")
+                raise error.JsonnetBuildFailed(err)
+            docker_run_payload = json.loads(result)
 
 
+        # Save the final docker-compose.run.yml file
+        self.log.info(f"Writing docker-compose file: {outfile}")
+        write_file (outfile, docker_run_payload)
+
+        return 
 
 
-
-
-class PaasifyStacks(NodeList,PaasifyObj):
+class PaasifyStackManager(NodeList,PaasifyObj):
 
     conf_schema={
         #"$schema": "http://json-schema.org/draft-07/schema#",
@@ -498,9 +470,6 @@ class PaasifyStacks(NodeList,PaasifyObj):
     }
 
     conf_children = PaasifyStack
-
-    # def _init(self, *args, **kwargs):
-
         
     def conf_post_build(self):
 
@@ -511,11 +480,6 @@ class PaasifyStacks(NodeList,PaasifyObj):
         if len(dup) > 0:
             raise error.ProjectInvalidConfig(f"Cannot have duplicate paths: {dup}")
   
-        #return payload
-
-
-
-
 
     def list_stacks(self):
         return self.get_children()
@@ -527,6 +491,7 @@ class PaasifyStacks(NodeList,PaasifyObj):
         return [getattr(x, attr) for x in self.get_children()]
 
 
+    # TODO: IS THIS ONE USED AT SOME POINTS ?
     def cmd_stack_assemble(self, stacks=None):
 
         stacks = stacks or self._nodes

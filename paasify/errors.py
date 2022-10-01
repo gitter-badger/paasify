@@ -41,7 +41,7 @@ class DockerCommandFailed(PaasifyError):
     "Raised when docker-config failed"
     rc = 32
 
-class JsonnetBuildTag(PaasifyError):
+class JsonnetBuildFailed(PaasifyError):
     "Raised when jsonnet failed"
     rc = 31
 
