@@ -66,15 +66,15 @@ stacks:
       # # Local settings
       # - app_image_version=v2.6.1
       # #- app_image_version: v2.6.1
-    # tags:
-    #   - ep_http
-    #   - ep_https
-    #   - expose_admin
-    #   - debug
-    #   - traefik-svc:
-    #       traefik_net_external: false
-    #         #traefik_svc_port: 8080
-    #         #traefik_svc_name: devbox_traefik_app  # TOFIX !
+    tags:
+      - ep_http
+      - ep_https
+      - expose_admin
+      - debug
+      - traefik-svc:
+          traefik_net_external: false
+            #traefik_svc_port: 8080
+            #traefik_svc_name: devbox_traefik_app  # TOFIX !
 
 
 # tututu:

@@ -29,7 +29,7 @@ local plugin = {
       app_domain: vars.prj_namespace,
       // app_name: vars.paasify_stack,
       // app_fqdn: vars.paasify_stack + '.' + vars.app_domain,
-
+      app_fqdn: self.app_name + '.' + self.app_domain,
 
       # Compose structure
       # --------------------------

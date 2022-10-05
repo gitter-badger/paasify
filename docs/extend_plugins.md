@@ -133,9 +133,11 @@ local plugin = {
 };
 ```
 
+
+
 ### Transform Plugins
 
-
+This exemple will add custom networks and services:
 ```
 local plugin = {
 
@@ -158,3 +160,11 @@ local plugin = {
 
 };
 ```
+
+### Documenting Plugins
+
+TODO: jsonschema
+
+### Test and debug Plugins
+
+TODO: Add features to support plugin development

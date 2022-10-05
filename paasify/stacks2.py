@@ -410,6 +410,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # Process jsonnet tag
         try:
+            # pylint: disable=c-extension-no-member
             result = _jsonnet.evaluate_file(
                 file,
                 ext_vars=ext_vars,
@@ -443,6 +444,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             ext_vars = {
                 "user_data": vars_base,
             }
+
             payload = self.process_jsonnet(jsonnet_file, "vars_default", ext_vars)
 
             # Update result
@@ -487,7 +489,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             # Update result if current value is kinda null
             for key, val in payload["vars_override"].items():
                 dst = vars_run.get(key, None)
-                print(dst)
+                # print(dst)
                 if not vars_run.get(key, None):
                     vars_run[key] = val
 
@@ -527,10 +529,10 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 self.log.info(f"  Insert: {docker_file}")
 
         # 5. Prepare docker-file output directory
-        outfile = os.path.join(self.path, "docker-compose.run.yml")
-        if not os.path.isdir(self.path):
-            self.log.info(f"Create missing directory: {self.path}")
-            os.mkdir(self.path)
+        outfile = os.path.join(self.stack_dir, "docker-compose.run.yml")
+        if not os.path.isdir(self.stack_dir):
+            self.log.info(f"Create missing directory: {self.stack_dir}")
+            os.mkdir(self.stack_dir)
 
         # 6. Build final docker file
         engine = self.engine
@@ -573,6 +575,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 "docker_file": docker_run_payload,
             }
             payload = self.process_jsonnet(jsonnet_file, "docker_override", ext_vars)
+
             docker_run_payload = payload["docker_override"]
 
             # # Prepare jsonnet environment
@@ -599,6 +602,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # 8. Save the final docker-compose.run.yml file
         self.log.info(f"Writing docker-compose file: {outfile}")
+        # pprint (docker_run_payload)
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
 
