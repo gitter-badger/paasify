@@ -1,3 +1,15 @@
 **/__pycache__
 **/.ipynb_checkpoints*
+
+.coverage
+*.code-workspace
+poetry.lock
+
+
+# Temp
+.vscode/*
+lab/*
+tmp/*
+tests_dev/*
+cafram
 *OLD*
