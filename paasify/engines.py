@@ -25,20 +25,20 @@ log = logging.getLogger(__name__)
 
 def bin2utf8(obj):
     if hasattr(obj, "stdout"):
-        obj.txtout = obj.stdout.decode("utf-8").rstrip('\n')
+        obj.txtout = obj.stdout.decode("utf-8").rstrip("\n")
     else:
         obj.txtout = None
     if hasattr(obj, "stderr"):
-        obj.txterr = obj.stderr.decode("utf-8").rstrip('\n')
+        obj.txterr = obj.stderr.decode("utf-8").rstrip("\n")
     else:
         obj.txterr = None
     return obj
 
 
-
 #####################
 
-class EngineCompose(NodeMap,PaasifyObj):
+
+class EngineCompose(NodeMap, PaasifyObj):
 
     version = None
 
@@ -50,16 +50,16 @@ class EngineCompose(NodeMap,PaasifyObj):
 
     ident = "default"
 
-    def node_hook_children(self): #, project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
-
+    def node_hook_children(
+        self,
+    ):  # , project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
 
         # self.project_dir = project_dir
         # self.project_name = project_name
 
         # DEPRECATED self.cont_engine = EngineDocker(self)
-        #self.compose_engine = EngineCompose(self)
-        #self.jsonnet_engine = EngineJsonnet(self)
-
+        # self.compose_engine = EngineCompose(self)
+        # self.jsonnet_engine = EngineJsonnet(self)
 
         # pprint (self.conf_default)
         # pprint (self.__dict__)
@@ -71,45 +71,50 @@ class EngineCompose(NodeMap,PaasifyObj):
         project_dir = self.project_dir
 
         self.arg_prefix = [
-            "--project-name", f"{project_name}",
-            "--project-directory", f"{project_dir}",
+            "--project-name",
+            f"{project_name}",
+            "--project-directory",
+            f"{project_dir}",
         ]
-        #print ((project_dir, self.docker_file))
+        # print ((project_dir, self.docker_file))
         self.docker_file_path = os.path.join(project_dir, self.docker_file)
-
 
         self.docker_file_exists = False
         if os.path.isfile(self.docker_file_path):
             self.docker_file_exists = True
 
-
-        #self.engine = 'docker'
-        #self.engine = 'podman-compose'
+        # self.engine = 'docker'
+        # self.engine = 'podman-compose'
 
         # Check here if support for with versions:
         # docker-compose (legacy) (support all)
         # docker compose (new) (support docker only)
         # podman compose (new) (support podman only)
 
-
     def assemble(self, compose_files, env_file=None, env=None):
 
         cli_args = list(self.arg_prefix)
 
         if env_file:
-            cli_args.extend(["--env-file", env_file]) 
+            cli_args.extend(["--env-file", env_file])
         for file in compose_files:
-            cli_args.extend(['--file', file])
-        cli_args.extend([
-            "config", 
-            # "--no-interpolate",
-            # "--no-normalize",
-        ])
+            cli_args.extend(["--file", file])
+        cli_args.extend(
+            [
+                "config",
+                # "--no-interpolate",
+                # "--no-normalize",
+            ]
+        )
 
         env_string = env or {}
-        env_string = { k: cast_docker_compose(v) for k, v in env.items() if v is not None }
+        env_string = {
+            k: cast_docker_compose(v) for k, v in env.items() if v is not None
+        }
 
-        result = _exec("docker-compose", cli_args, _out=None, _env=env_string, logger=self.log)
+        result = _exec(
+            "docker-compose", cli_args, _out=None, _env=env_string, logger=self.log
+        )
         bin2utf8(result)
         return result
 
@@ -121,7 +126,8 @@ class EngineCompose(NodeMap,PaasifyObj):
 
         cli_args = list(self.arg_prefix)
         cli_args = [
-            "--file", self.docker_file_path,
+            "--file",
+            self.docker_file_path,
             "up",
             "--detach",
         ]
@@ -138,7 +144,8 @@ class EngineCompose(NodeMap,PaasifyObj):
 
         cli_args = list(self.arg_prefix)
         cli_args = [
-            "--file", self.docker_file_path,
+            "--file",
+            self.docker_file_path,
             "down",
             "--remove-orphans",
         ]
@@ -152,9 +159,8 @@ class EngineCompose(NodeMap,PaasifyObj):
             bin2utf8(err)
 
             # This is U.G.L.Y
-            if not 'has active endpoints' in err.txterr:
+            if not "has active endpoints" in err.txterr:
                 raise error.DockerCommandFailed(f"{err.txterr}")
-
 
     def logs(self, follow=False):
 
@@ -164,15 +170,15 @@ class EngineCompose(NodeMap,PaasifyObj):
 
         sh_options = {}
         cli_args = [
-            "--file", self.docker_file_path,
+            "--file",
+            self.docker_file_path,
             "logs",
         ]
         if follow:
             cli_args.append("-f")
-            sh_options["_fg"]=True
+            sh_options["_fg"] = True
 
         _exec("docker-compose", cli_args, **sh_options)
-
 
     def ps(self):
 
@@ -181,10 +187,12 @@ class EngineCompose(NodeMap,PaasifyObj):
             return None
 
         cli_args = [
-            "--file", self.docker_file_path,
+            "--file",
+            self.docker_file_path,
             "ps",
             "--all",
-            "--format", "json",
+            "--format",
+            "json",
         ]
 
         result = _exec("docker-compose", cli_args, _out=None)
@@ -197,12 +205,12 @@ class EngineCompose(NodeMap,PaasifyObj):
 
             # Get and filter interesting ports
             published = svc["Publishers"] or []
-            published = [ x for x in published if x.get('PublishedPort') > 0 ]
+            published = [x for x in published if x.get("PublishedPort") > 0]
 
             # Reduce duplicates
             for x in published:
-                if x.get('URL') == '0.0.0.0':
-                    x['URL']='::'
+                if x.get("URL") == "0.0.0.0":
+                    x["URL"] = "::"
 
             # Format port strings
             exposed = []
@@ -217,11 +225,13 @@ class EngineCompose(NodeMap,PaasifyObj):
 
             # Remove duplicates ports and show
             exposed = list(set(exposed))
-            print (f"  {svc['Project'] :<32} {svc['Name'] :<40} {svc['Service'] :<16} {svc['State'] :<10} {', '.join(exposed)}")
-    
+            print(
+                f"  {svc['Project'] :<32} {svc['Name'] :<40} {svc['Service'] :<16} {svc['State'] :<10} {', '.join(exposed)}"
+            )
+
 
 class EngineCompose_26(EngineCompose):
-    
+
     ident = "docker-compose-2.6"
 
 
@@ -231,7 +241,8 @@ class EngineCompose_129(EngineCompose):
 
     def ps(self):
         cli_args = [
-            "--file", self.docker_file_path,
+            "--file",
+            self.docker_file_path,
             "ps",
             "--all",
         ]
@@ -240,7 +251,7 @@ class EngineCompose_129(EngineCompose):
 
 
 class EngineCompose_16(EngineCompose):
-    
+
     ident = "docker-compose-1.6"
 
 
@@ -278,47 +289,47 @@ class EngineCompose_16(EngineCompose):
 #         return self.compose_engine.ps(**kwargs) if self.compose_engine.docker_file_exists else None
 
 
-
 #############################
 
-#class EngineDetect(PaasifyObj):
-class EngineDetect():
-
+# class EngineDetect(PaasifyObj):
+class EngineDetect:
 
     versions = {
-            'docker': {
-                    '20.10.17': {},
-                },
-            'docker-compose': {
-                    '2.6.1': EngineCompose_26,
-                    '1.29.0': EngineCompose_129,
-                    '1.6.3': EngineCompose_16,
-
-                },
-            'podman-compose': {},
-            }
-
+        "docker": {
+            "20.10.17": {},
+        },
+        "docker-compose": {
+            "2.6.1": EngineCompose_26,
+            "1.29.0": EngineCompose_129,
+            "1.6.3": EngineCompose_16,
+        },
+        "podman-compose": {},
+    }
 
     def detect_docker_compose(self):
         try:
-            
-            #cmd = sh.Command("docker-compose", _log_msg='paasify')
+
+            # cmd = sh.Command("docker-compose", _log_msg='paasify')
             log.notice("This can take age when debugger is enabled...")
             out = _exec("docker-compose", ["--version"])
             # TOFIX: This takes ages in debugger, when above _log_msg is unset ?
-            #out = cmd('--version')
+            # out = cmd('--version')
             bin2utf8(out)
         except sh.ErrorReturnCode as err:
-            raise error.DockerUnsupportedVersion(f"Impossible to guess docker-compose version") from err
+            raise error.DockerUnsupportedVersion(
+                f"Impossible to guess docker-compose version"
+            ) from err
 
         # Scan version
-        patt = 'version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))'
+        patt = "version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))"
         match = re.search(patt, out.txtout)
         if match:
             version = match.groupdict()
         else:
-            raise error.DockerUnsupportedVersion(f"Version of docker-compose is not recognised: {out.txtout}")
-        curr_ver = version['version']
+            raise error.DockerUnsupportedVersion(
+                f"Version of docker-compose is not recognised: {out.txtout}"
+            )
+        curr_ver = version["version"]
 
         # Scan available versions
         versions = [key for key in self.versions["docker-compose"].keys()]
@@ -331,20 +342,19 @@ class EngineDetect():
                 match = version
                 break
 
-        
         if not match:
-            raise error.DockerUnsupportedVersion(f"Version of docker-compose is not supported: {curr_ver}")
-        
+            raise error.DockerUnsupportedVersion(
+                f"Version of docker-compose is not supported: {curr_ver}"
+            )
+
         cls = self.versions["docker-compose"][match]
         cls.version = match
         cls.name = "docker-compose"
         cls.ident = match
         return cls
-     
-
 
     def detect(self, engine=None):
-        
+
         if not engine:
             log.info("Guessing best docker engine ...")
             obj = self.detect_docker_compose()
@@ -353,14 +363,13 @@ class EngineDetect():
             if engine not in self.versions["docker-compose"]:
                 versions = list(self.versions["docker-compose"].keys())
                 log.warning(f"Please select engine one of: {versions}")
-                raise error.DockerUnsupportedVersion(f"Unknown docker-engine version: {engine}")
+                raise error.DockerUnsupportedVersion(
+                    f"Unknown docker-engine version: {engine}"
+                )
             obj = self.versions["docker-compose"][engine]
         # if not result:
-        #     raise error.DockerUnsupportedVersion(f"Can;t find docker-compose") 
+        #     raise error.DockerUnsupportedVersion(f"Can;t find docker-compose")
 
         log.debug(f"Detected docker-compose version: {obj.version}")
 
         return obj
-
-
-

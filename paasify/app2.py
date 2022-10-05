@@ -1,5 +1,3 @@
-
-
 import os
 import sys
 
@@ -12,18 +10,17 @@ from cafram.nodes import NodeList, NodeMap, NodeDict, NodeMapEnv
 
 
 import paasify.errors as error
-from paasify.framework import PaasifyObj, PaasifySources, PaasifyConfigVars, PaasifySimpleDict
+from paasify.framework import (
+    PaasifyObj,
+)
 from paasify.common import list_parent_dirs, find_file_up, filter_existing_files
 
 from paasify.projects import PaasifyProject
 
 
-#from paasify.common import _exec, list_parent_dirs, find_file_up, filter_existing_files, write_file
-#from paasify.class_model import *
-#from paasify.common import serialize, flatten, json_validate
-
-
-
+# from paasify.common import _exec, list_parent_dirs, find_file_up, filter_existing_files, write_file
+# from paasify.class_model import *
+# from paasify.common import serialize, flatten, json_validate
 
 
 class PaasifyAppConfig(NodeMapEnv, PaasifyObj):
@@ -35,9 +32,8 @@ class PaasifyAppConfig(NodeMapEnv, PaasifyObj):
         "cwd": os.getcwd(),
         "working_dir": os.getcwd(),
         "engine": None,
-        "filenames": ['paasify.yml', 'paasify.yaml'],
+        "filenames": ["paasify.yml", "paasify.yaml"],
     }
-
 
     conf_schema = {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -81,12 +77,13 @@ class PaasifyAppConfig(NodeMapEnv, PaasifyObj):
                         "type": "array",
                         "items": {
                             "type": "string",
-                        }
+                        },
                     },
                 ],
             },
-        }
+        },
     }
+
 
 class PaasifyApp(NodeMap, PaasifyObj):
 
@@ -109,10 +106,10 @@ class PaasifyApp(NodeMap, PaasifyObj):
         },
     ]
 
-    conf_schema ={
+    conf_schema = {
         "$defs": {
             "AppConfig": PaasifyAppConfig.conf_schema,
-            #"AppProject": schema_project_def,
+            # "AppProject": schema_project_def,
         },
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
@@ -125,9 +122,9 @@ class PaasifyApp(NodeMap, PaasifyObj):
         "properties": {
             "project": {
                 "title": "Project configuration",
-                "oneOf":[
+                "oneOf": [
                     {
-                        #"$ref": "#/$defs/AppProject",
+                        # "$ref": "#/$defs/AppProject",
                         "description": "Instanciate project",
                         "type": "object",
                     },
@@ -140,21 +137,19 @@ class PaasifyApp(NodeMap, PaasifyObj):
             "config": {
                 "$ref": "#/$defs/AppConfig",
             },
-            
-        }
+        },
     }
-
 
     def info(self, autoload=None):
         """Report app config"""
 
-        print ("Paasify App Info:")
-        print ("==================")
-        print (f"  cwd: {self.config.cwd}")
-        print (f"  project lookup dir: {self.config.working_dir}")
+        print("Paasify App Info:")
+        print("==================")
+        print(f"  cwd: {self.config.cwd}")
+        print(f"  project lookup dir: {self.config.working_dir}")
 
         # Autoload default project
-        msg = ''
+        msg = ""
         if autoload is None or autoload == True:
             try:
                 if not self.project:
@@ -166,27 +161,32 @@ class PaasifyApp(NodeMap, PaasifyObj):
                     raise error.ProjectNotFound(err)
                 pass
 
-        print ("\nPaasify Project Info:")
-        print ("==================")
+        print("\nPaasify Project Info:")
+        print("==================")
 
         if self.project:
             # Report with active project if available
             for k, v in self.project.runtime.get_value(lvl=-1).items():
-                print (f"  {k}: {v}")
+                print(f"  {k}: {v}")
         else:
-            print (f"  {msg}")
-        
-    
+            print(f"  {msg}")
+
     def load_project(self, path=None):
         "Return closest project"
-        
+
+        if self.project is not None:
+            return self.project
+
         # Auto discover project path
         prj = PaasifyProject.discover_project(
             parent=None,
-            path= path or self.config.working_dir,
-            filenames= self.config.filenames,
-            runtime = dict(self.config.get_value()),
+            path=path or self.config.working_dir,
+            filenames=self.config.filenames,
+            runtime=dict(self.config.get_value()),
         )
         self.add_child("project", prj)
+
+        # self.show_childs()
+        # sys.exit(1)
 
         return prj

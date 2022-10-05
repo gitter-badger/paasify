@@ -1,0 +1,102 @@
+config:
+  vars:
+    app_domain: devbox.jeznet.org
+    # wks1 app_expose_ip: 192.168.42.17
+    app_expose_ip: 192.168.42.203
+
+    # Required settings for traefik
+    #traefik_svc_entrypoints: front-http,front-https
+    #traefik_svc_tls: true
+
+  namespace: devbox_core
+
+  tags_prefix:
+  - _paasify
+  tags_suffix: []
+
+sources:
+  default:
+    url: https://git.jeznet.org/mrjk-foss/docker-compose.git
+
+stacks:
+#   # - path: just/a/path
+#   # - name: myapp
+#   # - app: myns:my_app
+#   # - app: namsepa_conly
+#   #   name: tutu
+
+#   # - app: myns:my_app
+#   #   name: customi_name
+#   #   #path: in_this/path/
+#   #   #path: just/a/path
+
+#   - app: myns:my_app
+#     name: customi_name3
+
+#   - name: customi_name4
+
+#   - app: :my_app3/sub_app
+#   - app: :my_app3/sub_app
+#     path: tutu
+#     name: other_name
+
+
+
+# OLD_STACKS:
+  - #path: traefik
+    app: default:traefik
+    #path: trafik1
+    # vars:
+    #   traefik_svc_port: "8080"
+    #   app_image_version: v2.6.1
+
+      # Local settings
+
+    #network: tototo
+
+    vars:
+      myvar1: toototo
+      myvar2: "dfsdf ET ${myvar1}"
+      myvar3: "dfsdf ET ${myvar_missing}"
+      traefik_svc_port: "8080"
+      
+      # - myvar1: toototo
+      # - myvar2: "dfsdf ET {myvar1}"
+      # - traefik_svc_port: "8080"
+      # # Local settings
+      # - app_image_version=v2.6.1
+      # #- app_image_version: v2.6.1
+    # tags:
+    #   - ep_http
+    #   - ep_https
+    #   - expose_admin
+    #   - debug
+    #   - traefik-svc:
+    #       traefik_net_external: false
+    #         #traefik_svc_port: 8080
+    #         #traefik_svc_name: devbox_traefik_app  # TOFIX !
+
+
+# tututu:
+#   - app: default:minio
+#     #path: sub1/minio2
+#     env:
+#       - app_admin_passwd: vojOubdirbovOnlij0
+#       - app_image: quay.io/minio/minio:latest
+#     tags:
+#       - traefik-svc:
+#           traefik_svc_name: minio
+#           traefik_svc_port: 9000
+#           traefik_svc_auth: null
+#       - traefik-svc:
+#           traefik_svc_ident: minio
+#           traefik_svc_name: minio-console
+#           traefik_svc_port: 9001
+#           traefik_svc_auth: null
+#           traefik_svc_domain: minio-console.devbox.jeznet.org
+#           # TOFIX: traefik_svc_domain: minio-console.$app_domain
+#       - docker-net-provider:
+#           app_network: front
+#           app_network_name: devbox_minio
+#           app_network_external: False
+# 

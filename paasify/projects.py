@@ -8,7 +8,12 @@ from cafram.nodes import NodeList, NodeMap, NodeDict
 
 import paasify.errors as error
 from paasify.engines import EngineDetect
-from paasify.framework import PaasifyObj, PaasifySources, PaasifyConfigVars, PaasifySimpleDict
+from paasify.framework import (
+    PaasifyObj,
+    PaasifySources,
+    PaasifyConfigVars,
+    PaasifySimpleDict,
+)
 from paasify.common import list_parent_dirs, find_file_up, filter_existing_files
 
 from paasify.stacks2 import PaasifyStackTagManager, PaasifyStackManager
@@ -49,19 +54,16 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
         # },
     ]
 
-
     conf_schema = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Paasify Project settings",
         "default": conf_default,
-
         "oneOf": [
             {
                 "type": "object",
                 "additionalProperties": True,
                 "properties": {
                     "namespace": {
-                        
                         "title": "Project namespace",
                         "description": "Name of the project namespace. If not set, defaulted to directory name",
                         "oneOf": [
@@ -83,29 +85,26 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
 
 
 class PaasifyProjectRuntime(NodeMap, PaasifyObj):
-
     def node_hook_transform(self, payload):
 
-        self.log.warning ("Build ProjectRuntime")
+        self.log.warning("Build ProjectRuntime")
 
         # Build default runtime
         root_path = payload.get("root_path") or os.getcwd()
         config_file = payload.get("config_file")
-        private_dir = os.path.join(root_path, '.paasify' )
+        private_dir = os.path.join(root_path, ".paasify")
         namespace = payload.get("namespace") or os.path.basename(root_path)
 
-        collection_dir = os.path.join(private_dir, 'collections' )
-        jsonnet_dir = os.path.join(private_dir, 'plugins' )
+        collection_dir = os.path.join(private_dir, "collections")
+        jsonnet_dir = os.path.join(private_dir, "plugins")
 
         _payload = {
             "root_path": root_path,
             "config_file": config_file,
-
             "project_root_dir": os.path.dirname(root_path),
             "project_private_dir": private_dir,
             "project_collection_dir": collection_dir,
             "project_jsonnet_dir": jsonnet_dir,
-
             "namespace": namespace,
             "engine": None,
         }
@@ -122,11 +121,8 @@ class PaasifyProjectRuntime(NodeMap, PaasifyObj):
         #     self.namespace = os.path.basename(namespace)
 
 
+class PaasifyProject(NodeMap, PaasifyObj):
 
-class PaasifyProject(NodeMap,PaasifyObj):
-
-
-    
     conf_default = {
         "_runtime": {},
         "config": {},
@@ -139,12 +135,12 @@ class PaasifyProject(NodeMap,PaasifyObj):
             "key": "_runtime",
             "cls": PaasifyProjectRuntime,
             "attr": "runtime",
-            #"default": {},
+            # "default": {},
         },
         {
             "key": "config",
             "cls": PaasifyProjectConfig,
-            #"attr": "config",
+            # "attr": "config",
             "hook": "_post_config",
         },
         {
@@ -157,15 +153,13 @@ class PaasifyProject(NodeMap,PaasifyObj):
         },
     ]
 
-
-
     conf_schema = {
         "$defs": {
             "Stacks": PaasifyStackManager.conf_schema,
             "Project": PaasifyProjectConfig.conf_schema,
-            #"Sources": SourcesManager.conf_schema,
+            # "Sources": SourcesManager.conf_schema,
         },
-        #"$schema": "http://json-schema.org/draft-07/schema#",
+        # "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "title": "Paasify",
         "description": "Main paasify project settings",
@@ -173,7 +167,6 @@ class PaasifyProject(NodeMap,PaasifyObj):
         # "required": [
         #     "stacks"
         # ],
-
         "default": conf_default,
         "properties": {
             "config": {
@@ -185,14 +178,12 @@ class PaasifyProject(NodeMap,PaasifyObj):
             "stacks": {
                 "$ref": "#/$defs/Stacks",
             },
-            
-        }
+        },
     }
 
     ident = "PaasifyProject"
-    filenames = ['paasify.yml', 'paasify.yaml']
+    filenames = ["paasify.yml", "paasify.yaml"]
     engine_cls = None
-
 
     def _post_config(self):
         "Ensure the settings are correctly set"
@@ -204,7 +195,6 @@ class PaasifyProject(NodeMap,PaasifyObj):
         if not self.engine_cls:
             engine_name = self.runtime.engine or None
             self.engine_cls = EngineDetect().detect(engine=engine_name)
-
 
     # Internal methods
     # ==================
@@ -225,51 +215,53 @@ class PaasifyProject(NodeMap,PaasifyObj):
     def get_project_path(cls, path, filenames=None):
         "Find the closest paasify config file"
 
-        #if not path.startswith('/'):
-
+        # if not path.startswith('/'):
 
         filenames = filenames or cls.filenames
-        #filenames = self._node_root.config.filenames
+        # filenames = self._node_root.config.filenames
 
         paths = list_parent_dirs(path)
-        result = find_file_up(filenames, paths )
+        result = find_file_up(filenames, paths)
 
         if len(result) > 0:
             result = result[0]
 
         return result
 
-
     @classmethod
-    #def discover(self, conf=None, path=None, filenames=None):
+    # def discover(self, conf=None, path=None, filenames=None):
     def discover_project(cls, parent=None, path=None, filenames=None, runtime=None):
         """Discover project
 
         Generate a project instance with payload as
         payload into the config that will
         be found in path with filename filenames
-        
+
         """
         conf = {}
         config_file = path or os.getcwd()
         filenames = filenames or ["paasify.yml", "paasify.yaml"]
-        
+
         # Find for project candidates
         if os.path.isdir(config_file):
             _path = cls.get_project_path(config_file, filenames=filenames)
             if len(_path) == 0:
                 # TOFIX: Not the good logger
                 # cls.log.warning("Please specify project path via `-c` flag or `PAASIFY_APP_WORKING_DIR` variable")
-                raise error.ProjectNotFound(f"Could not find any {' or '.join(filenames)} files in path: {path}")
+                raise error.ProjectNotFound(
+                    f"Could not find any {' or '.join(filenames)} files in path: {path}"
+                )
             config_file = _path
 
         if not os.path.isfile(config_file):
-            raise error.ProjectNotFound(f"Not a configuration file, got something else: {path}")
+            raise error.ProjectNotFound(
+                f"Not a configuration file, got something else: {path}"
+            )
 
         return cls.load_from_file(config_file, runtime=runtime, parent=parent)
-    
+
     @classmethod
-    #def discover(self, conf=None, path=None, filenames=None):
+    # def discover(self, conf=None, path=None, filenames=None):
     def load_from_file(cls, config_file, parent=None, runtime=None):
         "Load project from config file"
 
@@ -286,23 +278,19 @@ class PaasifyProject(NodeMap,PaasifyObj):
             _payload.update(anyconfig.load(config_file))
         _payload["_runtime"] = _runtime
 
-        pprint (_payload)
+        pprint(_payload)
         assert "WIPPP"
 
         prj = PaasifyProject(parent=parent, payload=_payload)
 
         return prj
 
-
-
     def cmd_stack_cmd(self, cmd, stacks=None):
+        "Forward command to stacks"
 
+        print("YOOOOOOOOOOo")
 
         for stack in self.stacks.get_children():
             fun = getattr(stack, cmd)
-            self.log.debug (f"Execute: {fun}")
+            self.log.debug(f"Execute: {fun}")
             fun()
-
-
-
-

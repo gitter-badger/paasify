@@ -1,6 +1,3 @@
-
-
-
 from cafram.nodes import NodeList, NodeMap
 from cafram.utils import serialize, flatten
 
@@ -10,11 +7,10 @@ from paasify.framework import PaasifyObj
 
 class PaasifyStackTag(NodeMap, PaasifyObj):
 
-    conf_schema={
-        #"$schema": "http://json-schema.org/draft-07/schema#",
+    conf_schema = {
+        # "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "StackTag configuration",
-
-        "oneOf":[
+        "oneOf": [
             {
                 "type": "string",
                 "oneOf": [
@@ -32,7 +28,7 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
                 "type": "object",
                 "additionalProperties": False,
                 "patternProperties": {
-                    '.*': {
+                    ".*": {
                         "oneOf": [
                             {"type": "object"},
                             {"type": "null"},
@@ -40,10 +36,8 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
                     }
                 },
             },
-
         ],
     }
-
 
     conf_ident = "{self.name}={self.vars}"
 
@@ -54,7 +48,7 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
         },
         {
             "key": "vars",
-            #"cls": dict,
+            # "cls": dict,
         },
     ]
     #     {
@@ -65,8 +59,8 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
     def node_hook_transform(self, payload):
 
         result = {
-            'name': None,
-            'vars': {},
+            "name": None,
+            "vars": {},
         }
         if isinstance(payload, str):
             result["name"] = payload
@@ -83,12 +77,11 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
                 raise Exception(f"Missing tag name: {payload}")
             else:
                 result.update(payload)
-            
+
         else:
             raise Exception(f"Not supported type: {payload}")
 
         return result
-
 
     def node_hook_children(self):
         "Self init object after loading of app"
@@ -96,22 +89,20 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
         self.prj = self.get_parent()
         self.app = self.get_parents()
 
-        #print("TAG", self, self.get_parents())
-        #totooo
+        # print("TAG", self, self.get_parents())
+        # totooo
 
         # self.app_dir = os.path.join(
-        #     self.prj.runtime.project_root_dir, 
-        #     '.paasify', 'collections', 
+        #     self.prj.runtime.project_root_dir,
+        #     '.paasify', 'collections',
         #     self.app_source, self.app_path)
-
-
-
 
     def _lookup_file(self, dirs, pattern):
         "Lookup a specific file name in dirs"
 
-        lookup =  []
+        lookup = []
         for dir_ in dirs:
+            self.log.trace(f"Looking up file '{','.join(pattern)}' in dir: {dir_}")
             lookup_def = {
                 "path": dir_,
                 "pattern": pattern,
@@ -119,34 +110,28 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
             lookup.append(lookup_def)
 
         local_cand = lookup_candidates(lookup)
-        local_cand = flatten([ x['matches'] for x in local_cand ])
+        local_cand = flatten([x["matches"] for x in local_cand])
 
         return local_cand
 
     def lookup_docker_files_tag(self, dirs):
         """Lookup docker-compose files in app directory"""
-        pattern = [
-            f"docker-compose.{self.name}.yml", 
-            f"docker-compose.{self.name}.yml"]
+        pattern = [f"docker-compose.{self.name}.yml", f"docker-compose.{self.name}.yml"]
         return self._lookup_file(dirs, pattern)
-
 
     def lookup_jsonnet_files_tag(self, dirs):
         """Lookup docker-compose files in app directory"""
-        pattern = [
-            f"{self.name}.jsonnet"]
+        pattern = [f"{self.name}.jsonnet"]
         return self._lookup_file(dirs, pattern)
-
 
 
 class PaasifyStackTagManager(NodeList, PaasifyObj):
 
-    conf_schema={
-        #"$schema": "http://json-schema.org/draft-07/schema#",
-
+    conf_schema = {
+        # "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Paasify Stack Tags configuration",
         "default": [],
-        "oneOf":[
+        "oneOf": [
             {
                 "type": "array",
                 "items": PaasifyStackTag.conf_schema,
@@ -155,7 +140,6 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
                 "type": "null",
             },
         ],
-
     }
 
     conf_children = PaasifyStackTag
