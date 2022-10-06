@@ -4,6 +4,7 @@
 .coverage
 *.code-workspace
 poetry.lock
+*build*
 
 
 # Temp

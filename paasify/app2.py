@@ -88,7 +88,7 @@ class PaasifyAppConfig(NodeMapEnv, PaasifyObj):
 
 class PaasifyApp(NodeMap, PaasifyObj):
 
-    ident = "Paasify"
+    ident = "Paasify App"
 
     conf_default = {
         "config": {},
