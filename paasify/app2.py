@@ -5,7 +5,7 @@ from pprint import pprint
 
 import anyconfig
 
-from cafram.utils import _exec, write_file, serialize, flatten, json_validate
+from cafram.utils import to_yaml, to_json, _exec, write_file, serialize, flatten, json_validate
 from cafram.nodes import NodeList, NodeMap, NodeDict, NodeMapEnv
 
 
@@ -14,6 +14,7 @@ from paasify.framework import (
     PaasifyObj,
 )
 from paasify.common import list_parent_dirs, find_file_up, filter_existing_files
+from paasify.common import OutputFormat
 
 from paasify.projects import PaasifyProject
 
@@ -109,22 +110,23 @@ class PaasifyApp(NodeMap, PaasifyObj):
     conf_schema = {
         "$defs": {
             "AppConfig": PaasifyAppConfig.conf_schema,
-            # "AppProject": schema_project_def,
+            "AppProject": PaasifyProject.conf_schema,
         },
         "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
-        "title": "Paasify",
-        "description": "Main paasify project settings",
+        "title": "Paasify App",
+        "description": "Paasify app implementation",
         "additionalProperties": False,
         # "required": [
         #     "stacks"
         # ],
+        "default": {},
         "properties": {
             "project": {
                 "title": "Project configuration",
                 "oneOf": [
                     {
-                        # "$ref": "#/$defs/AppProject",
+                        "$ref": "#/$defs/AppProject",
                         "description": "Instanciate project",
                         "type": "object",
                     },
@@ -170,6 +172,34 @@ class PaasifyApp(NodeMap, PaasifyObj):
                 print(f"  {k}: {v}")
         else:
             print(f"  {msg}")
+
+    def cmd_config_schema(self, format=None, target=None):
+        """Returns the configuration json schema
+
+        Args:
+            format (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
+
+        if target == "app":
+            out = self.conf_schema
+        elif target == "project":
+            out = PaasifyProject.conf_schema
+        elif target == "test":
+            from paasify.stacks2 import PaasifyStackManager
+            out = PaasifyStackManager.conf_schema
+            #raise NotImplemented()
+        else:
+            out = PaasifyProject.conf_schema
+
+        if format == OutputFormat.yaml:
+            out = to_yaml(out)
+        elif format == OutputFormat.json:
+            out = to_json(out, nice=True)
+
+        return out
 
     def load_project(self, path=None):
         "Return closest project"

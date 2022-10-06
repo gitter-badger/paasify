@@ -1,6 +1,7 @@
 import io
 import os
 import sys
+from enum import Enum
 
 import logging
 import json
@@ -22,6 +23,13 @@ import paasify.errors as error
 # =====================================================================
 # Init
 # =====================================================================
+
+
+class OutputFormat(str, Enum):
+    yaml = "yaml"
+    json = "json"
+    toml = "toml"
+
 
 
 # =====================================================================

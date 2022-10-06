@@ -19,6 +19,8 @@ from paasify.common import list_parent_dirs, find_file_up, filter_existing_files
 from paasify.stacks2 import PaasifyStackTagManager, PaasifyStackManager
 
 
+ALLOW_CONF_JUNK = False
+
 class PaasifyProjectConfig(NodeMap, PaasifyObj):
 
     conf_default = {
@@ -55,20 +57,43 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
     ]
 
     conf_schema = {
-        "$schema": "http://json-schema.org/draft-07/schema#",
+        #"$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Paasify Project settings",
-        "default": conf_default,
+        
+        "description": (
+            "Configure main project settings. It provides global settings"
+            " but also defaults vars and tags for all stacks."
+            ),
+
+        
+
         "oneOf": [
             {
                 "type": "object",
-                "additionalProperties": True,
+                "additionalProperties": ALLOW_CONF_JUNK,
+                "title": "Project configuration",
+                "description": (
+                    "Configure project as a dict value. "
+                    "Most of these settings are overridable via environment vars."
+                    ),
+                "default": {},
+
                 "properties": {
                     "namespace": {
                         "title": "Project namespace",
                         "description": "Name of the project namespace. If not set, defaulted to directory name",
                         "oneOf": [
-                            {"type": "string"},
-                            {"type": "null"},
+                            
+                            {
+                                "title": "None",
+                                "description": "Defaulted by the project dir name",
+                                "type": "null"
+                            },
+                            {
+                                "title": "String",
+                                "description": "Custom namespace name string",
+                                "type": "string"
+                            },
                         ],
                     },
                     "vars": PaasifyConfigVars.conf_schema,
@@ -76,9 +101,35 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
                     "tags_suffix": PaasifyStackTagManager.conf_schema,
                     "tags_prefix": PaasifyStackTagManager.conf_schema,
                 },
+
+                "examples":[
+                    {
+                        "config": {
+                            "namespace": "my_ns1",
+                            "vars": [
+                                {"my_var1": "my_value1"}
+                            ],
+                            "tags": [
+                                "tag1",
+                                "tag2"
+                            ],
+                        },
+                    }
+                ],
             },
             {
                 "type": "null",
+                "title": "Empty",
+                "description": "Use automatic conf if not set. You can still override conf values with environment vars.",
+                "default": None,
+                "examples": [
+                    {
+                        "config": None,
+                    },
+                    {
+                        "config": {},
+                    },
+                ],
             },
         ],
     }
@@ -155,28 +206,28 @@ class PaasifyProject(NodeMap, PaasifyObj):
 
     conf_schema = {
         "$defs": {
-            "Stacks": PaasifyStackManager.conf_schema,
-            "Project": PaasifyProjectConfig.conf_schema,
+            "stacks": PaasifyStackManager.conf_schema,
+            "Config": PaasifyProjectConfig.conf_schema,
             # "Sources": SourcesManager.conf_schema,
         },
         # "$schema": "http://json-schema.org/draft-07/schema#",
         "type": "object",
         "title": "Paasify",
-        "description": "Main paasify project settings",
-        "additionalProperties": False,
+        "description": "Main paasify project settings. This defines the format of `paasify.yml`.",
+        "additionalProperties": ALLOW_CONF_JUNK,
         # "required": [
         #     "stacks"
         # ],
-        "default": conf_default,
+        "default": {},
         "properties": {
             "config": {
-                "$ref": "#/$defs/Project",
+                "$ref": "#/$defs/Config",
             },
             "sources": {
                 "type": "object",
             },
             "stacks": {
-                "$ref": "#/$defs/Stacks",
+                #"$ref": "#/$defs/stacks",
             },
         },
     }
@@ -287,8 +338,6 @@ class PaasifyProject(NodeMap, PaasifyObj):
 
     def cmd_stack_cmd(self, cmd, stacks=None):
         "Forward command to stacks"
-
-        print("YOOOOOOOOOOo")
 
         for stack in self.stacks.get_children():
             fun = getattr(stack, cmd)

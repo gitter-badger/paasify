@@ -8,7 +8,6 @@
 import os
 import sys
 
-from enum import Enum
 from typing import List, Optional
 
 import glob
@@ -25,7 +24,9 @@ import typer
 import anyconfig
 from cafram.utils import serialize, get_logger
 
+
 import paasify.errors as error
+from paasify.common import OutputFormat
 from paasify.app2 import PaasifyApp
 
 # from rich.console import Console
@@ -47,11 +48,6 @@ from paasify.app2 import PaasifyApp
 
 log = get_logger(logger_name="paasify")
 
-
-class OutputFormat(str, Enum):
-    yaml = "yaml"
-    json = "json"
-    toml = "toml"
 
 
 cli_app = typer.Typer(help="Paasify, build your compose-files", no_args_is_help=True)
@@ -144,16 +140,16 @@ def ls(
 @cli_app.command()
 def schema(
     ctx: typer.Context,
-    format: OutputFormat = OutputFormat.json,
-    stack: Optional[str] = typer.Argument(
+    format: OutputFormat = OutputFormat.yaml,
+    target: Optional[str] = typer.Argument(
         None,
-        help="Stack to target, current cirectory or all",
+        help="Show segment only: app, project, stack",
     ),
 ):
     """Show paasify config schema"""
-    paasify = ctx.obj["paasify"]
-    print(paasify.cmd_config_schema(format=format))
-
+    psf = ctx.obj["paasify2"]
+    out = psf.cmd_config_schema(format=format, target=target)
+    print (out)
 
 @cli_app.command()
 def init(

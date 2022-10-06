@@ -5,36 +5,162 @@ from paasify.common import lookup_candidates
 from paasify.framework import PaasifyObj
 
 
+stack_name_pattern =   {
+    "title": "Short form",
+    "description": (
+        "Just pass the tag you want to apply as string."
+        " This form does not allow jsonnet ovar override"
+    ),
+    "type": "string",
+
+    "oneOf": [
+        {
+            "title": "Reference collection app",
+            "description": (
+                "Reference a tag from a specific collection."
+                " This form does not allow jsonnet ovar override"
+            ),
+            "pattern": "^.*:.*$",
+        },
+        {
+            "title": "Direct or absolute app path",
+            "description": (
+                "Reference a tag from a specific collection."
+            ),
+            "pattern": ".*/[^:]*",
+        },
+        {
+            "title": "Tag",
+            "description": (
+                "Will find the best matvhing tag."
+            ),
+            "pattern": "^.*$",
+        },
+    ],
+}
+
+
+stack_ref_kind_defs = [
+            {
+                "title": "With value",
+                "description": "Pass extra vars for during jsonet tag processing.",
+                "type": "object"
+            },
+            {
+                "title": "Without value",
+                "description": (
+                    "No vars are added for this jsonnet tag processing."
+                    ),
+                "type": "null"
+            },
+        ]
+stack_ref_defs = {
+
+    "[!^~].*": {
+        "title": "Disabled Tag: ~$tag_name",
+        "description": (
+            "Disable a tag from processing. Any vars are ignored. Other chars are also supported: !^"
+        ),
+        "oneOf": stack_ref_kind_defs,
+        "default": {},
+    },
+    "^.*:.*$": {
+        "title": "Collection tag: $collection_name:$tag_name",
+        "description": (
+            "Reference a tag from a specific collection."
+            "See: Specific tag documentation for further informations."
+        ),
+        "oneOf": stack_ref_kind_defs,
+        "default": {},
+    },
+    # ".*/[^:]*": {
+    #     "title": "Absolute tag: $tag_path",
+    #     "description": (
+    #         "Reference a tag from a absolute app path."
+    #     ),
+    # },
+    ".*": {
+        "title": "Tag name: $tag_name",
+        "description": (
+            "Will find the best matching tag."
+            "See: Specific tag documentation for further informations."
+        ),
+        "oneOf": stack_ref_kind_defs,
+        "default": {},
+    },
+}
+
+
 class PaasifyStackTag(NodeMap, PaasifyObj):
 
     conf_schema = {
         # "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "StackTag configuration",
+        "description": (
+            "Tag definition. It support two formats at the same time: as string or dict."
+            " If the name is prefixed with a `!`, then it is removed from the"
+            " processing list (both vars, docker-file and jsonnet processing)."
+        ),
+        
         "oneOf": [
+            
             {
+                "title": "As string",
+                "description": (
+                    "Just pass the tag you want to apply as string."
+                    " This form does not allow jsonnet ovar override"
+                ),
                 "type": "string",
-                "oneOf": [
+                "default": "",
+                "examples": [
                     {
-                        "title": "Reference sourced app",
-                        "pattern": "^.*:.*$",
-                    },
-                    {
-                        "title": "Direct or absolute app path",
-                        "pattern": "^.*$",
+                        "tags": [
+                            "my_tagg",
+                            "~my_prefix_tag",
+                            "my_collection:my_prefix_tag",
+                        ],
                     },
                 ],
+
+                "oneOf": [
+                    {
+                        "title": stack["title"],
+                        "description": stack["description"],
+                        "pattern": stack_pattern,
+                    }
+                    for stack_pattern, stack in stack_ref_defs.items()],
             },
             {
+                "title": "As object",
+                "description": (
+                    "Define a tag. The key represent the name of the"
+                    " tag, while it's value is passed as vars during"
+                    " jsonnet processing. This form allow jsonnet ovar override"
+                ),
                 "type": "object",
-                "additionalProperties": False,
-                "patternProperties": {
-                    ".*": {
-                        "oneOf": [
-                            {"type": "object"},
-                            {"type": "null"},
+                "default": {},
+                "examples": [
+                    {
+                        "tags": [
+                            {
+                                "other_tag": {
+                                    "specific_conf": "val1",
+                                }
+                            },
+                            {"my_collection:another_tag": None},
+                            {
+                                "~ignore_this_tag": {
+                                    "specific_conf": "val1",
+                                }
+                            },
                         ],
-                    }
-                },
+                    },
+                ],
+
+                "minProperties": 1,
+                "maxProperties": 1,
+                # "additionalProperties": False,
+                "patternProperties": stack_ref_defs,
             },
         ],
     }
@@ -130,14 +256,59 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
     conf_schema = {
         # "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Paasify Stack Tags configuration",
-        "default": [],
+        "description": (
+            "Determine a list of tags to apply."
+            ),
+        "type": "array",
+        #"default": [],
+        #"additionalProperties": PaasifyStackTag.conf_schema,
+        #"items": PaasifyStackTag.conf_schema,
+
         "oneOf": [
             {
+                "title": "List of tags",
+                "description": (
+                    "Define a list of tags. You can interact in few ways with"
+                    " tags. Tags can support boths syntaxes at the same time."
+                ),
                 "type": "array",
-                "items": PaasifyStackTag.conf_schema,
+                "default": [],
+                "additionalProperties": PaasifyStackTag.conf_schema,
+                #"items": PaasifyStackTag.conf_schema,
+
+                "examples": [
+                    {
+                        "tags": [
+                            "my_tagg",
+                            "~my_prefix_tag",
+                            "my_collection:my_prefix_tag",
+
+                            {
+                                "other_tag": {
+                                    "specific_conf": "val1",
+                                }
+                            },
+                            {"my_collection:another_tag": None},
+                            {
+                                "~ignore_this_tag": {
+                                    "specific_conf": "val1",
+                                }
+                            },
+                        ],
+                    },
+                ],
             },
             {
+                "title": "Unset",
+                "description": "Do not declare any tags",
                 "type": "null",
+                "default": None,
+
+                "examples": [
+                    {
+                        "tags": None,
+                    },
+                ],
             },
         ],
     }

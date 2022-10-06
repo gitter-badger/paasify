@@ -8,7 +8,7 @@ from pprint import pprint
 
 from cafram.nodes import NodeList, NodeMap, NodeDict
 from cafram.base import Log, Base, Hooks
-from cafram.utils import serialize, flatten, json_validate
+from cafram.utils import merge_dicts, serialize, flatten, json_validate
 
 import paasify.errors as error
 
@@ -36,12 +36,48 @@ class PaasifySimpleDict(NodeMap, PaasifyObj):
     conf_default = {}
 
 
+
+
+
 class PaasifyConfigVar(NodeMap, PaasifyObj):
 
     conf_ident = "{self.name}={self.value}"
     conf_default = {
         "name": None,
         "value": None,
+    }
+
+    conf_schema = {
+        "title": "Variable definition as key/value",
+        "description": "Simple key value variable declaration, under the form of: {KEY: VALUE}. This does preserve value type.",
+        "type": "object",
+        
+        "propertyNames": {
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "minProperties": 1,
+        "maxProperties": 1,
+        # "additionalProperties": False,
+        "patternProperties": {
+            "^[A-Za-z_][A-Za-z0-9_]*$": {
+            #".*": {
+                "title": "Environment Key value",
+                "description": "Value must be serializable type",
+                "oneOf": [
+                    {
+                        "title": "As string",
+                        "type": "string"
+                        },
+                    {"title": "As boolean", "type": "boolean"},
+                    {"title": "As integer", "type": "integer"},
+                    {"title": "As null", 
+                    "description": "If set to null, this will remove variable",
+                    "type": "null"},
+                ],
+
+            }
+        },
+
     }
 
     def node_hook_transform(self, payload):
@@ -62,13 +98,44 @@ class PaasifyConfigVar(NodeMap, PaasifyObj):
         else:
             raise Exception(f"Unsupported () type {type(payload)}: {payload}")
 
-        # print (f"INIT NEW VAR: {result} VS {payload}")
         return result
 
-    # def conf_post_build(self):
 
-    #     self.ident = f"{self.name}={self.value}"
 
+
+
+vardef_schema_complex = {
+    "description": "Environment configuration. Paasify leave two choices for the configuration, either use the native dict configuration or use the docker-compatible format",
+
+    "oneOf": [
+        merge_dicts(PaasifyConfigVar.conf_schema, 
+            {
+                "examples": [
+                    {
+                        "env": [
+                            {"MYSQL_ADMIN_USER": "MyUser"},
+                            {"MYSQL_ADMIN_DB": "MyDB"},
+                        ]
+                    },
+                ],
+            }
+        ),
+        {
+            "title": "Variable definition as string (Compat)",
+            "description": "Value must be a string, under the form of: KEY=VALUE. This does not preserve value type.",
+            "type": "string",
+            "pattern":  "^[A-Za-z_][A-Za-z0-9_]*=.*$",
+            "examples": [
+                {
+                    "env": [
+                        "MYSQL_ADMIN_USER=MyUser",
+                        "MYSQL_ADMIN_DB=MyDB",
+                    ]
+                },
+            ],
+        },
+    ],
+}
 
 class PaasifyConfigVars(NodeList, PaasifyObj):
 
@@ -78,61 +145,79 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
         # "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Environment configuration",
         "description": "Environment configuration. Paasify leave two choices for the configuration, either use the native dict configuration or use the docker-compatible format",
-        "default": {},
+
         "oneOf": [
             {
-                "title": "Env configuration (dict)",
+                "title": "Env configuration as list",
+                "description": ("Configure variables as a list. This is the recommended way as"
+                    "it preserves the variable parsing order, useful for templating. This format "
+                    "allow multiple configuration format."),
+                "type": "array",
+                "default": [],
+                
+                "additionalProperties": vardef_schema_complex,
+
+                "examples": [
+                    {
+                        "env": [
+                            # "MYSQL_ADMIN_DB=MyDB",
+                            {"MYSQL_ADMIN_USER": "MyUser"},
+                            {"MYSQL_ADMIN_DB": "MyDB"},
+                            {"MYSQL_ENABLE_BACKUP": True},
+                            {"MYSQL_BACKUPS_NODES": 3},
+                            {"MYSQL_NODE_REPLICA": None},
+                            "MYSQL_WELCOME_STRING=Is alway a string",
+
+                        ],
+                    },
+                ],
+            },
+            {
+                "title": "Env configuration as dict (Compat)",
+                "description": (
+                    "Configure variables as a dict. This option is only proposed for "
+                    "compatibility reasons. It does not preserve the order of the variables."),
+                "type": "object",
+                "default": {},
+
+                # "patternProperties": {
+                #     ".*": { "properties": PaasifyConfigVar.conf_schema, }
+                # }
+                "propertyNames": {
+                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+                },
+                "additionalProperties": PaasifyConfigVar.conf_schema,
+
                 "examples": [
                     {
                         "env": {
                             "MYSQL_ADMIN_USER": "MyUser",
                             "MYSQL_ADMIN_DB": "MyDB",
+                            "MYSQL_ENABLE_BACKUP": True,
+                            "MYSQL_BACKUPS_NODES": 3,
+                            "MYSQL_NODE_REPLICA": None,
                         }
-                    }
+                    },
                 ],
-                "type": "object",
-                "patternProperties": {
-                    ".*": {
-                        "oneOf": [
-                            {
-                                "title": "Environment Key value",
-                                "description": "Value must be a string",
-                                "oneOf": [
-                                    {"type": "string"},
-                                    {"type": "boolean"},
-                                    {"type": "integer"},
-                                ],
-                            },
-                            {
-                                "title": "Ignored value",
-                                "description": "If empty, value is ignored",
-                                "type": "null",
-                            },
-                        ],
-                    }
-                },
             },
             {
-                "title": "Env configuration (list)",
+                "title": "Unset",
+                "description": (
+                    "Do not define any vars"),
+                "type": "null",
+                "default": None,
+
                 "examples": [
                     {
-                        "env": [
-                            "MYSQL_ADMIN_USER=MyUser",
-                            "MYSQL_ADMIN_DB=MyDB",
-                        ]
-                    }
+                        "env": None,
+                    },
+                    {
+                        "env": [],
+                    },
+                    {
+                        "env": {},
+                    },
                 ],
-                "type": "array",
-                "items": {
-                    "title": "Environment list",
-                    "description": "Value must be a string, under the form of: KEY=VALUE",
-                    "type": "string",
-                },
-            },
-            {
-                "title": "Env configuration (Empty)",
-                "examples": [{"env": None}],
-                "type": "null",
             },
         ],
     }
