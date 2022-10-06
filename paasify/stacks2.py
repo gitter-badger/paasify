@@ -1,5 +1,10 @@
 """
 Paasify Stack management
+
+This library provides two classes:
+
+* PaasifyStackManager: Manage a list of stacks
+* PaasifyStack: A stack instance
 """
 
 # pylint: disable=logging-fstring-interpolation

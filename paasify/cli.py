@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-"""Paasify CLI interface"""
+"""Paasify CLI interface
+
+This API provides a similar experience as the CLI, but in Python.
+
+Example:
+``` py title="test.py"
+from paasify.cli import app
+
+paasify = app()
+paasify.info()
+paasify.apply()
+```
+
+"""
 
 # pylint: disable=logging-fstring-interpolation
 
@@ -69,7 +82,7 @@ def main(
     ),
 ):
     """
-    Manage users in the awesome CLI app.
+    Prepare Paasify App instance.
     """
 
     # 50: Crit
@@ -144,7 +157,7 @@ def schema(
         help="Show segment only: app, project, stack",
     ),
 ):
-    """Show paasify config schema"""
+    """Show paasify configurations schema format"""
     psf = ctx.obj["paasify2"]
     out = psf.cmd_config_schema(format=format, target=target)
     print(out)
@@ -223,7 +236,7 @@ def apply(
         help="Stack to target, current cirectory or all",
     ),
 ):
-    """Build and clily stack"""
+    """Build and apply stack"""
     paasify = ctx.obj["paasify"]
     prj = paasify.load_project()
 
@@ -381,10 +394,10 @@ def reset(
 
 
 def app():
-    "Actually start the app"
+    "Return a Paasify App instance"
 
     try:
-        cli_app()
+        return cli_app()
 
     # pylint: disable=broad-except
     except Exception as err:

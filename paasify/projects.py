@@ -1,7 +1,21 @@
 """
 Project library
 
-This handle the project entity
+This handle the project entity.
+
+This library provides two classes:
+
+* PaasifyProjectConfig: A project config
+* PaasifyProject: A project instance
+
+
+Example:
+``` py title="test.py"
+from paasify.projects import PaasifyProject
+
+prj = PaasifyProject.discover_project()
+prj.dump()
+```
 """
 
 # pylint: disable=logging-fstring-interpolation

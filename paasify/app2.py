@@ -3,6 +3,17 @@ Paasify Application library
 
 This library provides a convenient paasify user friendly API.
 
+Example:
+``` py title="test.py"
+from paasify.app2 import PaasifyApp
+
+app = PaasifyApp()
+
+print (app.info())
+prj = app.load_project()
+prj.dump()
+```
+
 """
 
 import os
