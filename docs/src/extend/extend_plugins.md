@@ -29,7 +29,7 @@ documented [here](https://jsonnet.org/learning/tutorial.html)
 This example taken from example dir presents how to modularize config.
 
 Example:
-```
+``` console
 $ ls -1  docker-compose.*
 docker-compose.debug.yml
 docker-compose.ep_https.yml

@@ -10,8 +10,10 @@ nav:
       - usage.md
       - schema_doc/schema_inject.md
       - advanced.md
-    - Howto:
+    - Tutorial:
       - howto/learn_101.ipynb
+    - Plugins:
+      - Standard Library: apidoc/plugins/*
     - API:
       - Introduction: schema_doc/index.md
       - Python:
@@ -20,6 +22,9 @@ nav:
       - Extend: 
         - extend/extend_apps.md
         - extend/extend_plugins.md
+    - About:
+      - contribute.md
+      - license.md
 
 # https://squidfunk.github.io/mkdocs-material/setup/adding-a-git-repository/
 
@@ -38,6 +43,8 @@ markdown_extensions:
   - pymdownx.inlinehilite
   - pymdownx.snippets
   - pymdownx.superfences
+  - admonition
+  - pymdownx.details
 
 
 theme:

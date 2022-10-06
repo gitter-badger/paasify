@@ -1,4 +1,4 @@
-# Internal Reference
+# Components API
 
 ## Paasify Project: `paasify.projects`
 

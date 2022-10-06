@@ -38,16 +38,9 @@ A plugin can be used for:
 
 How to choose between both?
 
-* docker-compose pro:
-    * Well known merge mecanism, supported by docker, easy to use
-* docker-compose con:
-    * Quite limited on advanced use case, such as rewrite or modification
-* Jsonnet pro:
-    * Allow to create variables
-    * Very powerful turing language to manupulate docker-compose content
-    * Provides a convenient API/plugin system
-* Jsonnet con:
-    * Need to learn jsonnet language
-    * Sometime hard to debug
+|  | docker-compose | jsonnet |
+|---|---|---|
+| Pros | <ul> <li>Well known merge mecanism, supported by docker</li><li>Easy to learn</li></ul> | <ul> <li>Allow to create variables</li> <li>Very powerful turing language to manupulate docker-compose content</li> <li>Provides a convenient API/plugin system </li></ul> |
+| Cons | <ul> <li>Quite limited on advanced use case, such as rewrite or modification</li></ul> | <ul> <li>Need to learn jsonnet language</li><li>Hard to learn and debug</li></ul> |
 
 See how to [create plugins](extend/extend_plugins.md) for further infos.
