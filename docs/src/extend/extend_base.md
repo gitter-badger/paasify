@@ -1,9 +1,18 @@
-# Extend apps
+# Base
 
 
-## Introduction
 
-Paasify provides a way to extend apps, via collections and apps.
+Paasify provides a way to extend apps, via different concepts:
+
+* project
+* repository
+* collection
+* app
+* tag
+    * docker-compose tag
+    * jsonnet tag
+
+## Concepts
 
 A repo:
 
@@ -21,12 +30,26 @@ An app can include:
 * Tags definitions (docker-compose.<tag>.yml)
 * A set of plugin for this app (<tag>.jsonnet)
 
+A tag can be:
 
-## File hierarchy
+* A simple docker-compose file prefixed with the tag name
+* A jsonnet file that understand a json API
+
+A project is:
+
+* A directory where lives `paasify.yml`
+* Can include all of the above
+
+
+
+
+
+## Project
+
+
+### File hierarchy
 
 Each component must follow a hierarchical file structure convention:
-
-### Project structure
 
 Project file structure:
 
@@ -48,7 +71,22 @@ Project file structure:
 ```
 
 
-### Collection structure
+## App
+
+TODO
+
+### Tags
+
+
+!!! info
+    A dedicated page is [available here](extend_tags) for tags.
+
+
+## Collection
+
+TODO
+
+### File hierarchy
 
 Collection file structure:
 ```
@@ -72,18 +110,12 @@ Each collection is contained in a git repo. A git repo can have many collections
 inside each collection. A collection can alos provides plugins, like stacks.
 
 
-## Extend Paasify
+
+## Repository
+
+TODO
+
+### File hierarchy
 
 
-### Create a repo
 
-This is a simple git repository where files are commited.
-
-
-### Create a collection
-
-### Create an app
-
-TODO:
-
-* explain: vars.yml

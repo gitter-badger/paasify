@@ -1,4 +1,4 @@
-# Top Level API 
+# Application and CLI
 
 ## Paasify CLI: `paasify.cli`
 

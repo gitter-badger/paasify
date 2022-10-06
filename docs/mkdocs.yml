@@ -1,27 +1,38 @@
 docs_dir: src/
 site_dir: build/site/
-site_name: "Paasify Documenation"
+site_name: "Paasify Documentation"
+
+watch:
+  - src
+  - ../paasify
+
+extra_css:
+  - css/mkdocstrings.css
 
 site_url: https://paasify.org/
 nav:
-    - introduction.md
-    - Usage:
+    - Introduction: index.md
+    - Documentation:
       - concepts.md
-      - usage.md
-      - schema_doc/schema_inject.md
+      - configuration.md
+      - distribute.md
+      - extend.md
       - advanced.md
     - Tutorial:
       - howto/learn_101.ipynb
     - Plugins:
       - Standard Library: apidoc/plugins/*
-    - API:
+    - Reference:
       - Introduction: schema_doc/index.md
-      - Python:
+      - Configuration: schema_doc/schema_inject.md
+      - Plugins: 
+          - extend/extend_base.md
+          - extend/extend_tags.md
+      - Command line: usage.md
+      - Python API:
         - schema_doc/python_app.md
         - schema_doc/python_project.md
-      - Extend: 
-        - extend/extend_apps.md
-        - extend/extend_plugins.md
+        - schema_doc/python_api_other.md
     - About:
       - development.md
       - contribute.md

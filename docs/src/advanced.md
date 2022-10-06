@@ -1,9 +1,9 @@
 # Advanced
 
 
-## Stack Build Process
+## Stack assemble workflow
 
-How is processed a stack?
+How is assembled a stack?
 
 * Read variables:
     * Generate default stack vars (paasify)
@@ -24,23 +24,14 @@ How is processed a stack?
 * Write final docker-compose:
     * Write into: <stack_dir>/docker-compose.run.yml
 
-## Two kinds of plugins
 
-There are two kinds of plugins:
+Related piece of code: `paasify.stacks2.PaasifyStack.assemble()`
 
-* a docker-compose: `docker-compose.<tag_name>.yml` YAML file
-* a jsonnet script: `<tag_name>.jsonnet` jsonnet file
+::: paasify.stacks2.PaasifyStack.assemble
+    options:
+      show_root_heading: False
+      show_source: true
+      heading_level: 4
+      # show_category_heading: true
 
-A plugin can be used for:
 
-* Providing extra variables
-* Transform docker-compose final file
-
-How to choose between both?
-
-|  | docker-compose | jsonnet |
-|---|---|---|
-| Pros | <ul> <li>Well known merge mecanism, supported by docker</li><li>Easy to learn</li></ul> | <ul> <li>Allow to create variables</li> <li>Very powerful turing language to manupulate docker-compose content</li> <li>Provides a convenient API/plugin system </li></ul> |
-| Cons | <ul> <li>Quite limited on advanced use case, such as rewrite or modification</li></ul> | <ul> <li>Need to learn jsonnet language</li><li>Hard to learn and debug</li></ul> |
-
-See how to [create plugins](extend/extend_plugins.md) for further infos.

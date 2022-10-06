@@ -9,8 +9,9 @@ Paasify provides different APIs, depending your use cases, you may one or both:
 
 * `paasify` python API
     * Usage: Recommanded for python scripting
-    * Top Level API: [App](python_app.md)
-    * Internal API: [Project](python_project.md)
+    * [Application and CLI](python_app.md)
+    * [Projects and stacks](python_project.md)
+    * [Other](python_api_other.md)
 
 There are the different schema:
 
