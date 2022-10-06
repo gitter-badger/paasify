@@ -1,117 +1,43 @@
-import os
-import sys
+"""
+Paasify Stack management
+"""
 
-import textwrap
-import _jsonnet
+# pylint: disable=logging-fstring-interpolation
+
+
+import os
+
 import json
 from pprint import pprint
+
+
+import _jsonnet
 import anyconfig
 
 
-from cafram.nodes import NodeList, NodeMap, NodeDict, NodeVal
+from cafram.nodes import NodeList, NodeMap
 from cafram.utils import (
-    from_yaml,
     to_domain,
     to_yaml,
     first,
-    serialize,
     flatten,
-    json_validate,
     duplicates,
     write_file,
-    to_dict,
+    # to_dict,
+    # from_yaml,
+    # serialize,
+    # json_validate,
 )
 
 from paasify.common import lookup_candidates  # serialize, , json_validate, duplicates
-from paasify.framework import PaasifyObj, PaasifyConfigVars, PaasifySimpleDict
+from paasify.framework import PaasifyObj, PaasifyConfigVars  # , PaasifySimpleDict
 from paasify.engines import bin2utf8
-from paasify.stack_tags import PaasifyStackTagManager, PaasifyStackTag
+from paasify.stack_components import PaasifyStackTagManager, PaasifyStackApp
 import paasify.errors as error
 
 
-class PaasifyStackApp(NodeMap, PaasifyObj):
-
-    conf_default = {
-        "app": None,
-        "app_source": None,
-        "app_path": None,
-        "app_name": None,
-    }
-
-    def node_hook_transform(self, payload):
-
-        if isinstance(payload, str):
-            payload = {"app": payload}
-
-        app_def = payload.get("app")
-        app_path = payload.get("app_path")
-        app_source = payload.get("app_source")
-        app_name = payload.get("app_name")
-
-        app_split = app_def.split(":", 2)
-
-        if len(app_split) == 2:
-            app_source = app_source or app_split[0] or "default"
-            app_path = app_path or app_split[1]
-        else:
-            # Get from default namespace
-            app_name = app_source or app_split[0] or "default"
-            app_source = "default"
-            app_path = app_name
-        app_def = f"{app_source}:{app_path}"
-
-        if not app_name:
-            app_name = "_".join([part for part in os.path.split(app_path) if part])
-
-        result = {
-            "app": app_def,
-            "app_path": app_path,
-            "app_source": app_source,
-            "app_name": app_name,
-        }
-
-        return result
-
-    def node_hook_children(self):
-        "Self init object after loading of app"
-
-        self.prj = self.get_parents()[2]
-        self.collection_dir = os.path.join(
-            self.prj.runtime.project_collection_dir, self.app_source
-        )
-        self.app_dir = os.path.join(self.collection_dir, self.app_path)
-        self.tags_dir = os.path.join(self.collection_dir, ".paasify", "plugins")
-
-    def lookup_docker_files_app(self):
-        """Lookup docker-compose files in app directory"""
-
-        lookup = [
-            {
-                "path": self.app_dir,
-                "pattern": ["docker-compose.yml", "docker-compose.yml"],
-            }
-        ]
-        local_cand = lookup_candidates(lookup)
-        local_cand = flatten([x["matches"] for x in local_cand])
-
-        return local_cand
-
-    def lookup_jsonnet_files_app(self):
-        """Lookup docker-compose files in app directory"""
-
-        lookup = [
-            {
-                "path": self.app_dir,
-                "pattern": ["docker-compose.yml", "docker-compose.yml"],
-            }
-        ]
-        local_cand = lookup_candidates(lookup)
-        local_cand = flatten([x["matches"] for x in local_cand])
-
-        return local_cand
-
-
 class PaasifyStack(NodeMap, PaasifyObj):
+    "Paasify Stack Instance"
 
     conf_ident = "{self.path}"
 
@@ -126,38 +52,19 @@ class PaasifyStack(NodeMap, PaasifyObj):
         "tags_suffix": [],
         "tags_prefix": [],
         "vars": [],
-        # "_runtime": {},
-        # "TEST": "DEFAULT BUUUG",
     }
 
     conf_children = [
-        # {
-        #     "key": "name",
-        #     "cls": str,
-        # },
-        # {
-        #     "key": "path",
-        #     "cls": str,
-        # },
         {
             "key": "app",
             "cls": PaasifyStackApp,
             "action": "unset",
             # "hook": "init_stack",
         },
-        # {
-        #     "key": "tags",
-        #     #"cls": PaasifyStackTagManager,
-        # },
         {
             "key": "vars",
             "cls": PaasifyConfigVars,
         },
-        # {
-        #     "key": "TEST",
-        #     "cls": NodeVal,
-        #     "default": "My STirng Value",
-        # },
     ]
 
     conf_schema = {
@@ -183,14 +90,18 @@ class PaasifyStack(NodeMap, PaasifyObj):
         },
     }
 
-    # conf_struct = {
-    #     "name": str,
-    #     "path": str,
-    #     #"path": None,
-    #     "app": PaasifyStackApp,
-    #     "tags": PaasifyStackTagManager,
-    #     "vars": PaasifyConfigVars,
-    # }
+    # Other objects
+    tag_manager = None
+    engine = None
+    prj = None
+
+    # TODO: Fix those vars
+    stack_dir = None
+    prj_dir = None
+    name = None
+    stack_name = None
+    path = None
+    namespace = None
 
     # CaFram functions
     # ---------------------
@@ -222,7 +133,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.stack_name = self.get_name()
         self.name = self.stack_name  # Legacy code
         self.path = self.get_path()  # legacy code
-        assert self.stack_name, f"Bug here, should not be empty"
+        assert self.stack_name, f"Bug here, should not be empty, got: {self.stack_name}"
 
         self.prj_dir = self.prj.runtime.root_path
         self.stack_dir = os.path.join(self.prj.runtime.root_path, self.stack_name)
@@ -364,7 +275,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # dsfsdf
 
         # Build default
-        app_dir = self.path
+        # app_dir = self.path
         result = {
             "paasify_sep": "_",
             "prj_path": self.prj_dir,
@@ -490,7 +401,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             for key, val in payload["vars_override"].items():
                 dst = vars_run.get(key, None)
                 # print(dst)
-                if not vars_run.get(key, None):
+                if not dst:
                     vars_run[key] = val
 
         return vars_run
@@ -502,7 +413,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # 1. Update sources
         # TOFIX: Be more selective on the source
-        assert len(self.prj.sources.get_children()) > 0, f"Missing default source!"
+        assert len(self.prj.sources.get_children()) > 0, "Missing default source!"
         for src_name, src in self.prj.sources.get_children().items():
             src.install(update=False)
 
@@ -540,11 +451,12 @@ class PaasifyStack(NodeMap, PaasifyObj):
             out = engine.assemble(docker_files, env=vars_run)
         except Exception as err:
             err = bin2utf8(err)
+            # pylint: disable=no-member
             self.log.critical(err.txterr)
             raise err
-            raise error.DockerBuildConfig(
-                f"Impossible to build docker-compose files: "
-            ) from err
+            # raise error.DockerBuildConfig(
+            #     f"Impossible to build docker-compose files: {err}"
+            # ) from err
 
         # Fetch output
         docker_run_content = out.stdout.decode("utf-8")
@@ -601,15 +513,14 @@ class PaasifyStack(NodeMap, PaasifyObj):
             # docker_run_payload = result["docker_override"]
 
         # 8. Save the final docker-compose.run.yml file
-        self.log.info(f"Writing docker-compose file: {outfile}")
+        self.log.notice(f"Writing docker-compose file: {outfile}")
         # pprint (docker_run_payload)
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
 
-        return
-
 
 class PaasifyStackManager(NodeList, PaasifyObj):
+    "Manage a list of stacks"
 
     conf_schema = {
         # "$schema": "http://json-schema.org/draft-07/schema#",
@@ -622,25 +533,30 @@ class PaasifyStackManager(NodeList, PaasifyObj):
     conf_children = PaasifyStack
 
     def conf_post_build(self):
+        "(deprecated)"
 
         stack_paths = self.list_stack_by("path")
-        stack_names = self.list_stack_by("name")
+        # stack_names = self.list_stack_by("name")
 
         dup = duplicates(stack_paths)
         if len(dup) > 0:
             raise error.ProjectInvalidConfig(f"Cannot have duplicate paths: {dup}")
 
     def list_stacks(self):
+        "Get stacks children (deprecated)"
         return self.get_children()
 
     def list_stack_by_ident(self):
+        "List stack per idents"
         return [x.ident for x in self.get_children()]
 
     def list_stack_by(self, attr="ident"):
+        "List stacks by attribute"
         return [getattr(x, attr) for x in self.get_children()]
 
     # TODO: IS THIS ONE USED AT SOME POINTS ?
     def cmd_stack_assemble(self, stacks=None):
+        "Assemble a stack"
 
         stacks = stacks or self._nodes
         for stack in stacks:
@@ -649,24 +565,28 @@ class PaasifyStackManager(NodeList, PaasifyObj):
             # stack.assemble()
 
     def cmd_stack_up(self, stacks=None):
+        "Start a stack"
 
         stacks = stacks or self._nodes
         for stack in stacks:
             stack.up()
 
     def cmd_stack_down(self, stacks=None):
+        "Stop a stack"
 
         stacks = stacks or self._nodes
         for stack in stacks:
             stack.down()
 
     def cmd_stack_recreate(self, stacks=None):
+        "Recreate a stack"
 
         self.cmd_stack_down(stacks=stacks)
         self.cmd_stack_assemble(stacks=stacks)
         self.cmd_stack_up(stacks=stacks)
 
     def cmd_stack_apply(self, stacks=None):
+        "Apply a stack"
 
         self.cmd_stack_assemble(stacks=stacks)
         self.cmd_stack_up(stacks=stacks)

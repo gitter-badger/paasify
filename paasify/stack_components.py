@@ -1,18 +1,110 @@
+import os
+
 from cafram.nodes import NodeList, NodeMap
-from cafram.utils import serialize, flatten
+from cafram.utils import flatten
 
 from paasify.common import lookup_candidates
 from paasify.framework import PaasifyObj
 
 
-stack_name_pattern =   {
+# =======================================================================================
+# Stack Apps
+# =======================================================================================
+
+
+class PaasifyStackApp(NodeMap, PaasifyObj):
+
+    conf_default = {
+        "app": None,
+        "app_source": None,
+        "app_path": None,
+        "app_name": None,
+    }
+
+    def node_hook_transform(self, payload):
+
+        if isinstance(payload, str):
+            payload = {"app": payload}
+
+        app_def = payload.get("app")
+        app_path = payload.get("app_path")
+        app_source = payload.get("app_source")
+        app_name = payload.get("app_name")
+
+        app_split = app_def.split(":", 2)
+
+        if len(app_split) == 2:
+            app_source = app_source or app_split[0] or "default"
+            app_path = app_path or app_split[1]
+        else:
+            # Get from default namespace
+            app_name = app_source or app_split[0] or "default"
+            app_source = "default"
+            app_path = app_name
+        app_def = f"{app_source}:{app_path}"
+
+        if not app_name:
+            app_name = "_".join([part for part in os.path.split(app_path) if part])
+
+        result = {
+            "app": app_def,
+            "app_path": app_path,
+            "app_source": app_source,
+            "app_name": app_name,
+        }
+
+        return result
+
+    def node_hook_children(self):
+        "Self init object after loading of app"
+
+        self.prj = self.get_parents()[2]
+        self.collection_dir = os.path.join(
+            self.prj.runtime.project_collection_dir, self.app_source
+        )
+        self.app_dir = os.path.join(self.collection_dir, self.app_path)
+        self.tags_dir = os.path.join(self.collection_dir, ".paasify", "plugins")
+
+    def lookup_docker_files_app(self):
+        """Lookup docker-compose files in app directory"""
+
+        lookup = [
+            {
+                "path": self.app_dir,
+                "pattern": ["docker-compose.yml", "docker-compose.yml"],
+            }
+        ]
+        local_cand = lookup_candidates(lookup)
+        local_cand = flatten([x["matches"] for x in local_cand])
+
+        return local_cand
+
+    def lookup_jsonnet_files_app(self):
+        """Lookup docker-compose files in app directory"""
+
+        lookup = [
+            {
+                "path": self.app_dir,
+                "pattern": ["docker-compose.yml", "docker-compose.yml"],
+            }
+        ]
+        local_cand = lookup_candidates(lookup)
+        local_cand = flatten([x["matches"] for x in local_cand])
+
+        return local_cand
+
+
+# =======================================================================================
+# Stack Tag schemas
+# =======================================================================================
+
+stack_name_pattern = {
     "title": "Short form",
     "description": (
         "Just pass the tag you want to apply as string."
         " This form does not allow jsonnet ovar override"
     ),
     "type": "string",
-
     "oneOf": [
         {
             "title": "Reference collection app",
@@ -24,16 +116,12 @@ stack_name_pattern =   {
         },
         {
             "title": "Direct or absolute app path",
-            "description": (
-                "Reference a tag from a specific collection."
-            ),
+            "description": ("Reference a tag from a specific collection."),
             "pattern": ".*/[^:]*",
         },
         {
             "title": "Tag",
-            "description": (
-                "Will find the best matvhing tag."
-            ),
+            "description": ("Will find the best matvhing tag."),
             "pattern": "^.*$",
         },
     ],
@@ -41,21 +129,18 @@ stack_name_pattern =   {
 
 
 stack_ref_kind_defs = [
-            {
-                "title": "With value",
-                "description": "Pass extra vars for during jsonet tag processing.",
-                "type": "object"
-            },
-            {
-                "title": "Without value",
-                "description": (
-                    "No vars are added for this jsonnet tag processing."
-                    ),
-                "type": "null"
-            },
-        ]
+    {
+        "title": "With value",
+        "description": "Pass extra vars for during jsonet tag processing.",
+        "type": "object",
+    },
+    {
+        "title": "Without value",
+        "description": ("No vars are added for this jsonnet tag processing."),
+        "type": "null",
+    },
+]
 stack_ref_defs = {
-
     "[!^~].*": {
         "title": "Disabled Tag: ~$tag_name",
         "description": (
@@ -101,9 +186,7 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
             " If the name is prefixed with a `!`, then it is removed from the"
             " processing list (both vars, docker-file and jsonnet processing)."
         ),
-        
         "oneOf": [
-            
             {
                 "title": "As string",
                 "description": (
@@ -121,14 +204,14 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
                         ],
                     },
                 ],
-
                 "oneOf": [
                     {
                         "title": stack["title"],
                         "description": stack["description"],
                         "pattern": stack_pattern,
                     }
-                    for stack_pattern, stack in stack_ref_defs.items()],
+                    for stack_pattern, stack in stack_ref_defs.items()
+                ],
             },
             {
                 "title": "As object",
@@ -156,7 +239,6 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
                         ],
                     },
                 ],
-
                 "minProperties": 1,
                 "maxProperties": 1,
                 # "additionalProperties": False,
@@ -256,14 +338,11 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
     conf_schema = {
         # "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Paasify Stack Tags configuration",
-        "description": (
-            "Determine a list of tags to apply."
-            ),
+        "description": ("Determine a list of tags to apply."),
         "type": "array",
-        #"default": [],
-        #"additionalProperties": PaasifyStackTag.conf_schema,
-        #"items": PaasifyStackTag.conf_schema,
-
+        # "default": [],
+        # "additionalProperties": PaasifyStackTag.conf_schema,
+        # "items": PaasifyStackTag.conf_schema,
         "oneOf": [
             {
                 "title": "List of tags",
@@ -274,15 +353,13 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
                 "type": "array",
                 "default": [],
                 "additionalProperties": PaasifyStackTag.conf_schema,
-                #"items": PaasifyStackTag.conf_schema,
-
+                # "items": PaasifyStackTag.conf_schema,
                 "examples": [
                     {
                         "tags": [
                             "my_tagg",
                             "~my_prefix_tag",
                             "my_collection:my_prefix_tag",
-
                             {
                                 "other_tag": {
                                     "specific_conf": "val1",
@@ -303,7 +380,6 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
                 "description": "Do not declare any tags",
                 "type": "null",
                 "default": None,
-
                 "examples": [
                     {
                         "tags": None,

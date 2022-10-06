@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Paasify CLI interface"""
 
+# pylint: disable=logging-fstring-interpolation
+
 # Run like this:
 #   python3 python_cli.py -vvvv demo
 # Author: mrjk
@@ -8,24 +10,19 @@
 import os
 import sys
 
-from typing import List, Optional
-
-import glob
-import sh
-import yaml
-import json
 import traceback
-import re
 
-from pprint import pprint
+from typing import Optional
+
+
+# from pprint import pprint
 from pathlib import Path
 
 import typer
-import anyconfig
-from cafram.utils import serialize, get_logger
+from cafram.utils import get_logger
 
 
-import paasify.errors as error
+# import paasify.errors as error
 from paasify.common import OutputFormat
 from paasify.app2 import PaasifyApp
 
@@ -47,7 +44,6 @@ from paasify.app2 import PaasifyApp
 # log = logging.getLogger("paasify")
 
 log = get_logger(logger_name="paasify")
-
 
 
 cli_app = typer.Typer(help="Paasify, build your compose-files", no_args_is_help=True)
@@ -105,6 +101,7 @@ def main(
             "default_source": "default",
             "cwd": os.getcwd(),
             "working_dir": working_dir,
+            # "collections_dir": collections_dir,
         }
     }
 
@@ -137,6 +134,7 @@ def ls(
     prj.cmd_stacks_list()
 
 
+# pylint: disable=redefined-builtin
 @cli_app.command()
 def schema(
     ctx: typer.Context,
@@ -149,7 +147,8 @@ def schema(
     """Show paasify config schema"""
     psf = ctx.obj["paasify2"]
     out = psf.cmd_config_schema(format=format, target=target)
-    print (out)
+    print(out)
+
 
 @cli_app.command()
 def init(
@@ -276,7 +275,7 @@ def build(
 
     # sys.exit(1)
 
-    print("\n\n")
+    # print("\n\n")
     # print ("PASSED: Dict")
     # pprint (paasify.__dict__)
     # print ("PASSED: SAerialized")
@@ -302,11 +301,11 @@ def build(
     # print (serialize(paasify.__dict__, fmt='json'))
     # print (serialize(paasify.project.stacks.__dict__, fmt='json'))
 
-    sys.exit(0)
+    # sys.exit(0)
 
-    paasify = ctx.obj["paasify"]
-    prj = paasify.load_project()
-    prj.cmd_build(stack=stack)
+    # paasify = ctx.obj["paasify"]
+    # prj = paasify.load_project()
+    # prj.cmd_build(stack=stack)
 
 
 @cli_app.command()
@@ -386,13 +385,15 @@ def app():
 
     try:
         cli_app()
+
+    # pylint: disable=broad-except
     except Exception as err:
         err_type = err.__class__.__module__ + "." + err.__class__.__name__
 
         if hasattr(err, "paasify"):
             err_name = err.__class__.__name__
             if isinstance(err.advice, str):
-                log.warn(err.advice)
+                log.warning(err.advice)
             log.error(err)
             log.critical(f"Error {err.rc}: {err_name}")
             sys.exit(err.rc)

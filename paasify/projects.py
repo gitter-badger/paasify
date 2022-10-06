@@ -1,10 +1,18 @@
+"""
+Project library
+
+This handle the project entity
+"""
+
+# pylint: disable=logging-fstring-interpolation
+
+
 import os
-import sys
 
 from pprint import pprint
 import anyconfig
 
-from cafram.nodes import NodeList, NodeMap, NodeDict
+from cafram.nodes import NodeMap
 
 import paasify.errors as error
 from paasify.engines import EngineDetect
@@ -12,16 +20,17 @@ from paasify.framework import (
     PaasifyObj,
     PaasifySources,
     PaasifyConfigVars,
-    PaasifySimpleDict,
 )
-from paasify.common import list_parent_dirs, find_file_up, filter_existing_files
+from paasify.common import list_parent_dirs, find_file_up
 
 from paasify.stacks2 import PaasifyStackTagManager, PaasifyStackManager
 
 
 ALLOW_CONF_JUNK = False
 
+
 class PaasifyProjectConfig(NodeMap, PaasifyObj):
+    "Paasify Project Configuration"
 
     conf_default = {
         "namespace": None,
@@ -57,16 +66,12 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
     ]
 
     conf_schema = {
-        #"$schema": "http://json-schema.org/draft-07/schema#",
+        # "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Paasify Project settings",
-        
         "description": (
             "Configure main project settings. It provides global settings"
             " but also defaults vars and tags for all stacks."
-            ),
-
-        
-
+        ),
         "oneOf": [
             {
                 "type": "object",
@@ -75,24 +80,22 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
                 "description": (
                     "Configure project as a dict value. "
                     "Most of these settings are overridable via environment vars."
-                    ),
+                ),
                 "default": {},
-
                 "properties": {
                     "namespace": {
                         "title": "Project namespace",
                         "description": "Name of the project namespace. If not set, defaulted to directory name",
                         "oneOf": [
-                            
                             {
                                 "title": "None",
                                 "description": "Defaulted by the project dir name",
-                                "type": "null"
+                                "type": "null",
                             },
                             {
                                 "title": "String",
                                 "description": "Custom namespace name string",
-                                "type": "string"
+                                "type": "string",
                             },
                         ],
                     },
@@ -101,18 +104,12 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
                     "tags_suffix": PaasifyStackTagManager.conf_schema,
                     "tags_prefix": PaasifyStackTagManager.conf_schema,
                 },
-
-                "examples":[
+                "examples": [
                     {
                         "config": {
                             "namespace": "my_ns1",
-                            "vars": [
-                                {"my_var1": "my_value1"}
-                            ],
-                            "tags": [
-                                "tag1",
-                                "tag2"
-                            ],
+                            "vars": [{"my_var1": "my_value1"}],
+                            "tags": ["tag1", "tag2"],
                         },
                     }
                 ],
@@ -136,6 +133,8 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
 
 
 class PaasifyProjectRuntime(NodeMap, PaasifyObj):
+    "Paasify Runtime Object (deprecated)"
+
     def node_hook_transform(self, payload):
 
         self.log.warning("Build ProjectRuntime")
@@ -173,6 +172,7 @@ class PaasifyProjectRuntime(NodeMap, PaasifyObj):
 
 
 class PaasifyProject(NodeMap, PaasifyObj):
+    "Paasify Project instance"
 
     conf_default = {
         "_runtime": {},
@@ -227,7 +227,7 @@ class PaasifyProject(NodeMap, PaasifyObj):
                 "type": "object",
             },
             "stacks": {
-                #"$ref": "#/$defs/stacks",
+                # "$ref": "#/$defs/stacks",
             },
         },
     }
@@ -289,7 +289,6 @@ class PaasifyProject(NodeMap, PaasifyObj):
         be found in path with filename filenames
 
         """
-        conf = {}
         config_file = path or os.getcwd()
         filenames = filenames or ["paasify.yml", "paasify.yaml"]
 

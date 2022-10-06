@@ -19,31 +19,7 @@ sources:
     url: https://git.jeznet.org/mrjk-foss/docker-compose.git
 
 stacks:
-#   # - path: just/a/path
-#   # - name: myapp
-#   # - app: myns:my_app
-#   # - app: namsepa_conly
-#   #   name: tutu
-
-#   # - app: myns:my_app
-#   #   name: customi_name
-#   #   #path: in_this/path/
-#   #   #path: just/a/path
-
-#   - app: myns:my_app
-#     name: customi_name3
-
-#   - name: customi_name4
-
-#   - app: :my_app3/sub_app
-#   - app: :my_app3/sub_app
-#     path: tutu
-#     name: other_name
-
-
-
-# OLD_STACKS:
-  - #path: traefik
+  - path: traefik
     app: default:traefik
     #path: trafik1
     # vars:

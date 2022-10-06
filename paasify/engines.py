@@ -1,19 +1,30 @@
-import os
-import sys
+"""Paasify Engine management
 
+This class helps to deal with docker engine versions
+"""
+
+# pylint: disable=logging-fstring-interpolation
+# pylint: disable=invalid-name
+
+
+import os
 import re
 import logging
 import json
 
-from pprint import pprint
 from distutils.version import StrictVersion
+
+# from packaging.version import StrictVersion
 from pprint import pprint
 
 import semver
+
+# from semver.version import Version
+
 import sh
 
 from cafram.utils import _exec
-from cafram.nodes import NodeList, NodeMap, NodeDict
+from cafram.nodes import NodeMap
 
 import paasify.errors as error
 from paasify.common import cast_docker_compose
@@ -24,6 +35,8 @@ log = logging.getLogger(__name__)
 
 
 def bin2utf8(obj):
+    "Transform sh output bin to utf-8"
+
     if hasattr(obj, "stdout"):
         obj.txtout = obj.stdout.decode("utf-8").rstrip("\n")
     else:
@@ -39,8 +52,12 @@ def bin2utf8(obj):
 
 
 class EngineCompose(NodeMap, PaasifyObj):
+    "Generic docker-engine compose API"
 
     version = None
+    docker_file_exists = False
+    docker_file_path = None
+    arg_prefix = []
 
     conf_default = {
         "project_dir": ".",
@@ -50,9 +67,9 @@ class EngineCompose(NodeMap, PaasifyObj):
 
     ident = "default"
 
-    def node_hook_children(
-        self,
-    ):  # , project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
+    def node_hook_children(self):
+        "Create stack context on start"
+        # , project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
 
         # self.project_dir = project_dir
         # self.project_name = project_name
@@ -79,7 +96,7 @@ class EngineCompose(NodeMap, PaasifyObj):
         # print ((project_dir, self.docker_file))
         self.docker_file_path = os.path.join(project_dir, self.docker_file)
 
-        self.docker_file_exists = False
+        # self.docker_file_exists = False
         if os.path.isfile(self.docker_file_path):
             self.docker_file_exists = True
 
@@ -92,6 +109,7 @@ class EngineCompose(NodeMap, PaasifyObj):
         # podman compose (new) (support podman only)
 
     def assemble(self, compose_files, env_file=None, env=None):
+        "Generate docker-compose file"
 
         cli_args = list(self.arg_prefix)
 
@@ -118,7 +136,9 @@ class EngineCompose(NodeMap, PaasifyObj):
         bin2utf8(result)
         return result
 
+    # pylint: disable=invalid-name
     def up(self, **kwargs):
+        "Start containers"
 
         if not self.docker_file_exists:
             self.log.notice(f"Stack {self.parent.project_name} is not built yet")
@@ -137,6 +157,7 @@ class EngineCompose(NodeMap, PaasifyObj):
             log.notice(out.txtout)
 
     def down(self, **kwargs):
+        "Stop containers"
 
         if not self.docker_file_exists:
             self.log.notice(f"Stack {self.parent.project_name} is not built yet")
@@ -155,6 +176,8 @@ class EngineCompose(NodeMap, PaasifyObj):
             if out:
                 bin2utf8(out)
                 log.notice(out.txtout)
+
+        # pylint: disable=no-member
         except sh.ErrorReturnCode_1 as err:
             bin2utf8(err)
 
@@ -163,6 +186,7 @@ class EngineCompose(NodeMap, PaasifyObj):
                 raise error.DockerCommandFailed(f"{err.txterr}")
 
     def logs(self, follow=False):
+        "Return container logs"
 
         if not self.docker_file_exists:
             self.log.notice(f"Stack {self.parent.project_name} is not built yet")
@@ -180,7 +204,9 @@ class EngineCompose(NodeMap, PaasifyObj):
 
         _exec("docker-compose", cli_args, **sh_options)
 
+    # pylint: disable=invalid-name
     def ps(self):
+        "Return container processes"
 
         if not self.docker_file_exists:
             self.log.notice(f"Stack {self.parent.project_name} is not built yet")
@@ -208,9 +234,9 @@ class EngineCompose(NodeMap, PaasifyObj):
             published = [x for x in published if x.get("PublishedPort") > 0]
 
             # Reduce duplicates
-            for x in published:
-                if x.get("URL") == "0.0.0.0":
-                    x["URL"] = "::"
+            for pub in published:
+                if pub.get("URL") == "0.0.0.0":
+                    pub["URL"] = "::"
 
             # Format port strings
             exposed = []
@@ -231,14 +257,17 @@ class EngineCompose(NodeMap, PaasifyObj):
 
 
 class EngineCompose_26(EngineCompose):
+    "Docker-engine: Support for version until 2.6"
 
     ident = "docker-compose-2.6"
 
 
 class EngineCompose_129(EngineCompose):
+    "Docker-engine: Support for version until 1.29"
 
     ident = "docker-compose-1.29"
 
+    # pylint: disable=invalid-name
     def ps(self):
         cli_args = [
             "--file",
@@ -249,8 +278,11 @@ class EngineCompose_129(EngineCompose):
 
         result = _exec("docker-compose", cli_args, _fg=True)
 
+        return result
+
 
 class EngineCompose_16(EngineCompose):
+    "Docker-engine: Support for version until 1.6"
 
     ident = "docker-compose-1.6"
 
@@ -293,6 +325,7 @@ class EngineCompose_16(EngineCompose):
 
 # class EngineDetect(PaasifyObj):
 class EngineDetect:
+    "Class helper to retrieve the appropriate docker-engine class"
 
     versions = {
         "docker": {
@@ -307,6 +340,10 @@ class EngineDetect:
     }
 
     def detect_docker_compose(self):
+        "Detect current version of docker compose. Return a docker-engine class."
+
+        # pylint: disable=no-member
+        out = "No output for command"
         try:
 
             # cmd = sh.Command("docker-compose", _log_msg='paasify')
@@ -317,11 +354,11 @@ class EngineDetect:
             bin2utf8(out)
         except sh.ErrorReturnCode as err:
             raise error.DockerUnsupportedVersion(
-                f"Impossible to guess docker-compose version"
+                f"Impossible to guess docker-compose version: {out}"
             ) from err
 
         # Scan version
-        patt = "version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))"
+        patt = r"version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))"
         match = re.search(patt, out.txtout)
         if match:
             version = match.groupdict()
@@ -332,7 +369,7 @@ class EngineDetect:
         curr_ver = version["version"]
 
         # Scan available versions
-        versions = [key for key in self.versions["docker-compose"].keys()]
+        versions = [key for key in self.versions["docker-compose"]]
         versions.sort(key=StrictVersion)
         versions.reverse()
         match = None
@@ -354,6 +391,7 @@ class EngineDetect:
         return cls
 
     def detect(self, engine=None):
+        "Return the Engine class that match engine string"
 
         if not engine:
             log.info("Guessing best docker engine ...")

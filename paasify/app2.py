@@ -1,21 +1,30 @@
+"""
+Paasify Application library
+
+This library provides a convenient paasify user friendly API.
+
+"""
+
 import os
-import sys
 
 from pprint import pprint
 
-import anyconfig
 
-from cafram.utils import to_yaml, to_json, _exec, write_file, serialize, flatten, json_validate
-from cafram.nodes import NodeList, NodeMap, NodeDict, NodeMapEnv
+from cafram.utils import (
+    to_yaml,
+    to_json,
+)
+from cafram.nodes import NodeMap, NodeMapEnv
 
 
 import paasify.errors as error
 from paasify.framework import (
     PaasifyObj,
 )
-from paasify.common import list_parent_dirs, find_file_up, filter_existing_files
-from paasify.common import OutputFormat
 
+# from paasify.common import list_parent_dirs, find_file_up, filter_existing_files
+from paasify.common import OutputFormat
+from paasify.stacks2 import PaasifyStackManager
 from paasify.projects import PaasifyProject
 
 
@@ -25,6 +34,7 @@ from paasify.projects import PaasifyProject
 
 
 class PaasifyAppConfig(NodeMapEnv, PaasifyObj):
+    "Configuration of Paasify main Application"
 
     conf_env_prefix = "PAASIFY_APP"
 
@@ -87,6 +97,7 @@ class PaasifyAppConfig(NodeMapEnv, PaasifyObj):
 
 
 class PaasifyApp(NodeMap, PaasifyObj):
+    "Paasify Main application Instance"
 
     ident = "Paasify App"
 
@@ -152,7 +163,7 @@ class PaasifyApp(NodeMap, PaasifyObj):
 
         # Autoload default project
         msg = ""
-        if autoload is None or autoload == True:
+        if autoload is None or bool(autoload):
             try:
                 if not self.project:
                     self.log.notice("Info is autoloading project")
@@ -161,18 +172,18 @@ class PaasifyApp(NodeMap, PaasifyObj):
                 msg = err
                 if autoload is True:
                     raise error.ProjectNotFound(err)
-                pass
 
         print("\nPaasify Project Info:")
         print("==================")
 
         if self.project:
             # Report with active project if available
-            for k, v in self.project.runtime.get_value(lvl=-1).items():
-                print(f"  {k}: {v}")
+            for key, val in self.project.runtime.get_value(lvl=-1).items():
+                print(f"  {key}: {val}")
         else:
             print(f"  {msg}")
 
+    # pylint: disable=redefined-builtin
     def cmd_config_schema(self, format=None, target=None):
         """Returns the configuration json schema
 
@@ -188,9 +199,9 @@ class PaasifyApp(NodeMap, PaasifyObj):
         elif target == "project":
             out = PaasifyProject.conf_schema
         elif target == "test":
-            from paasify.stacks2 import PaasifyStackManager
+
             out = PaasifyStackManager.conf_schema
-            #raise NotImplemented()
+            # raise NotImplemented()
         else:
             out = PaasifyProject.conf_schema
 

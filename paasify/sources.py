@@ -1,20 +1,24 @@
+"""Paasify Source management libray
+
+"""
+
 import os
-import sys
 import logging
 
 # import yaml
-import anyconfig
-import sh
+# import anyconfig
+# import sh
 
 # import _jsonnet
 
 from pprint import pprint, pformat
 
-from paasify.common import _exec
+# from paasify.common import _exec
+from cafram.utils import _exec
+from cafram.nodes import NodeMap, NodeDict
 
 # from paasify.class_model import ClassClassifier
-from cafram.nodes import NodeList, NodeMap, NodeDict
-from paasify.framework import *
+from paasify.framework import PaasifyObj
 
 
 log = logging.getLogger(__name__)
@@ -140,21 +144,21 @@ class SourcesManager(NodeDict, PaasifyObj):
 
     conf_children = Source
 
-    def _init(self, **kwargs):
+    # def _init(self, **kwargs):
 
-        self.obj_prj = self.parent
+    #     self.obj_prj = self._node_parent
 
-        self.collection_dir = self.runtime["collections_dir"]
+    #     self.collection_dir = self.obj_prj.runtime["collections_dir"]
 
-        assert isinstance(self.user_config, dict), f"Source def is not a dict"
+    #     assert isinstance(self.user_config, dict), f"Source def is not a dict"
 
-        store = []
+    #     store = []
 
-        for source_name, source_def in self.user_config.items():
-            source = Source(self, user_config=source_def, name=source_name)
-            store.append(source)
+    #     for source_name, source_def in self.user_config.items():
+    #         source = Source(self, user_config=source_def, name=source_name)
+    #         store.append(source)
 
-        self.store = store
+    #     self.store = store
 
     def get_all(self):
         "Return the list of all sources"

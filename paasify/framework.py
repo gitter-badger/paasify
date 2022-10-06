@@ -1,5 +1,9 @@
+"Paasify Framework Libary"
+
+
+# pylint: disable=logging-fstring-interpolation
+
 import os
-import sys
 from string import Template
 import logging
 
@@ -8,7 +12,7 @@ from pprint import pprint
 
 from cafram.nodes import NodeList, NodeMap, NodeDict
 from cafram.base import Log, Base, Hooks
-from cafram.utils import merge_dicts, serialize, flatten, json_validate
+from cafram.utils import merge_dicts
 
 import paasify.errors as error
 
@@ -18,6 +22,7 @@ _log = logging.getLogger()
 
 # class PaasifyObj(Conf,Family,Log,Base):
 class PaasifyObj(Log, Hooks, Base):
+    "Default Paasify base object"
 
     module = "paasify"
     log = _log
@@ -32,14 +37,13 @@ class PaasifyObj(Log, Hooks, Base):
 
 
 class PaasifySimpleDict(NodeMap, PaasifyObj):
+    "Simple Paaisfy Configuration Dict"
 
     conf_default = {}
 
 
-
-
-
 class PaasifyConfigVar(NodeMap, PaasifyObj):
+    "Simple Paaisfy Configuration Var Dict"
 
     conf_ident = "{self.name}={self.value}"
     conf_default = {
@@ -51,33 +55,27 @@ class PaasifyConfigVar(NodeMap, PaasifyObj):
         "title": "Variable definition as key/value",
         "description": "Simple key value variable declaration, under the form of: {KEY: VALUE}. This does preserve value type.",
         "type": "object",
-        
-        "propertyNames": {
-            "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
-        },
+        "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
         "minProperties": 1,
         "maxProperties": 1,
         # "additionalProperties": False,
         "patternProperties": {
             "^[A-Za-z_][A-Za-z0-9_]*$": {
-            #".*": {
+                # ".*": {
                 "title": "Environment Key value",
                 "description": "Value must be serializable type",
                 "oneOf": [
-                    {
-                        "title": "As string",
-                        "type": "string"
-                        },
+                    {"title": "As string", "type": "string"},
                     {"title": "As boolean", "type": "boolean"},
                     {"title": "As integer", "type": "integer"},
-                    {"title": "As null", 
-                    "description": "If set to null, this will remove variable",
-                    "type": "null"},
+                    {
+                        "title": "As null",
+                        "description": "If set to null, this will remove variable",
+                        "type": "null",
+                    },
                 ],
-
             }
         },
-
     }
 
     def node_hook_transform(self, payload):
@@ -101,14 +99,11 @@ class PaasifyConfigVar(NodeMap, PaasifyObj):
         return result
 
 
-
-
-
 vardef_schema_complex = {
     "description": "Environment configuration. Paasify leave two choices for the configuration, either use the native dict configuration or use the docker-compatible format",
-
     "oneOf": [
-        merge_dicts(PaasifyConfigVar.conf_schema, 
+        merge_dicts(
+            PaasifyConfigVar.conf_schema,
             {
                 "examples": [
                     {
@@ -118,13 +113,13 @@ vardef_schema_complex = {
                         ]
                     },
                 ],
-            }
+            },
         ),
         {
             "title": "Variable definition as string (Compat)",
             "description": "Value must be a string, under the form of: KEY=VALUE. This does not preserve value type.",
             "type": "string",
-            "pattern":  "^[A-Za-z_][A-Za-z0-9_]*=.*$",
+            "pattern": "^[A-Za-z_][A-Za-z0-9_]*=.*$",
             "examples": [
                 {
                     "env": [
@@ -137,26 +132,31 @@ vardef_schema_complex = {
     ],
 }
 
+
 class PaasifyConfigVars(NodeList, PaasifyObj):
+    "Paasify Project configuration object"
 
     conf_children = PaasifyConfigVar
 
     conf_schema = {
         # "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Environment configuration",
-        "description": "Environment configuration. Paasify leave two choices for the configuration, either use the native dict configuration or use the docker-compatible format",
-
+        "description": (
+            "Environment configuration. Paasify leave two choices for the "
+            "configuration, either use the native dict configuration or use the "
+            "docker-compatible format"
+        ),
         "oneOf": [
             {
                 "title": "Env configuration as list",
-                "description": ("Configure variables as a list. This is the recommended way as"
+                "description": (
+                    "Configure variables as a list. This is the recommended way as"
                     "it preserves the variable parsing order, useful for templating. This format "
-                    "allow multiple configuration format."),
+                    "allow multiple configuration format."
+                ),
                 "type": "array",
                 "default": [],
-                
                 "additionalProperties": vardef_schema_complex,
-
                 "examples": [
                     {
                         "env": [
@@ -167,7 +167,6 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
                             {"MYSQL_BACKUPS_NODES": 3},
                             {"MYSQL_NODE_REPLICA": None},
                             "MYSQL_WELCOME_STRING=Is alway a string",
-
                         ],
                     },
                 ],
@@ -176,18 +175,15 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
                 "title": "Env configuration as dict (Compat)",
                 "description": (
                     "Configure variables as a dict. This option is only proposed for "
-                    "compatibility reasons. It does not preserve the order of the variables."),
+                    "compatibility reasons. It does not preserve the order of the variables."
+                ),
                 "type": "object",
                 "default": {},
-
                 # "patternProperties": {
                 #     ".*": { "properties": PaasifyConfigVar.conf_schema, }
                 # }
-                "propertyNames": {
-                    "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
-                },
+                "propertyNames": {"pattern": "^[A-Za-z_][A-Za-z0-9_]*$"},
                 "additionalProperties": PaasifyConfigVar.conf_schema,
-
                 "examples": [
                     {
                         "env": {
@@ -202,11 +198,9 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
             },
             {
                 "title": "Unset",
-                "description": (
-                    "Do not define any vars"),
+                "description": ("Do not define any vars"),
                 "type": "null",
                 "default": None,
-
                 "examples": [
                     {
                         "env": None,
@@ -247,6 +241,7 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
         return result
 
     def parse_vars(self, current=None):
+        "Parse vars and interpolate strings"
 
         result = dict(current or {})
 
@@ -262,6 +257,7 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
                     self.log.warning(
                         f"Variable {err} is not defined in: {var.name}='{value}'"
                     )
+                # pylint: disable=broad-except
                 except Exception as err:
                     self.log.warning(
                         f"Could not parse variable: {var.name}='{value}' ( => {err.__class__}/{err})"
@@ -292,7 +288,7 @@ class PaasifySource(NodeDict, PaasifyObj):
             return
 
         self.log.info(f"Install source '{self.ident}' in: {git_dir}")
-        raise NotImplemented
+        raise NotImplementedError
 
 
 class PaasifySources(NodeDict, PaasifyObj):

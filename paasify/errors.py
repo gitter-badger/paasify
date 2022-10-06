@@ -1,3 +1,8 @@
+"""
+Paasify errors
+"""
+
+
 class PaasifyError(Exception):
     """Base class for other exceptions"""
 
@@ -7,6 +12,8 @@ class PaasifyError(Exception):
     def __init__(self, message, rc=None, advice=None):
         # self.paasify = True
         self.advice = advice
+
+        # pylint: disable=invalid-name
         self.rc = rc or self.rc
         super().__init__(message)
 

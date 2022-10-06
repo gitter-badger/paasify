@@ -1,24 +1,20 @@
-import io
+"""Paasify common library
+
+Holds common pieces of code
+
+"""
+
 import os
-import sys
 from enum import Enum
 
-import logging
-import json
 from pprint import pprint
-from pathlib import Path
 
+# from pathlib import Path
+# from jsonschema import Draft202012Validator, validators
+# import paasify.errors as error
+
+import shlex
 import re
-import sh
-import ruamel.yaml
-import jsonschema
-from jsonschema import Draft202012Validator, validators
-
-import paasify.errors as error
-
-
-# raise Exception ("common is deprecated")
-
 
 # =====================================================================
 # Init
@@ -26,10 +22,11 @@ import paasify.errors as error
 
 
 class OutputFormat(str, Enum):
+    "Available paasify format outputs"
+
     yaml = "yaml"
     json = "json"
     toml = "toml"
-
 
 
 # =====================================================================
@@ -131,6 +128,7 @@ def merge_env_vars(obj):
 
 
 def parse_vars(match):
+    "Deprecated"
 
     match = match.groupdict()
 
@@ -149,8 +147,8 @@ def parse_vars(match):
     else:
         mode = "simple"
 
-    r = {"name": name, "mode": mode, "arg": match["arg"] or None}
-    return r
+    result = {"name": name, "mode": mode, "arg": match["arg"] or None}
+    return result
 
 
 # Broken
@@ -184,15 +182,14 @@ def extract_shell_vars(file):
     print(f"FILE MATCH: {file}")
 
     # Open file
-    with open(file) as f:
-        lines = f.readlines()
+    with open(file, encoding="uft-8") as _file:
+        lines = _file.readlines()
 
     content = "".join(lines)
 
     ### LEXER APPROACH
-    import shlex
 
-    lexer = shlex.shlex(content)
+    # lexer = shlex.shlex(content)
     print(shlex.split(content))
     # for token in lexer:
     #     print ( repr(token))
@@ -200,35 +197,35 @@ def extract_shell_vars(file):
     #### REGEX APPROACH
 
     # Parse shell vars, first round
-    result = []
+    results = []
     for match in re.finditer(SHELL_REGEX, content):
 
-        r = parse_vars(match)
-        print("  NEW MATCH 1: ", r)
-        result.append(r)
+        result = parse_vars(match)
+        print("  NEW MATCH 1: ", result)
+        results.append(result)
 
     # PArse shell vars second round
     found = True
-    while found == True:
+    while found is True:
 
-        cand = [x["arg"] for x in result if isinstance(x["arg"], str)]
+        cand = [x["arg"] for x in results if isinstance(x["arg"], str)]
         cand = "\n".join(cand)
 
         # print (cand)
         found = False
         for match in re.finditer(SHELL_REGEX, cand):
 
-            r = parse_vars(match)
+            result = parse_vars(match)
             # print ("  NEW MATCH", match.groupdict())
-            print("  NEW MATCH 2: ", r)
-            var_name = r["name"]
-            if len([x for x in result if x["name"] == var_name]) == 0:
+            print("  NEW MATCH 2: ", result)
+            var_name = result["name"]
+            if len([x for x in results if x["name"] == var_name]) == 0:
                 found = True
-                result.append(r)
+                results.append(result)
 
         # TEMP
         # found = False
 
     print("FINAL RESULT ============================")
-    pprint(result)
-    return result
+    pprint(results)
+    return results

@@ -47,7 +47,7 @@ def test_stacks_resolution(data_regression):
     # Load project
     app_conf = {
         "config": {
-            "working_dir": cwd + "/tests/examples/stacks_idents",
+            "working_dir": cwd + "/tests/examples/unit_stacks_idents",
         }
     }
     psf = PaasifyApp(payload=app_conf)
