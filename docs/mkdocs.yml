@@ -23,6 +23,7 @@ nav:
         - extend/extend_apps.md
         - extend/extend_plugins.md
     - About:
+      - development.md
       - contribute.md
       - license.md
 
