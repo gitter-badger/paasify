@@ -2,35 +2,50 @@ docs_dir: src/
 site_dir: build/site/
 site_name: "Paasify Documenation"
 
-site_url: https://example.com/
+site_url: https://paasify.org/
 nav:
-    - Introduction: introduction.md
-    - Configuration:
-      - Concepts: concepts.md
-      - Usage: usage.md
+    - introduction.md
+    - Usage:
+      - concepts.md
+      - usage.md
+      - schema_doc/schema_inject.md
+      - advanced.md
     - Howto:
-      - Quick start: howto/learn_101.ipynb
-    - Extend: 
-      - extend/extend_apps.md
-      - extend/extend_plugins.md
-    - Schemas:
-      - paasify.yml schema: schema_doc/paasify_yml_schema.md
-      - paasify.yml schema (HTML): schema_doc/paasify_yml_schema.html
-      - paasify.yml schema (Beta): schema_doc/test.md
+      - howto/learn_101.ipynb
+    - API:
+      - Introduction: schema_doc/index.md
+      - Python:
+        - schema_doc/python_app.md
+        - schema_doc/python_project.md
+      - Extend: 
+        - extend/extend_apps.md
+        - extend/extend_plugins.md
 
 # https://squidfunk.github.io/mkdocs-material/setup/adding-a-git-repository/
 
 plugins:
   - search
+  - mkdocstrings
   #- schema_reader:
   #    include: 
   #      - "build/paasify_yml_schema.json"
   - mkdocs-jupyter
 
 
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
+
 theme:
     name: material
     locale: en
+    features:
+      - content.code.annotate
+
     #custom_dir: mkdocs_override/
     #custom_dir: overrides
     #custom_dir: custom_theme/

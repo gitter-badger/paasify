@@ -1,14 +1,12 @@
-# Tags and plugins
+# Extend tags and plugins
 
 
 
 
 ## Introduction
 
-A plugin can be used for:
 
-* Providing extra variables
-* Transform docker-compose final file
+
 
 
 ### docker-compose tag
