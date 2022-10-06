@@ -1,0 +1,53 @@
+docs_dir: src/
+site_dir: build/site/
+site_name: "Paasify Documenation"
+
+site_url: https://example.com/
+nav:
+    - Introduction: introduction.md
+    - Configuration:
+      - Concepts: concepts.md
+      - Usage: usage.md
+    - Howto:
+      - Quick start: howto/learn_101.ipynb
+    - Extend: 
+      - extend/extend_apps.md
+      - extend/extend_plugins.md
+    - Schemas:
+      - paasify.yml schema: schema_doc/paasify_yml_schema.md
+      - paasify.yml schema (HTML): schema_doc/paasify_yml_schema.html
+      - paasify.yml schema (Beta): schema_doc/test.md
+
+# https://squidfunk.github.io/mkdocs-material/setup/adding-a-git-repository/
+
+plugins:
+  - search
+  #- schema_reader:
+  #    include: 
+  #      - "build/paasify_yml_schema.json"
+  - mkdocs-jupyter
+
+
+theme:
+    name: material
+    locale: en
+    #custom_dir: mkdocs_override/
+    #custom_dir: overrides
+    #custom_dir: custom_theme/
+    palette: 
+
+      # Palette toggle for light mode
+      - scheme: default
+        primary: light green
+        accent: indigo
+        toggle:
+          icon: material/brightness-7 
+          name: Switch to dark mode
+
+      # Palette toggle for dark mode
+      - scheme: slate
+        primary: blue grey
+        accent: green light
+        toggle:
+          icon: material/brightness-4
+          name: Switch to light mode
