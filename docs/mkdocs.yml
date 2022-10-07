@@ -11,18 +11,16 @@ extra_css:
 
 site_url: https://paasify.org/
 nav:
-    - Introduction: index.md
     - Documentation:
+      - Introduction: index.md
       - docs/concepts.md
       - docs/configuration.md
       - docs/distribute.md
       - docs/extend.md
       - docs/advanced.md
-    - Tutorial:
-      - tutorial/learn_101.ipynb
+    - Guides:
+      - jupyter/*.ipynb
       - tutorial/best_practices.md
-    - Plugins:
-      - plugins_apidoc/*/markdown.md
     - Reference:
       - Introduction: refs/index.md
       - Configuration: refs/config_schema.md
@@ -34,6 +32,8 @@ nav:
         - refs/python_api_app.md
         - refs/python_api_project.md
         - refs/python_api_other.md
+    - Plugins:
+      - plugins_apidoc/*/markdown.md
     - About:
       - about/development.md
       - about/contribute.md
@@ -66,6 +66,14 @@ theme:
     locale: en
     features:
       - content.code.annotate
+      - navigation.tracking
+      - navigation.tabs
+      - navigation.tabs.sticky
+#      - navigation.expand
+      - navigation.sections
+#      - toc.integrate
+      - navigation.top
+      - search.highlight
 
     #custom_dir: mkdocs_override/
     #custom_dir: overrides

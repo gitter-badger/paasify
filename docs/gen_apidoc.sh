@@ -2,7 +2,7 @@
 
 set -eu
 
-python -m bash_kernel.install
+#python -m bash_kernel.install
 
 BUILD_DIR=./build
 BUILD_DIR=./src/schema_doc

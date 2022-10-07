@@ -42,6 +42,19 @@ This is the general workflow:
 
 Once you developped or changed things, you need to test
 
+## Recommended tools
+
+Recommended tools:
+
+* [Poetry](https://python-poetry.org/): Python project management
+* [Task](https://taskfile.dev/): MakeFile replacement
+* [direnv](https://direnv.net/): Allow to enable 
+
+Troubleshooting:
+
+* [jq](https://stedolan.github.io/jq/): Process JSON files
+* [yq](https://mikefarah.gitbook.io/yq/): Process YAML files
+
 
 ## Quality Process
 
