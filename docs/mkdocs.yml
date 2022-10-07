@@ -4,7 +4,7 @@ site_name: "Paasify Documentation"
 
 watch:
   - src
-  - ../paasify
+#  - ../paasify
 
 extra_css:
   - css/mkdocstrings.css
