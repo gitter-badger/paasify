@@ -60,6 +60,24 @@ Troubleshooting:
 
 The main steps as been implemented as task files.
 
+
+### Documentation
+
+You can manually edit the documentation or simply
+use the integrated web IDE.
+```
+task doc:serve_ide
+```
+
+Applications:
+
+* Documentation: [http://127.0.0.1:8042](http://127.0.0.1:8042/)
+* Jupyter Notebook Editor:  [http://127.0.0.1:8043](http://127.0.0.1:8043/), token is shown in docker logs.
+* Code Editor (optional):  [http://127.0.0.1:8044](http://127.0.0.1:8044/)
+
+From these, you can both edit the code with a visual editor and also
+run jupyter notebooks, and see in live the result in the web page.
+
 ### Development
 
 Run code linting:
@@ -109,6 +127,16 @@ Show documentation:
 task doc:serve_doc: 
 ```
 
+Test dockerized paasify with your project:
+```
+alias paasify-docker='docker run -ti --rm -v $(dirname $PWD):/work -w /work/$(basename $PWD) paasify:latest paasify2'
+
+# Run command from outside
+paasify-docker info
+
+# To get into your project
+docker run -ti --rm -v $(dirname $PWD):/work -w /work/$(basename $PWD) bash
+``` 
 
 
 ### Commit reviewable code
