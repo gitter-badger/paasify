@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "properties": {
+    "overrides": {
+      "type": "object"
+    },
+    "transform": {
+      "description": "Do nothing",
+      "type": "object"
+    },
+    "variables": {
+      "properties": {
+        "app_domain": {
+          "description": "Domain of the application",
+          "type": "string"
+        },
+        "app_fqdn": {
+          "description": "Fully Qualified Domain Name of the application",
+          "type": "string"
+        },
+        "app_name": {
+          "description": "Name of the application",
+          "type": "string"
+        },
+        "app_namespace": {
+          "description": "Namespace of the application",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    }
+  },
+  "title": "Paasify Standard library",
+  "type": "object"
+}

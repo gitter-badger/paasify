@@ -13,30 +13,31 @@ site_url: https://paasify.org/
 nav:
     - Introduction: index.md
     - Documentation:
-      - concepts.md
-      - configuration.md
-      - distribute.md
-      - extend.md
-      - advanced.md
+      - docs/concepts.md
+      - docs/configuration.md
+      - docs/distribute.md
+      - docs/extend.md
+      - docs/advanced.md
     - Tutorial:
-      - howto/learn_101.ipynb
+      - tutorial/learn_101.ipynb
+      - tutorial/best_practices.md
     - Plugins:
-      - Standard Library: apidoc/plugins/*
+      - plugins_apidoc/*/markdown.md
     - Reference:
-      - Introduction: schema_doc/index.md
-      - Configuration: schema_doc/schema_inject.md
+      - Introduction: refs/index.md
+      - Configuration: refs/config_schema.md
       - Plugins: 
-          - extend/extend_base.md
-          - extend/extend_tags.md
-      - Command line: usage.md
+          - refs/extend_base.md
+          - refs/extend_tags.md
+      - Command line: refs/cli_usage.md
       - Python API:
-        - schema_doc/python_app.md
-        - schema_doc/python_project.md
-        - schema_doc/python_api_other.md
+        - refs/python_api_app.md
+        - refs/python_api_project.md
+        - refs/python_api_other.md
     - About:
-      - development.md
-      - contribute.md
-      - license.md
+      - about/development.md
+      - about/contribute.md
+      - about/license.md
 
 # https://squidfunk.github.io/mkdocs-material/setup/adding-a-git-repository/
 
@@ -47,7 +48,8 @@ plugins:
   #    include: 
   #      - "build/paasify_yml_schema.json"
   - mkdocs-jupyter
-
+  - literate-nav:
+      nav_file: SUMMARY.md
 
 markdown_extensions:
   - pymdownx.highlight:

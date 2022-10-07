@@ -1,0 +1,24 @@
+description: Create a traefik service for a given service
+properties:
+  overrides:
+    type: object
+  transform:
+    description: Do nothing
+    type: object
+  variables:
+    properties:
+      app_name:
+        traefik_svc_entrypoints: Name of the application
+        type: string
+      traefik_svc_certresolver:
+        description: Domain of the application
+        type: string
+      traefik_svc_entrypoints:
+        description: Fully Qualified Domain Name of the application
+        type: string
+      traefik_svc_tls:
+        description: Namespace of the application
+        type: boolean
+    type: object
+title: Trafik service
+type: object

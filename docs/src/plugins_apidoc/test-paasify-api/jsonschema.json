@@ -1,0 +1,5 @@
+{
+  "description": "Validate if the Paasify API works as expected",
+  "title": "Paasify Standard library",
+  "type": "object"
+}
