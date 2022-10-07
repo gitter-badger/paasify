@@ -81,3 +81,8 @@ class InvalidConfig(PaasifyError):
 class PaasifyNestedProject(PaasifyError):
     "Raised when a project is created into an existing project"
     rc = 35
+
+
+class StackMissingDockerComposeFile(PaasifyError):
+    """Raised when a stack can't find a docker-compose.yml"""
+    rc = 38

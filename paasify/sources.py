@@ -142,6 +142,7 @@ class SourcesManager(NodeDict, PaasifyObj):
         },
     }
 
+    store = []
     conf_children = Source
 
     # def _init(self, **kwargs):

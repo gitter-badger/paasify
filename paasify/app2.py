@@ -39,7 +39,8 @@ from paasify.stacks2 import PaasifyStackManager
 from paasify.projects import PaasifyProject
 
 
-# from paasify.common import _exec, list_parent_dirs, find_file_up, filter_existing_files, write_file
+# from paasify.common import _exec, list_parent_dirs, find_file_up,
+#   filter_existing_files, write_file
 # from paasify.class_model import *
 # from paasify.common import serialize, flatten, json_validate
 
@@ -195,7 +196,7 @@ class PaasifyApp(NodeMap, PaasifyObj):
             print(f"  {msg}")
 
     # pylint: disable=redefined-builtin
-    def cmd_config_schema(self, format=None, target=None):
+    def cmd_config_schema(self, format=None, target=None, mode=None, output=None):
         """Returns the configuration json schema
 
         Args:
@@ -205,6 +206,18 @@ class PaasifyApp(NodeMap, PaasifyObj):
             _type_: _description_
         """
 
+        target = target or "project"
+        mode = mode or "stdout"
+        assert target in [
+            "app",
+            "project",
+            "test",
+            "project",
+            "plugins",
+        ], f"Invalid target: {target}"
+        assert mode in ["doc", "single", "stdout", "file"], f"Invalid mode: {mode}"
+
+        # Select target to document
         if target == "app":
             out = self.conf_schema
         elif target == "project":

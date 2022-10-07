@@ -1,7 +1,7 @@
 import os
 
 from cafram.nodes import NodeList, NodeMap
-from cafram.utils import flatten
+from cafram.utils import flatten, first
 
 from paasify.common import lookup_candidates
 from paasify.framework import PaasifyObj
@@ -264,8 +264,23 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
     #     "vars": dict,
     # }
 
+    # Place to store list of candidates
+    jsonnet_candidates = None
+    docker_candidates = None
+
+    # Object shortcuts
+    stack = None
+    prj = None
+    app = None
+
     def node_hook_transform(self, payload):
 
+        # Init parent objects
+        self.stack = self.get_parent().get_parent()
+        self.prj = self.stack.get_parent().get_parent()
+        self.app = self.prj.get_parents()
+
+        # Transform input
         result = {
             "name": None,
             "vars": {},
@@ -291,19 +306,16 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
 
         return result
 
-    def node_hook_children(self):
-        "Self init object after loading of app"
+    # def node_hook_children(self):
+    #     "Self init object after loading of app"
 
-        self.prj = self.get_parent()
-        self.app = self.get_parents()
+    # print("TAG", self, self.get_parents())
+    # totooo
 
-        # print("TAG", self, self.get_parents())
-        # totooo
-
-        # self.app_dir = os.path.join(
-        #     self.prj.runtime.project_root_dir,
-        #     '.paasify', 'collections',
-        #     self.app_source, self.app_path)
+    # self.app_dir = os.path.join(
+    #     self.prj.runtime.project_root_dir,
+    #     '.paasify', 'collections',
+    #     self.app_source, self.app_path)
 
     def _lookup_file(self, dirs, pattern):
         "Lookup a specific file name in dirs"
@@ -393,3 +405,31 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
 
     def list_tags(self):
         return self._nodes
+
+    def resolve_tags_files(self, dirs):
+        """Generate a list of file tags
+
+        Return a list of dict:
+        """
+
+        # Actually find best candidates
+        results = []
+        for tag in self.get_children():
+
+            # Match files
+            docker_files = tag.lookup_docker_files_tag(dirs)
+            jsonnet_files = tag.lookup_jsonnet_files_tag(dirs)
+
+            # Backup data in object
+            tag.jsonnet_candidates = jsonnet_files
+            tag.docker_candidates = docker_files
+
+            results.append(
+                {
+                    "tag": tag,
+                    "jsonnet_file": first(jsonnet_files),
+                    "docker_file": first(docker_files),
+                }
+            )
+
+        return results

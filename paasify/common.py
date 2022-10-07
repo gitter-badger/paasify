@@ -24,6 +24,8 @@ import re
 class OutputFormat(str, Enum):
     "Available paasify format outputs"
 
+    # pylint: disable=invalid-name
+
     yaml = "yaml"
     json = "json"
     toml = "toml"

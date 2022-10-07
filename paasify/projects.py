@@ -99,7 +99,10 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
                 "properties": {
                     "namespace": {
                         "title": "Project namespace",
-                        "description": "Name of the project namespace. If not set, defaulted to directory name",
+                        "description": (
+                            "Name of the project namespace. If not"
+                            " set, defaulted to directory name"
+                        ),
                         "oneOf": [
                             {
                                 "title": "None",
@@ -151,7 +154,7 @@ class PaasifyProjectRuntime(NodeMap, PaasifyObj):
 
     def node_hook_transform(self, payload):
 
-        self.log.warning("Build ProjectRuntime")
+        self.log.info("Build ProjectRuntime")
 
         # Build default runtime
         root_path = payload.get("root_path") or os.getcwd()
@@ -342,9 +345,6 @@ class PaasifyProject(NodeMap, PaasifyObj):
             _payload.update(anyconfig.load(config_file))
         _payload["_runtime"] = _runtime
 
-        pprint(_payload)
-        assert "WIPPP"
-
         prj = PaasifyProject(parent=parent, payload=_payload)
 
         return prj
@@ -356,3 +356,21 @@ class PaasifyProject(NodeMap, PaasifyObj):
             fun = getattr(stack, cmd)
             self.log.debug(f"Execute: {fun}")
             fun()
+
+    def explain_stacks(self, mode=None):
+        "Show informations on project plugins"
+
+        if isinstance(mode, str):
+
+            dst_path = mode
+            print("Generate documentation in dir:", dst_path)
+
+            for stack in self.stacks.get_children():
+
+                stack.gen_doc(output_dir=dst_path)
+
+        else:
+
+            for stack in self.stacks.get_children():
+
+                stack.explain_tags()

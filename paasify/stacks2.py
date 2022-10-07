@@ -28,6 +28,7 @@ from cafram.utils import (
     flatten,
     duplicates,
     write_file,
+    to_json,
     # to_dict,
     # from_yaml,
     # serialize,
@@ -41,10 +42,24 @@ from paasify.stack_components import PaasifyStackTagManager, PaasifyStackApp
 import paasify.errors as error
 
 
+# Try to load json schema if present
+ENABLE_JSON_SCHEMA = False
+try:
+    from json_schema_for_humans.generate import (
+        generate_from_filename,
+        generate_from_schema,
+    )
+    from json_schema_for_humans.generation_configuration import GenerationConfiguration
+
+    ENABLE_JSON_SCHEMA = True
+except ImportError:
+    ENABLE_JSON_SCHEMA = False
+
+
 class PaasifyStack(NodeMap, PaasifyObj):
     "Paasify Stack Instance"
 
-    conf_ident = "{self.path}"
+    conf_ident = "{self.namespace}/{self.stack_name}"
 
     conf_default = {
         "path": None,
@@ -99,6 +114,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
     tag_manager = None
     engine = None
     prj = None
+
+    # TODO: State vars
+    docker_candidates = None
 
     # TODO: Fix those vars
     stack_dir = None
@@ -190,8 +208,18 @@ class PaasifyStack(NodeMap, PaasifyObj):
     # Local functions
     # ---------------------
 
-    def resolve_docker_file(self):
-        "Return all docker-files candidates: local, app and tags"
+    def resolve_stack_files(self):
+        """Return all docker-files candidates: local, app and tags
+
+        Modify object and set:
+            Name: self.docker_candidates
+            Content: A list of docker candidates
+
+        Return nothing
+        """
+
+        stack_dir = self.stack_dir
+        app = self.app
 
         # Search in:
         # <local>/docker-compose.yml
@@ -199,69 +227,71 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # <local>/docker-compose.<tags>.yml
         # <app>/docker-compose.<tags>.yml
 
-        # Get local docker compose
+        # 1. Get local docker compose
         lookup = [
             {
-                "path": self.stack_dir,
+                "path": stack_dir,
                 "pattern": ["docker-compose.yml", "docker-compose.yml"],
             }
         ]
         local_cand = lookup_candidates(lookup)
-        local_cand = flatten([x["matches"] for x in local_cand])
 
-        # Get app cand as fallback
-        if len(local_cand) < 1 and self.app:
-            local_cand = self.app.lookup_docker_files_app()
+        # 2. Get app cand as fallback
+        app_cand = []
+        if app:
+            local_cand = app.lookup_docker_files_app()
+
+        # 3. Flatten result to matching candidates
+        results = []
+        results.extend(local_cand)
+        results.extend(app_cand)
 
         # Filter result
-        if len(local_cand) > 0:
-            return local_cand[0]
-        else:
-            raise Exception("Docker compose main file not found")
+        if len(results) < 1:
+            msg = f"Can't find `docker-compose.yml` file neither in stack or app in: {stack_dir}"
+            raise error.StackMissingDockerComposeFile(msg)
 
-    def resolve_all_tags(self):
-        "Resolve all tags"
+        # Return all results
+        self.docker_candidates = results
 
-        results = []
+    def get_tag_plan(self):
+        """
+        Resolve all files associated to tags
 
-        # Generate base
-        base = {
+        Return the list of tags with files
+        """
+
+        if not self.docker_candidates:
+            self.resolve_stack_files()
+
+        # 0. Init
+        # Objects:
+        app = self.app or None
+        # Vars:
+        stack_dir = self.stack_dir
+        project_jsonnet_dir = self.prj.runtime.project_jsonnet_dir
+
+        # 1. Generate default tag (docker compose files only)
+        tag_base = {
             "tag": None,
-            # TOFIX: Add default lib, _paasify.jsonnet
             "jsonnet_file": None,
-            "docker_file": self.resolve_docker_file(),
+            "docker_file": first(self.docker_candidates),
         }
-        results.append(base)
 
-        # Generate directory lookup for tags
+        # 2. Forward to StackTagManager: Generate directory lookup for tags
         dirs = [
-            self.stack_dir,
-            self.prj.runtime.project_jsonnet_dir,
+            stack_dir,
+            project_jsonnet_dir,
         ]
-        if self.app:
-            dirs.append(self.app.app_dir)
-            dirs.append(self.app.tags_dir)
+        if app:
+            dirs.append(app.app_dir)
+            dirs.append(app.tags_dir)
+        tag_list = self.tag_manager.resolve_tags_files(dirs)
 
-        # Actually find best candidates
-        for tag in self.tag_manager.get_children():
-            # print (tag, dirs)
-
-            docker_files = tag.lookup_docker_files_tag(dirs)
-            jsonnet_files = tag.lookup_jsonnet_files_tag(dirs)
-            # if not docker_file:
-            # pprint (jsonnet_file)
-            # jfile = first(jsonnet_file)
-            # dfile = first(docker_file)
-            # self.log.debug(f"Found files for tag {tag.name}: {dfile}, {jfile}")
-
-            results.append(
-                {
-                    "tag": tag,
-                    "jsonnet_file": first(jsonnet_files),
-                    "docker_file": first(docker_files),
-                }
-            )
-
+        # 3. Return result list
+        results = []
+        results.append(tag_base)
+        results.extend(tag_list)
         return results
 
     def gen_conveniant_vars(self, docker_file):
@@ -423,7 +453,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             src.install(update=False)
 
         # 2. Resolve all tags files
-        all_tags = self.resolve_all_tags()
+        all_tags = self.get_tag_plan()
 
         # 3. Parse stack vars
         vars_run = self.gen_stacks_vars(
@@ -522,6 +552,147 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # pprint (docker_run_payload)
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
+
+    def explain_tags(self):
+        "Explain hos tags are processed on stack"
+
+        print(f"  Scanning stack plugins: {self.ident}")
+        matches = self.get_tag_plan()
+
+        # 0. Internal functions
+        def list_items(items):
+            "List items"
+            _first = "*"
+            # list_items(items)
+            for cand in items:
+                print(f"          {_first} {cand}")
+                _first = "-"
+
+        def list_jsonnet_files(items):
+            "List jsonnet files"
+            for match in items:
+
+                tag = match.get("tag")
+                if tag:
+                    cand = match.get("jsonnet_file")
+                    if cand:
+                        print(f"        - {tag.name}")
+
+        # 1. Show all match combinations
+        for match in matches:
+
+            tag = match.get("tag")
+
+            if not tag:
+                print("    Default config:")
+                list_items(self.docker_candidates)
+                print("    Tag config:")
+                continue
+
+            print(f"      tag: {tag.name}")
+
+            if tag.docker_candidates:
+                print("        Docker tags:")
+                list_items(tag.docker_candidates)
+
+            if tag.jsonnet_candidates:
+                print("        Jsonnet tags:")
+                list_items(tag.jsonnet_candidates)
+
+        # 2. Show actual loading
+        print("\n    Tag Loading Order:")
+
+        # 2.1 Var loading
+        print("      Loading vars:")
+        list_jsonnet_files(matches)
+
+        # 2.2 Tag loading
+        print("      Loading Tags:")
+        for match in matches:
+
+            tag = match.get("tag")
+
+            if not tag:
+                cand = match.get("docker_file")
+                print(f"        * base: {cand}")
+                continue
+            else:
+                cand = match.get("docker_file")
+                if cand:
+                    print(f"        - {tag.name}")
+
+        # 2.3 Jsonnet loading
+        print("      Loading jsonnet:")
+        list_jsonnet_files(matches)
+
+    def gen_doc(self, output_dir=None):
+        "Generate documentation"
+
+        matches = self.get_tag_plan()
+
+        # 3. Show jsonschema
+        print("\n    Plugins jsonschema:")
+        for match in matches:
+
+            tag = match.get("tag")
+            if not tag:
+                continue
+
+            file = match.get("jsonnet_file")
+            if not file:
+                continue
+
+            # Create output dir
+            dest_dir = os.path.join(output_dir, tag.name)
+            if not os.path.isdir(dest_dir):
+                os.makedirs(dest_dir)
+
+            print(f"        # {tag.name}: {file}")
+            out = self.process_jsonnet(file, "metadata", None)
+            tag_meta = out["metadata"]
+            tag_schema = tag_meta.get("jsonschema")
+            # pprint (tag_meta)
+            if "jsonschema" in tag_meta:
+                del tag_meta["jsonschema"]
+
+            dest_schema = os.path.join(dest_dir, f"jsonschema")
+            if tag_schema:
+                print(f"Generated jsonschema files in: {dest_schema}.[json|yml]")
+                write_file(dest_schema + ".json", to_json(tag_schema))
+                write_file(dest_schema + ".yml", to_yaml(tag_schema))
+
+            # Create HTML documentation
+            if ENABLE_JSON_SCHEMA:
+
+                fname = "web.html"
+                dest_html = os.path.join(dest_dir, fname)
+                print(f"Generated HTML doc in: {dest_html}")
+                config = GenerationConfiguration(copy_css=True, expand_buttons=True)
+                generate_from_filename(dest_schema + ".json", dest_html, config=config)
+
+                # /schema_doc/paasify_yml_schema.html
+                # /plugin_api_doc/{tag.name}/web.html
+                markdown_doc = f"""
+# {tag.name}
+
+Documentationfor tag: `{tag.name}`
+
+## Meta data
+
+``` yaml
+{to_yaml(tag_meta)}
+```
+
+## Tag documentation
+
+<iframe scrolling="yes" src="/plugins_apidoc/{tag.name}/{fname}" style="width: 100vw; height: 70vh; overflow: auto; border: 0px;">
+</iframe>
+
+
+                """
+                dest_md = os.path.join(dest_dir, f"markdown.md")
+                write_file(dest_md, markdown_doc)
+                print(f"Generated Markdown doc in: {dest_md}")
 
 
 class PaasifyStackManager(NodeList, PaasifyObj):

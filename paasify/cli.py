@@ -138,6 +138,20 @@ def info(
 
 
 @cli_app.command()
+def explain(
+    ctx: typer.Context,
+    mode: Optional[str] = typer.Option(
+        None,
+        help="If a path, generate the doc, if none, report stdout",
+    ),
+):
+    """Show project plugins"""
+    psf = ctx.obj["paasify2"]
+    prj = psf.load_project()
+    prj.explain_stacks(mode=mode)
+
+
+@cli_app.command()
 def ls(
     ctx: typer.Context,
 ):
@@ -156,10 +170,18 @@ def schema(
         None,
         help="Show segment only: app, project, stack",
     ),
+    mode: Optional[str] = typer.Option(
+        None,
+        help="Determine output format: cli,standalone,doc",
+    ),
+    output: Optional[str] = typer.Option(
+        None,
+        help="Determine output directory",
+    ),
 ):
     """Show paasify configurations schema format"""
     psf = ctx.obj["paasify2"]
-    out = psf.cmd_config_schema(format=format, target=target)
+    out = psf.cmd_config_schema(format=format, target=target, mode=mode, output=output)
     print(out)
 
 
