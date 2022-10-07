@@ -68,6 +68,7 @@ local plugin = {
 
   // Provides plugin metadata
   metadata: {
+      local meta = self,
       name: "Traefik Service",
       description: 'Bind service to traefik instance',
 
@@ -81,14 +82,46 @@ local plugin = {
       jsonschema: {
           // $schema: 'http://json-schema.org/draft-07/schema#',
           type: 'object',
-          title: 'Trafik service',
+          title: meta.name,
           description: 'Create a traefik service for a given service',
+          examples: [
+            {
+              stacks: [
+                {
+                  app: "my_app_name",
+                  vars: [
+                    {
+                      traefik_svc_entrypoints: "front-http,front-https",
+                    },
+                    {
+                      traefik_svc_port: 8080,
+                    },
+                    {
+                      traefik_svc_group: "trafik_prod",
+                    },
+                  ],
+                  tags: [
+                    "traefik-svc"
+                  ],
+                },
+              ],
+
+            },
+          ],
           properties: {
-            variables: {
+            transform_variables: {
                 type: 'object',
                 properties: {
-                  app_name: {
-                    traefik_svc_entrypoints: 'Name of the application',
+                  traefik_svc_group: {
+                    description: 'Traefik group name to assign this container',
+                    type: "string",
+                  },
+                  traefik_svc_port: {
+                    description: 'Listening port of the application',
+                    type: "string",
+                  },
+                  traefik_network_name: {
+                    description: 'Name of the application',
                     type: "string",
                   },
                   traefik_svc_tls: {
@@ -105,12 +138,12 @@ local plugin = {
                   },
                 },
             },
-            overrides: {
-                type: 'object',
+            variables: {
+                type: 'null',
             },
             transform: {
                 type: 'object',
-                description: 'Do nothing',
+                description: 'Add correct traefik labels for a given service. Also append traefik network if not already present.',
             },
           },
 

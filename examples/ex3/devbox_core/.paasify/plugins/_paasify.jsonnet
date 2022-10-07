@@ -4,10 +4,10 @@ local plugin = {
 
   // Provides plugin metadata
   metadata: {
-      // local this = self,
+      local meta = self,
 
       name: "Paasify std lib",
-      description: '',
+      description: 'Paasify standard tag library',
 
       author: "mrjk",
       email: '',
@@ -19,7 +19,8 @@ local plugin = {
       jsonschema: {
           ['$schema']: 'http://json-schema.org/draft-07/schema#',
           type: 'object',
-          title: 'Paasify Standard library',
+          title: meta.name,
+          description: 'Provide default common variables',
           //default: conf_default,
           properties: {
             variables: {
@@ -43,11 +44,11 @@ local plugin = {
                   },
                 },
             },
-            overrides: {
-                type: 'object',
+            transform_variables: {
+                type: 'null',
             },
             transform: {
-                type: 'object',
+                type: 'null',
                 description: 'Do nothing',
             },
           },

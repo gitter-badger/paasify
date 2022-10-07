@@ -1,10 +1,11 @@
 $schema: http://json-schema.org/draft-07/schema#
+description: Provide default common variables
 properties:
-  overrides:
-    type: object
   transform:
     description: Do nothing
-    type: object
+    type: 'null'
+  transform_variables:
+    type: 'null'
   variables:
     properties:
       app_domain:
@@ -20,5 +21,5 @@ properties:
         description: Namespace of the application
         type: string
     type: object
-title: Paasify Standard library
+title: Paasify std lib
 type: object

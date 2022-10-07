@@ -20,25 +20,38 @@ local assert_docker_file(docker_file) =
 local plugin = {
 
   // Provides plugin metadata
-  metadata: {
-      // local this = self,
+  metadata: 
+    {
+        local meta = self,
 
-      name: "Paasify API validator",
-      description: 'Validate if the Paasify API works as expected',
+        name: "Paasify API validator",
+        description: 'Test if the Paasify Plugin API works as expected',
 
-      author: "mrjk",
-      email: '',
-      license: '',
-      version: '',
+        author: "mrjk",
+        email: '',
+        license: '',
+        version: '',
 
-      require: '',
-      api: 1,
-      jsonschema: {
-          // $schema: 'http://json-schema.org/draft-07/schema#',
-          type: 'object',
-          title: 'Paasify Standard library',
-          description: 'Validate if the Paasify API works as expected',
-      }
+        require: '',
+        api: 1,
+        jsonschema: {
+            // ['$schema']: 'http://json-schema.org/draft-07/schema#',
+            type: 'object',
+            title: meta.name,
+            description: 'Raise an error if the Plugin API does not answer correctly. Mostly usedful for testing Paasify.',
+            properties: {
+                transform_variables: {
+                    type: "null",
+                },
+                variables: {
+                    type: "null",
+                },
+                transform: {
+                    type: "null",
+                },
+            },
+            
+        }
     },
 
   // Return global vars

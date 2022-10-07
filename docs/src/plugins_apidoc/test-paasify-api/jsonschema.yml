@@ -1,3 +1,11 @@
-description: Validate if the Paasify API works as expected
-title: Paasify Standard library
+description: Raise an error if the Plugin API does not answer correctly. Mostly usedful
+  for testing Paasify.
+properties:
+  transform:
+    type: 'null'
+  transform_variables:
+    type: 'null'
+  variables:
+    type: 'null'
+title: Paasify API validator
 type: object

@@ -667,7 +667,12 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 fname = "web.html"
                 dest_html = os.path.join(dest_dir, fname)
                 print(f"Generated HTML doc in: {dest_html}")
-                config = GenerationConfiguration(copy_css=True, expand_buttons=True)
+                config = GenerationConfiguration(copy_css=True,
+                    description_is_markdown=True,
+                    examples_as_yaml=True,
+                    footer_show_time = False,
+                    expand_buttons=True,  
+                    show_breadcrumbs=False)
                 generate_from_filename(dest_schema + ".json", dest_html, config=config)
 
                 # /schema_doc/paasify_yml_schema.html
@@ -677,7 +682,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
 Documentationfor tag: `{tag.name}`
 
-## Meta data
+## Informations
 
 ``` yaml
 {to_yaml(tag_meta)}

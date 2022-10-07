@@ -3,12 +3,12 @@
 
 Documentationfor tag: `_paasify`
 
-## Meta data
+## Informations
 
 ``` yaml
 api: 1
 author: mrjk
-description: ''
+description: Paasify standard tag library
 email: ''
 license: ''
 name: Paasify std lib

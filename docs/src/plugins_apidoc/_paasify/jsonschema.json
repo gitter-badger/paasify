@@ -1,12 +1,13 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
+  "description": "Provide default common variables",
   "properties": {
-    "overrides": {
-      "type": "object"
-    },
     "transform": {
       "description": "Do nothing",
-      "type": "object"
+      "type": "null"
+    },
+    "transform_variables": {
+      "type": "null"
     },
     "variables": {
       "properties": {
@@ -30,6 +31,6 @@
       "type": "object"
     }
   },
-  "title": "Paasify Standard library",
+  "title": "Paasify std lib",
   "type": "object"
 }

@@ -1,14 +1,22 @@
 description: Create a traefik service for a given service
+examples:
+- stacks:
+  - app: my_app_name
+    tags:
+    - traefik-svc
+    vars:
+    - traefik_svc_entrypoints: front-http,front-https
+    - traefik_svc_port: 8080
+    - traefik_svc_group: trafik_prod
 properties:
-  overrides:
-    type: object
   transform:
-    description: Do nothing
+    description: Add correct traefik labels for a given service. Also append traefik
+      network if not already present.
     type: object
-  variables:
+  transform_variables:
     properties:
-      app_name:
-        traefik_svc_entrypoints: Name of the application
+      traefik_network_name:
+        description: Name of the application
         type: string
       traefik_svc_certresolver:
         description: Domain of the application
@@ -16,9 +24,17 @@ properties:
       traefik_svc_entrypoints:
         description: Fully Qualified Domain Name of the application
         type: string
+      traefik_svc_group:
+        description: Traefik group name to assign this container
+        type: string
+      traefik_svc_port:
+        description: Listening port of the application
+        type: string
       traefik_svc_tls:
         description: Namespace of the application
         type: boolean
     type: object
-title: Trafik service
+  variables:
+    type: 'null'
+title: Traefik Service
 type: object

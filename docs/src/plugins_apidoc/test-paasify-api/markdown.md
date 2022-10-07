@@ -3,12 +3,12 @@
 
 Documentationfor tag: `test-paasify-api`
 
-## Meta data
+## Informations
 
 ``` yaml
 api: 1
 author: mrjk
-description: Validate if the Paasify API works as expected
+description: Test if the Paasify Plugin API works as expected
 email: ''
 license: ''
 name: Paasify API validator

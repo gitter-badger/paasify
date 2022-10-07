@@ -3,7 +3,7 @@
 
 Documentationfor tag: `traefik-svc`
 
-## Meta data
+## Informations
 
 ``` yaml
 api: 1
