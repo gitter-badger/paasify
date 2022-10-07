@@ -85,4 +85,5 @@ class PaasifyNestedProject(PaasifyError):
 
 class StackMissingDockerComposeFile(PaasifyError):
     """Raised when a stack can't find a docker-compose.yml"""
+
     rc = 38

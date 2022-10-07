@@ -60,7 +60,11 @@ from paasify.app2 import PaasifyApp
 log = get_logger(logger_name="paasify")
 
 
-cli_app = typer.Typer(help="Paasify, build your compose-files", invoke_without_command=True, no_args_is_help=True)
+cli_app = typer.Typer(
+    help="Paasify, build your compose-files",
+    invoke_without_command=True,
+    no_args_is_help=True,
+)
 
 
 @cli_app.callback()
@@ -125,9 +129,8 @@ def main(
     }
 
     if version:
-        print (__version__)
+        print(__version__)
         return
-    
 
     paasify2 = PaasifyApp(payload=app_conf)
 

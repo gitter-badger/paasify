@@ -358,13 +358,13 @@ class EngineDetect:
             ) from err
 
         # Scan version
-        patt = r"version (?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))"
+        patt = r"version v?(?P<version>(?P<major>[0-9]+)\.(?P<minor>[0-9]+)\.(?P<patch>[0-9]+))"
         match = re.search(patt, out.txtout)
         if match:
             version = match.groupdict()
         else:
             raise error.DockerUnsupportedVersion(
-                f"Version of docker-compose is not recognised: {out.txtout}"
+                f"OUtput format of docker-compose is not recognised: {out.txtout}"
             )
         curr_ver = version["version"]
 

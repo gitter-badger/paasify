@@ -121,9 +121,10 @@ class PaasifyStack(NodeMap, PaasifyObj):
     # TODO: Fix those vars
     stack_dir = None
     prj_dir = None
-    name = None
+    # name = None
+    # path = None
     stack_name = None
-    path = None
+
     namespace = None
 
     # CaFram functions
@@ -140,11 +141,14 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # Ensure payload is a dict
         if isinstance(payload, str):
             if ":" in payload:
-                payload = {"app": payload}
+                payload = {
+                    "name": payload.split(":")[1],
+                    "app": payload,
+                }
             else:
                 payload = {
+                    "name": payload,
                     "path": payload,
-                    # "name": payload,
                 }
 
         return payload
@@ -155,6 +159,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # Config update
         self.stack_name = self.get_name()
         self.name = self.stack_name  # Legacy code
+
         self.path = self.get_path()  # legacy code
         assert self.stack_name, f"Bug here, should not be empty, got: {self.stack_name}"
 
@@ -194,16 +199,20 @@ class PaasifyStack(NodeMap, PaasifyObj):
         if self.app:
             result = result or self.app.app_name
 
+        if not result:
+            pprint(self.__dict__)
+            print(self.path, self.name)
+        assert result, f"Error while getting path: {result}"
         return result
 
     def get_name(self):
         "Return stack name"
 
-        result = self.name or self.get_path().replace(os.path.sep, "_")
+        result = self.name or self.get_path()
         if self.app:
             result = result or self.app.app_name
 
-        return result
+        return result.replace(os.path.sep, "_")
 
     # Local functions
     # ---------------------
@@ -448,7 +457,10 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # 1. Update sources
         # TOFIX: Be more selective on the source
-        assert len(self.prj.sources.get_children()) > 0, "Missing default source!"
+        if not len(self.prj.sources.get_children()) > 0:
+            msg = f"Missing default source for stack: {self.serialize(mode='raw')}"
+            raise error.StackMissingOrigin(msg)
+
         for src_name, src in self.prj.sources.get_children().items():
             src.install(update=False)
 
@@ -667,12 +679,14 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 fname = "web.html"
                 dest_html = os.path.join(dest_dir, fname)
                 print(f"Generated HTML doc in: {dest_html}")
-                config = GenerationConfiguration(copy_css=True,
+                config = GenerationConfiguration(
+                    copy_css=True,
                     description_is_markdown=True,
                     examples_as_yaml=True,
-                    footer_show_time = False,
-                    expand_buttons=True,  
-                    show_breadcrumbs=False)
+                    footer_show_time=False,
+                    expand_buttons=True,
+                    show_breadcrumbs=False,
+                )
                 generate_from_filename(dest_schema + ".json", dest_html, config=config)
 
                 # /schema_doc/paasify_yml_schema.html
