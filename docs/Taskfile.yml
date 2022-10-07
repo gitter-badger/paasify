@@ -32,13 +32,15 @@ tasks:
     cmds:
       - docker-compose up -d
       - |
+        sleep 3
         echo "Documentation: http://127.0.0.1:8042"
         echo "Jupyter:       $( docker-compose logs | grep -m 1 ' or http:' | sed 's/.* or //' )"
 
   stop_ide:
     desc: Stop documentation IDE
     cmds:
-      - docker-compose rm
+      - docker-compose rm -f
+      #- docker-compose stop
 
 
   # Local tools

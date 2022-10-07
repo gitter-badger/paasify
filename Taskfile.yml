@@ -27,6 +27,7 @@ includes:
   doc:
     taskfile: ./docs/Taskfile.yml
     dir: ./docs
+    
 
 
 
@@ -126,9 +127,36 @@ tasks:
   docker_build_prepare:
     desc: Generate requirements.txt
     cmds:
-      - poetry export --without-hashes --format=requirements.txt --output=dist/requirements.txt
+      - >
+        poetry export --without-hashes 
+        --format=requirements.txt --output=dist/requirements.txt
     status:
       - test -f dist/requirements.txt
+
+  docker_build_prepare_doc:
+    desc: Generate requirements.txt for docs
+    cmds:
+      - >
+        poetry export 
+        --without-hashes 
+        --without main --with doc
+        --format=requirements.txt --output=dist/requirements-doc.txt
+    status:
+      - test -f dist/requirements-doc.txt
+
+
+  docker_build_image_doc:
+    desc: Build docker image 
+    deps:
+      - docker_build_prepare_doc
+      - docker_build_image
+    cmds: 
+    - >
+      docker build 
+      -f docker/Dockerfile.doc
+      -t paasify-doc:{{.DOCKER_VERSION}}
+      -t paasify-doc:latest
+      .
 
   docker_build_image:
     desc: Build docker image 
@@ -140,15 +168,16 @@ tasks:
       docker build 
       -f docker/Dockerfile.build
       -t paasify:{{.DOCKER_VERSION}}
+      -t paasify:latest
       --build-arg PAASIFY_VERSION={{.PKG_VERSION}}
       .
 
   docker_run:
     desc: Run paasify binary
     deps:
-     - docker_build_image
+      - docker_build_image
     cmds:
-    - docker run -ti --rm paasify:{{.DOCKER_VERSION}} paasify2 {{.CLI_ARGS}}
+      - docker run -ti --rm paasify:{{.DOCKER_VERSION}} paasify2 {{.CLI_ARGS}}
 
   docker_clean:
     desc: Clean generated images
