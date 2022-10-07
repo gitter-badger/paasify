@@ -1,15 +1,51 @@
-FROM python:3.8
 
+# Builder image
+# ==================
+
+FROM python:3.9-slim  as builder
+
+# For Debian
+RUN apt-get update \
+    && apt-get install gcc g++ make jsonnet libjsonnet-dev -y \
+    && apt-get clean
+
+# For Alpine
+# RUN apk update && \
+#     apk add python3-dev \
+#     gcc \
+#     make \
+#     libc-dev \
+#     jsonnet-dev \
+#     jsonnet
+# Missing libffi-dev ???
+
+# Install python dependencies
+ENV PIP_ROOT_USER_ACTION=ignore
+COPY dist/requirements.txt /requirements.txt
+RUN pip install -r /requirements.txt
+# See: https://towardsdatascience.com/how-to-build-slim-docker-images-fast-ecc246d7f4a7
+
+
+
+# Builder image
+# ==================
+
+FROM python:3.9-slim  as app
+
+# Import installed python libs
+COPY --from=builder /usr/local/lib/python3.9/ /usr/local/lib/python3.9/
+
+# Set vars
 ARG PAASIFY_VERSION 
 #=0.1.0a0
 # TODO: Run as limited user ?
 
+# Install app from python package
 RUN mkdir /app
-
 WORKDIR /app
+
 COPY dist/paasify-${PAASIFY_VERSION}-py3-none-any.whl /app
 COPY dist/paasify-${PAASIFY_VERSION}.tar.gz /app
 
-ENV PYTHONPATH=${PYTHONPATH}:${PWD}
-ENV PIP_ROOT_USER_ACTION=ignore
-RUN pip3 install paasify-${PAASIFY_VERSION}.tar.gz
+#ENV PYTHONPATH=${PYTHONPATH}:${PWD}
+RUN PIP_ROOT_USER_ACTION=ignore pip3 install paasify-${PAASIFY_VERSION}.tar.gz

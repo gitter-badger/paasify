@@ -123,10 +123,18 @@ tasks:
 
   # Docker Workflow
   # ---------------
+  docker_build_prepare:
+    desc: Generate requirements.txt
+    cmds:
+      - poetry export --without-hashes --format=requirements.txt --output=dist/requirements.txt
+    status:
+      - test -f dist/requirements.txt
+
   docker_build_image:
     desc: Build docker image 
     deps:
       - pkg_build
+      - docker_build_prepare
     cmds: 
     - >
       docker build 
