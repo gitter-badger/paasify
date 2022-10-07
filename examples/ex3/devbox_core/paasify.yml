@@ -51,6 +51,7 @@ stacks:
           traefik_net_external: false
             #traefik_svc_port: 8080
             #traefik_svc_name: devbox_traefik_app  # TOFIX !
+      - test-paasify-api
 
 
 # tututu:

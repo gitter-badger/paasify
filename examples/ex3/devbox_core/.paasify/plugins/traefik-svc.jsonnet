@@ -78,7 +78,43 @@ local plugin = {
 
       require: '',
       api: 1,
-      schema: {},
+      jsonschema: {
+          // $schema: 'http://json-schema.org/draft-07/schema#',
+          type: 'object',
+          title: 'Trafik service',
+          description: 'Create a traefik service for a given service',
+          properties: {
+            variables: {
+                type: 'object',
+                properties: {
+                  app_name: {
+                    traefik_svc_entrypoints: 'Name of the application',
+                    type: "string",
+                  },
+                  traefik_svc_tls: {
+                    description: 'Namespace of the application',
+                    type: "boolean",
+                  },
+                  traefik_svc_certresolver: {
+                    description: 'Domain of the application',
+                    type: "string",
+                  },
+                  traefik_svc_entrypoints: {
+                    description: 'Fully Qualified Domain Name of the application',
+                    type: "string",
+                  },
+                },
+            },
+            overrides: {
+                type: 'object',
+            },
+            transform: {
+                type: 'object',
+                description: 'Do nothing',
+            },
+          },
+
+      }
     },
 
   // Return global vars

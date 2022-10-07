@@ -19,10 +19,10 @@ services:
       TRAEFIK_LOG_LEVEL: debug
       TRAEFIK_PILOT_DASHBOARD: 'false'
       TRAEFIK_PROVIDERS_DOCKER: 'true'
-      TRAEFIK_PROVIDERS_DOCKER_CONSTRAINTS: Label(`traefik.group`,`devbox_core_traefik`)
+      TRAEFIK_PROVIDERS_DOCKER_CONSTRAINTS: Label(`traefik.group`,`devbox_core_devbox_core/traefik`)
       TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: unix:///var/run/docker.sock
       TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: 'false'
-      TRAEFIK_PROVIDERS_DOCKER_NETWORK: devbox_core_traefik
+      TRAEFIK_PROVIDERS_DOCKER_NETWORK: devbox_core_devbox_core/traefik
       TRAEFIK_PROVIDERS_DOCKER_SWARMMODE: 'false'
       TRAEFIK_PROVIDERS_DOCKER_WATCH: 'true'
       TRAEFIK_PROVIDERS_FILE_DIRECTORY: /etc/traefik
@@ -31,7 +31,7 @@ services:
       traefik.enable: 'true'
       traefik.group: devbox_core_traefik
       traefik.http.routers.devbox_core_traefik.entrypoints: front-http
-      traefik.http.routers.devbox_core_traefik.rule: Host(`traefik.devbox_core`)
+      traefik.http.routers.devbox_core_traefik.rule: Host(`devbox_core/traefik.localhost`)
       traefik.http.routers.devbox_core_traefik.service: devbox_core_traefik
       traefik.http.services.devbox_core_traefik.loadbalancer.server.port: '8080'
     networks:
@@ -89,3 +89,5 @@ x-paasify:
     traefik_svc_tls: true
 x-paasify-config:
   new_custom_service:
+x-paasify-debug:
+  status: PASSED

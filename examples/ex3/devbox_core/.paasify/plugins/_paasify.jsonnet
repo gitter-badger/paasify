@@ -4,6 +4,8 @@ local plugin = {
 
   // Provides plugin metadata
   metadata: {
+      // local this = self,
+
       name: "Paasify std lib",
       description: '',
 
@@ -14,7 +16,42 @@ local plugin = {
 
       require: '',
       api: 1,
-      schema: {},
+      jsonschema: {
+          ['$schema']: 'http://json-schema.org/draft-07/schema#',
+          type: 'object',
+          title: 'Paasify Standard library',
+          //default: conf_default,
+          properties: {
+            variables: {
+                type: 'object',
+                properties: {
+                  app_name: {
+                    description: 'Name of the application',
+                    type: "string",
+                  },
+                  app_namespace: {
+                    description: 'Namespace of the application',
+                    type: "string",
+                  },
+                  app_domain: {
+                    description: 'Domain of the application',
+                    type: "string",
+                  },
+                  app_fqdn: {
+                    description: 'Fully Qualified Domain Name of the application',
+                    type: "string",
+                  },
+                },
+            },
+            overrides: {
+                type: 'object',
+            },
+            transform: {
+                type: 'object',
+                description: 'Do nothing',
+            },
+          },
+      },
     },
 
   // Return global vars
@@ -26,7 +63,9 @@ local plugin = {
       # --------------------------
 
       app_name: vars.stack_name,
-      app_domain: vars.prj_namespace,
+      app_namespace: vars.prj_namespace,
+      app_domain: std.get(vars, 'app_domain', default='localhost') ,
+      #app_domain: std.prune(vars.app_domain, self.app_namespace, 'localdomain'),
       // app_name: vars.paasify_stack,
       // app_fqdn: vars.paasify_stack + '.' + vars.app_domain,
       app_fqdn: self.app_name + '.' + self.app_domain,
