@@ -1,0 +1,15 @@
+FROM python:3.8
+
+ARG PAASIFY_VERSION 
+#=0.1.0a0
+# TODO: Run as limited user ?
+
+RUN mkdir /app
+
+WORKDIR /app
+COPY dist/paasify-${PAASIFY_VERSION}-py3-none-any.whl /app
+COPY dist/paasify-${PAASIFY_VERSION}.tar.gz /app
+
+ENV PYTHONPATH=${PYTHONPATH}:${PWD}
+ENV PIP_ROOT_USER_ACTION=ignore
+RUN pip3 install paasify-${PAASIFY_VERSION}.tar.gz

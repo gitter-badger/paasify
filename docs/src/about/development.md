@@ -56,21 +56,79 @@ Troubleshooting:
 * [yq](https://mikefarah.gitbook.io/yq/): Process YAML files
 
 
-## Quality Process
+## Quickstart
 
-Run automatic linting:
-```
-black passify
-```
+The main steps as been implemented as task files.
 
-Run linting report:
+### Development
+
+Run code linting:
 ```
-pylint paasify
+task run_qa
 ```
 
 Run tests:
 ```
-pytest tests
+task run_tests
+```
+
+Build docuementation:
+```
+task doc:build_doc
+```
+
+Build docker image:
+```
+task docker_build_image
+```
+
+Build python package:
+```
+task pkg_build
+``` 
+
+### Test and Review
+
+Try directly:
+```
+paasify --version
+```
+
+Try you current code version in docker:
+```
+task docker_run -- --version
+```
+
+Try package installation:
+```
+pip3 install dist/paasify-0.1.1a2.tar.gz
+```
+
+Show documentation:
+```
+task doc:serve_doc: 
+```
+
+
+
+### Commit reviewable code
+
+Bumping versions workflow:
+```
+poetry version prepatch  # Idempotent
+poetry version prerelease
+poetry version patch
+poetry version minor
+poetry version major
+
+# Reset version
+poetry version <expected version>
+
+# Reset to default git version
+task 
+git checkout paasify.version.py
+poetry version $(python -m paasify.version)
+
 ```
 
 Create commit:
@@ -79,6 +137,9 @@ git add <modified files>
 git commit -m ""
 ```
 
+### Release
+
+TODO
 
 ## Commit message standards
 
