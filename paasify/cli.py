@@ -36,6 +36,7 @@ from cafram.utils import get_logger
 
 
 # import paasify.errors as error
+from paasify.version import __version__
 from paasify.common import OutputFormat
 from paasify.app2 import PaasifyApp
 
@@ -59,7 +60,7 @@ from paasify.app2 import PaasifyApp
 log = get_logger(logger_name="paasify")
 
 
-cli_app = typer.Typer(help="Paasify, build your compose-files", no_args_is_help=True)
+cli_app = typer.Typer(help="Paasify, build your compose-files", invoke_without_command=True, no_args_is_help=True)
 
 
 @cli_app.callback()
@@ -79,6 +80,11 @@ def main(
         "--collections_dir",
         help="Path of paasify collections directory.",
         envvar="PAASIFY_COLLECTIONS_DIR",
+    ),
+    version: bool = typer.Option(
+        False,
+        "--version",
+        help="Show version info",
     ),
 ):
     """
@@ -117,6 +123,11 @@ def main(
             # "collections_dir": collections_dir,
         }
     }
+
+    if version:
+        print (__version__)
+        return
+    
 
     paasify2 = PaasifyApp(payload=app_conf)
 
