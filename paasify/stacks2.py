@@ -166,7 +166,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         self.prj_dir = self.prj.runtime.root_path
         self.stack_dir = os.path.join(self.prj.runtime.root_path, self.stack_name)
-        self.namespace = self.prj.config.namespace or os.path.basename(self.stack_name)
+        self.namespace = self.prj.config.namespace or os.path.basename(self.prj_dir)
 
         assert os.path.isdir(self.prj_dir)
 
@@ -324,11 +324,11 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # Build default
         # app_dir = self.path
         result = {
-            "paasify_sep": "_",
+            "paasify_sep": "-",
             "prj_path": self.prj_dir,
-            "prj_namespace": self.prj.config.namespace,
-            "prj_domain": to_domain(self.prj.config.namespace),
-            "stack_name": self.ident,
+            "prj_namespace": self.namespace,
+            "prj_domain": to_domain(self.namespace),
+            "stack_name": self.stack_name,
             "stack_network": default_network,
             "stack_service": default_service,
             "stack_path": self.stack_dir,
@@ -387,7 +387,13 @@ class PaasifyStack(NodeMap, PaasifyObj):
         localvars = self.vars
 
         # 1. Define default generic local stack vars
+        #   - Generate convenients vars
+        #   - Read project vars with parsing
+        #   - Read stack vars with parsing
         vars_base = self.gen_conveniant_vars(docker_file=docker_file)
+        vars_global = globvars.parse_vars(current=vars_base)
+        vars_run = localvars.parse_vars(current=vars_global)
+
 
         # 2. Read tag vars
         # Run each tag and get default variables
@@ -401,14 +407,16 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
             # Parse jsonnet file
             ext_vars = {
-                "user_data": vars_base,
+                "user_data": vars_run,
             }
-
             payload = self.process_jsonnet(jsonnet_file, "vars_default", ext_vars)
 
             # Update result
             for key, val in payload["vars_default"].items():
-                vars_base[key] = val
+                curr_val = vars_run.get(key, None)
+                # Set variable only if not already set
+                if curr_val is None:
+                    vars_run[key] = val
 
         # 4. Read static files:
         # Read <collection>/<stack>/vars.yml
@@ -427,13 +435,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
         vars_cand = flatten([x["matches"] for x in vars_cand])
         for cand in vars_cand:
             conf = anyconfig.load(cand, ac_parser="yaml")
-            vars_base.update(conf)
+            vars_run.update(conf)
 
-        # 5. Read project vars with parsing
-        vars_global = globvars.parse_vars(current=vars_base)
-
-        # 6. Read stack vars with parsing
-        vars_run = localvars.parse_vars(current=vars_global)
 
         # 7. Loop again on tags and override/process tags vars
         # Overrides unset vars only
@@ -448,7 +451,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
             # Update result if current value is kinda null
             for key, val in payload["vars_override"].items():
                 dst = vars_run.get(key, None)
-                # print(dst)
                 if not dst:
                     vars_run[key] = val
 
@@ -536,34 +538,10 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 "docker_file": docker_run_payload,
             }
             payload = self.process_jsonnet(jsonnet_file, "docker_override", ext_vars)
-
             docker_run_payload = payload["docker_override"]
 
-            # # Prepare jsonnet environment
-            # assert isinstance(jsonnet_data, dict), f"Error, env is not a dict, got: {type(jsonnet_data)}"
-            # ext_vars = {
-            #     # ALL VALUES MUST BE JSON STRINGS
-            #     "action": json.dumps("docker_override"),
-            #     "user_data": json.dumps(jsonnet_data),
-            #     "docker_file": json.dumps(docker_run_payload),
-            # }
-
-            # # Process jsonnet tag
-            # try:
-            #     result = _jsonnet.evaluate_file(
-            #         jsonnet_file,
-            #         ext_vars=ext_vars,
-            #     )
-            # except RuntimeError as err:
-            #     self.log.critical(f"Can't parse jsonnet file: {jsonnet_file}")
-            #     raise error.JsonnetBuildFailed(err)
-            # docker_run_payload = json.loads(result)["docker_override"]
-            # pprint (docker_run_payload)
-            # docker_run_payload = result["docker_override"]
-
         # 8. Save the final docker-compose.run.yml file
-        self.log.notice(f"Writing docker-compose file: {outfile}")
-        # pprint (docker_run_payload)
+        self.log.info(f"Writing docker-compose file: {outfile}")
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
 

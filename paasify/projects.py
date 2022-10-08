@@ -305,7 +305,20 @@ class PaasifyProject(NodeMap, PaasifyObj):
         payload into the config that will
         be found in path with filename filenames
 
+        Args:
+            parent (_type_, optional): _description_. Defaults to None.
+            path (_type_, optional): _description_. Defaults to None.
+            filenames (_type_, optional): Name of file names to lookup. Defaults to None.
+            runtime (_type_, optional): _description_. Defaults to None.
+
+        Raises:
+            error.ProjectNotFound: Raise error when project is not found
+
+        Returns:
+            _type_: _description_
         """
+        
+
         config_file = path or os.getcwd()
         filenames = filenames or ["paasify.yml", "paasify.yaml"]
 
@@ -330,7 +343,17 @@ class PaasifyProject(NodeMap, PaasifyObj):
     @classmethod
     # def discover(self, conf=None, path=None, filenames=None):
     def load_from_file(cls, config_file, parent=None, runtime=None):
-        "Load project from config file"
+        """Load project from config file
+
+        Args:
+            config_file (_type_): _description_
+            parent (_type_, optional): _description_. Defaults to None.
+            runtime (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
+
 
         runtime = runtime or {}
 
@@ -348,34 +371,3 @@ class PaasifyProject(NodeMap, PaasifyObj):
         prj = PaasifyProject(parent=parent, payload=_payload)
 
         return prj
-
-    # def get_stack_names(self):
-    #     'Return a list of string og stacks names'
-
-    #     result = []
-    #     for stack in self.stacks.get_children():
-    #         result.append(stack.name)
-    #     return result
-
-    # def cmd_stack_cmd(self, cmd, stacks=None, reverse=False):
-    #     "Forward command to stacks DEPRECATED, USE STACK MANAGER INSTEAD"
-
-    #     # Get stacks names
-
-    #     assert False, "Forward command to stacks DEPRECATED, USE STACK MANAGER INSTEAD"
-
-    #     # Cast stacks
-    #     stack_names = stacks
-    #     if stacks is None:
-    #         stack_names = self.get_stack_names()
-    #     elif not isinstance(stacks, list):
-    #         stack_names = [stacks]
-
-    #     for stack in self.stacks.get_children():
-
-    #         if not stack.name in stack_names:
-    #             continue
-
-    #         fun = getattr(stack, cmd)
-    #         self.log.debug(f"Execute: {fun}")
-    #         fun()
