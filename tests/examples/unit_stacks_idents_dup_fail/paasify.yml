@@ -2,13 +2,13 @@
 stacks:
 
   # shortcuts
-  - custom_source:custom_app1
-  - my_local_app1
+  - custom_source:custom_app
+  - my_local_app
   - my/local/app
 
   # Minimal
-  - app: custom_source:custom_app2
-  - name: my_local_app2
+  - app: custom_source:custom_app
+  - name: my_local_app
   - path: local/app/path
   
   ## with app and name
@@ -19,12 +19,12 @@ stacks:
 
   ## with app and path
   - app: custom_source:custom_app
-    path: nested/path1
+    path: nested/path
   - app: default_source_app
-    path: nested/path2
+    path: nested/path
 
   ## with name and path
-  - name: my_local_app3
-    path: nested/path3
+  - name: my_local_app
+    path: nested/path
 
 

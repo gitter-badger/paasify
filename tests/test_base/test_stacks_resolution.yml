@@ -1,33 +1,33 @@
 - stack_app:
-    app: custom_source:custom_app
-    app_name: custom_app
-    app_path: custom_app
+    app: custom_source:custom_app1
+    app_name: custom_app1
+    app_path: custom_app1
     app_source: custom_source
-  stack_config: custom_source:custom_app
-  stack_name: custom_app
-  stack_path: custom_app
+  stack_config: custom_source:custom_app1
+  stack_name: custom_app1
+  stack_path: custom_app1
 - stack_app: null
-  stack_config: my_local_app
-  stack_name: my_local_app
-  stack_path: my_local_app
+  stack_config: my_local_app1
+  stack_name: my_local_app1
+  stack_path: my_local_app1
 - stack_app: null
   stack_config: my/local/app
   stack_name: my_local_app
   stack_path: my/local/app
 - stack_app:
-    app: custom_source:custom_app
-    app_name: custom_app
-    app_path: custom_app
+    app: custom_source:custom_app2
+    app_name: custom_app2
+    app_path: custom_app2
     app_source: custom_source
   stack_config:
-    app: custom_source:custom_app
-  stack_name: custom_app
-  stack_path: custom_app
+    app: custom_source:custom_app2
+  stack_name: custom_app2
+  stack_path: custom_app2
 - stack_app: null
   stack_config:
-    name: my_local_app
-  stack_name: my_local_app
-  stack_path: my_local_app
+    name: my_local_app2
+  stack_name: my_local_app2
+  stack_path: my_local_app2
 - stack_app: null
   stack_config:
     path: local/app/path
@@ -60,9 +60,9 @@
     app_source: custom_source
   stack_config:
     app: custom_source:custom_app
-    path: nested/path
-  stack_name: nested_path
-  stack_path: nested/path
+    path: nested/path1
+  stack_name: nested_path1
+  stack_path: nested/path1
 - stack_app:
     app: default:default_source_app
     app_name: default_source_app
@@ -70,12 +70,12 @@
     app_source: default
   stack_config:
     app: default_source_app
-    path: nested/path
-  stack_name: nested_path
-  stack_path: nested/path
+    path: nested/path2
+  stack_name: nested_path2
+  stack_path: nested/path2
 - stack_app: null
   stack_config:
-    name: my_local_app
-    path: nested/path
-  stack_name: my_local_app
-  stack_path: nested/path
+    name: my_local_app3
+    path: nested/path3
+  stack_name: my_local_app3
+  stack_path: nested/path3

@@ -66,6 +66,26 @@ def test_stacks_resolution(data_regression):
     data_regression.check(results)
 
 
+def test_stacks_resolution(data_regression):
+    "Ensure name, app path and direct string config works correctly"
+
+    # Load project
+    app_conf = {
+        "config": {
+            "working_dir": cwd + "/tests/examples/unit_stacks_idents_dup_fail",
+        }
+    }
+    psf = PaasifyApp(payload=app_conf)
+    
+    # Test the load fails
+    try:
+        psf.load_project()
+        assert False, "Duplicate configuration should have raised an error!"
+    except error.ProjectInvalidConfig:
+        pass
+
+
+
 # Main run
 # ------------------------
 
