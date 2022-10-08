@@ -92,4 +92,10 @@ class StackMissingDockerComposeFile(PaasifyError):
 class BuildStackFirstError(PaasifyError):
     """Raised when a trying to interact with stack but docker-compose.yml is missing"""
 
-    rc = 38
+    rc = 39
+
+
+class OSError(PaasifyError):
+    """Used for OS errors"""
+
+    rc = 40

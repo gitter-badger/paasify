@@ -35,7 +35,7 @@ import typer
 from cafram.utils import get_logger
 
 
-# import paasify.errors as error
+import paasify.errors as error
 from paasify.version import __version__
 from paasify.common import OutputFormat
 from paasify.app2 import PaasifyApp
