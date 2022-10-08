@@ -1,7 +1,7 @@
-name: devbox_core_traefik
+name: traefik
 networks:
   default:
-    name: devbox_core_traefik
+    name: devbox_core-traefik
 services:
   traefik:
     environment:
@@ -11,43 +11,35 @@ services:
       TRAEFIK_API_DASHBOARD: 'true'
       TRAEFIK_API_DEBUG: 'true'
       TRAEFIK_API_INSECURE: 'true'
-      TRAEFIK_ENTRYPOINTS_front-http_ADDRESS: :80
-      TRAEFIK_ENTRYPOINTS_front-http_HTTP_REDIRECTIONS_ENTRYPOINT_PERMANENT: 'true'
-      TRAEFIK_ENTRYPOINTS_front-http_HTTP_REDIRECTIONS_ENTRYPOINT_SCHEME: https
-      TRAEFIK_ENTRYPOINTS_front-http_HTTP_REDIRECTIONS_ENTRYPOINT_TO: front-https
-      TRAEFIK_ENTRYPOINTS_front-https_ADDRESS: :443
+      TRAEFIK_ENTRYPOINTS_default-http: 'True'
+      TRAEFIK_ENTRYPOINTS_default-http_ADDRESS: :80
       TRAEFIK_LOG_LEVEL: debug
       TRAEFIK_PILOT_DASHBOARD: 'false'
       TRAEFIK_PROVIDERS_DOCKER: 'true'
-      TRAEFIK_PROVIDERS_DOCKER_CONSTRAINTS: Label(`traefik.group`,`devbox_core_devbox_core/traefik`)
+      TRAEFIK_PROVIDERS_DOCKER_CONSTRAINTS: Label(`traefik.group`,`devbox_core-traefik`)
       TRAEFIK_PROVIDERS_DOCKER_ENDPOINT: unix:///var/run/docker.sock
       TRAEFIK_PROVIDERS_DOCKER_EXPOSEDBYDEFAULT: 'false'
-      TRAEFIK_PROVIDERS_DOCKER_NETWORK: devbox_core_devbox_core/traefik
+      TRAEFIK_PROVIDERS_DOCKER_NETWORK: devbox_core-traefik
       TRAEFIK_PROVIDERS_DOCKER_SWARMMODE: 'false'
       TRAEFIK_PROVIDERS_DOCKER_WATCH: 'true'
       TRAEFIK_PROVIDERS_FILE_DIRECTORY: /etc/traefik
     image: traefik
     labels:
       traefik.enable: 'true'
-      traefik.group: devbox_core_traefik
-      traefik.http.routers.devbox_core_traefik.entrypoints: front-http
-      traefik.http.routers.devbox_core_traefik.rule: Host(`devbox_core/traefik.localhost`)
-      traefik.http.routers.devbox_core_traefik.service: devbox_core_traefik
-      traefik.http.services.devbox_core_traefik.loadbalancer.server.port: '8080'
+      traefik.group: devbox_core-traefik
+      traefik.http.routers.devbox_core-traefik.entrypoints: default-http
+      traefik.http.routers.devbox_core-traefik.rule: Host(`traefik.devbox.192.168.186.129.nip.io`)
+      traefik.http.routers.devbox_core-traefik.service: devbox_core-traefik
+      traefik.http.services.devbox_core-traefik.loadbalancer.server.port: '8080'
     networks:
       default:
     ports:
-    - host_ip: 192.168.42.203
+    - host_ip: 192.168.186.129
       mode: ingress
       protocol: tcp
       published: '80'
       target: 80
-    - host_ip: 192.168.42.203
-      mode: ingress
-      protocol: tcp
-      published: '443'
-      target: 443
-    - host_ip: 192.168.42.203
+    - host_ip: 192.168.186.129
       mode: ingress
       protocol: tcp
       published: '8080'
@@ -85,9 +77,5 @@ x-paasify:
     service: traefik
     version: v1.6
   conf:
-    traefik_svc_entrypoints: front-http,front-https
-    traefik_svc_tls: true
-x-paasify-config:
-  new_custom_service:
-x-paasify-debug:
-  status: PASSED
+    traefik_svc_entrypoints: default-http
+    traefik_svc_tls: false
