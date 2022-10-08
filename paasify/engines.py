@@ -54,14 +54,16 @@ def bin2utf8(obj):
 class EngineCompose(NodeMap, PaasifyObj):
     "Generic docker-engine compose API"
 
+    _node_parent_kind = ["PaasifyStack"]
+
     version = None
     docker_file_exists = False
     docker_file_path = None
     arg_prefix = []
 
     conf_default = {
-        "project_dir": ".",
-        "project_name": "default",
+        "stack_name": None,
+        "stack_dir": None,
         "docker_file": "docker-compose.yml",
     }
 
@@ -69,47 +71,44 @@ class EngineCompose(NodeMap, PaasifyObj):
 
     def node_hook_children(self):
         "Create stack context on start"
-        # , project_dir=None, project_name=None, docker_file='docker-compose.run.yml', **kwargs):
 
-        # self.project_dir = project_dir
-        # self.project_name = project_name
+        # Get parents
+        stack = self._node_parent
+        # prj = stack.prj
 
-        # DEPRECATED self.cont_engine = EngineDocker(self)
-        # self.compose_engine = EngineCompose(self)
-        # self.jsonnet_engine = EngineJsonnet(self)
+        # Init object
+        stack_name = stack.stack_name
+        stack_dir = stack.stack_dir
+        self.docker_file_path = os.path.join(stack_dir, self.docker_file)
 
-        # pprint (self.conf_default)
-        # pprint (self.__dict__)
-
-        # stack = self.get_parent()
-        # prj = stack.get_parent().get_parent()
-        # print (">>>>>>> STACK, PROJECT", stack, prj)
-        project_name = self.project_name
-        project_dir = self.project_dir
-
+        # Pre build args
         self.arg_prefix = [
             "--project-name",
-            f"{project_name}",
+            f"{stack_name}",
             "--project-directory",
-            f"{project_dir}",
+            f"{stack_dir}",
         ]
-        # print ((project_dir, self.docker_file))
-        self.docker_file_path = os.path.join(project_dir, self.docker_file)
 
-        # self.docker_file_exists = False
-        if os.path.isfile(self.docker_file_path):
-            self.docker_file_exists = True
 
-        # self.engine = 'docker'
-        # self.engine = 'podman-compose'
+    def require_stack(self):
+        "Ensure stack context"
 
-        # Check here if support for with versions:
-        # docker-compose (legacy) (support all)
-        # docker compose (new) (support docker only)
-        # podman compose (new) (support podman only)
+        if not self.stack_name:
+            assert False, "Command not available for stacks!"
+
+    def require_compose_file(self):
+        "Raise an exception when compose file is absent"
+
+        self.require_stack()
+
+        if not os.path.isfile(self.docker_file_path):
+            self.log.warning("Please build stack first")
+            raise error.BuildStackFirstError("Docker file is not built yet !")
 
     def assemble(self, compose_files, env_file=None, env=None):
         "Generate docker-compose file"
+
+        self.require_stack()
 
         cli_args = list(self.arg_prefix)
 
@@ -140,10 +139,7 @@ class EngineCompose(NodeMap, PaasifyObj):
     def up(self, **kwargs):
         "Start containers"
 
-        if not self.docker_file_exists:
-            self.log.notice(f"Stack {self.parent.project_name} is not built yet")
-            return None
-
+        self.require_compose_file()
         cli_args = list(self.arg_prefix)
         cli_args = [
             "--file",
@@ -156,13 +152,12 @@ class EngineCompose(NodeMap, PaasifyObj):
             out = bin2utf8(out)
             log.notice(out.txtout)
 
+        return out
+
     def down(self, **kwargs):
         "Stop containers"
 
-        if not self.docker_file_exists:
-            self.log.notice(f"Stack {self.parent.project_name} is not built yet")
-            return None
-
+        self.require_stack()
         cli_args = list(self.arg_prefix)
         cli_args = [
             "--file",
@@ -188,10 +183,7 @@ class EngineCompose(NodeMap, PaasifyObj):
     def logs(self, follow=False):
         "Return container logs"
 
-        if not self.docker_file_exists:
-            self.log.notice(f"Stack {self.parent.project_name} is not built yet")
-            return None
-
+        self.require_stack()
         sh_options = {}
         cli_args = [
             "--file",
@@ -208,9 +200,7 @@ class EngineCompose(NodeMap, PaasifyObj):
     def ps(self):
         "Return container processes"
 
-        if not self.docker_file_exists:
-            self.log.notice(f"Stack {self.parent.project_name} is not built yet")
-            return None
+        self.require_stack()
 
         cli_args = [
             "--file",
@@ -287,41 +277,7 @@ class EngineCompose_16(EngineCompose):
     ident = "docker-compose-1.6"
 
 
-#############################
 
-
-# # DEPRECATED ?
-# class ContainerEngine(PaasifyObj):
-
-
-#     def __init__(self, project_dir=None, project_name=None):
-
-#         self.project_dir = project_dir
-#         self.project_name = project_name
-
-#         # DEPRECATED self.cont_engine = EngineDocker(self)
-#         self.compose_engine = EngineCompose(self)
-#         #self.jsonnet_engine = EngineJsonnet(self)
-
-#     def assemble(self, compose_files, **kwargs):
-#         return self.compose_engine.assemble(compose_files, **kwargs)
-
-#     def up(self, **kwargs):
-#         return self.compose_engine.up(**kwargs) if self.compose_engine.docker_file_exists else None
-
-#     def down(self, **kwargs):
-#         return self.compose_engine.down(**kwargs) if self.compose_engine.docker_file_exists else None
-
-#     def logs(self, **kwargs):
-#         return self.compose_engine.logs(**kwargs) if self.compose_engine.docker_file_exists else None
-
-#     def ps(self, **kwargs):
-#         print ("YOOOOOOOOOOO")
-#         print (self.compose_engine.docker_file_exists)
-#         return self.compose_engine.ps(**kwargs) if self.compose_engine.docker_file_exists else None
-
-
-#############################
 
 # class EngineDetect(PaasifyObj):
 class EngineDetect:
