@@ -148,7 +148,6 @@ def info(
 ):
     """Show context infos"""
     psf = ctx.obj["paasify2"]
-
     psf.info(autoload=None)
 
 
@@ -267,48 +266,8 @@ def src_tree(
     prj.cmd_src_tree()
 
 
-# Stack commands
+# Stack commands (Base)
 # ==============================
-@cli_app.command()
-def apply(
-    ctx: typer.Context,
-    stack: Optional[str] = typer.Argument(
-        None,
-        help="Stack to target, current cirectory or all",
-    ),
-):
-    """Build and apply stack"""
-    paasify = ctx.obj["paasify2"]
-    prj = paasify.load_project()
-
-    log.notice("Rebuild docker-compose ...")
-    prj.stacks.cmd_stack_assemble(stacks=stack)
-
-    log.notice("Apply stack")
-    prj.stacks.cmd_stack_up(stacks=stack)
-
-
-@cli_app.command()
-def recreate(
-    ctx: typer.Context,
-    stack: Optional[str] = typer.Argument(
-        None,
-        help="Stack to target, current cirectory or all",
-    ),
-):
-    """Stop, rebuild and create stack"""
-    paasify = ctx.obj["paasify2"]
-    prj = paasify.load_project()
-
-    log.notice("Remove stacks")
-    prj.stacks.cmd_stack_down(stacks=stack)
-
-    log.notice("Rebuild docker-compose ...")
-    prj.stacks.cmd_stack_assemble(stacks=stack)
-
-    log.notice("Apply stack")
-    prj.stacks.cmd_stack_up(stacks=stack)
-
 
 @cli_app.command()
 def build(
@@ -323,9 +282,6 @@ def build(
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
     prj.stacks.cmd_stack_assemble(stacks=stack)
-
-    return
-
 
 @cli_app.command()
 def up(
@@ -384,17 +340,37 @@ def logs(
     prj.stacks.cmd_stack_logs(stacks=stack, follow=follow)
 
 
+# Stack commands (Helpers)
+# ==============================
+
+
 @cli_app.command()
-def reset(
+def apply(
     ctx: typer.Context,
-    follow: bool = typer.Option(False, "--follow", "-f"),
     stack: Optional[str] = typer.Argument(
         None,
         help="Stack to target, current cirectory or all",
     ),
 ):
-    """Reset presistent application volume data (destructive!)"""
+    """Build and apply stack"""
     paasify = ctx.obj["paasify2"]
+    prj = paasify.load_project()
+    prj.stacks.cmd_stack_apply(stacks=stack)
+
+
+@cli_app.command()
+def recreate(
+    ctx: typer.Context,
+    stack: Optional[str] = typer.Argument(
+        None,
+        help="Stack to target, current cirectory or all",
+    ),
+):
+    """Stop, rebuild and create stack"""
+    paasify = ctx.obj["paasify2"]
+    prj = paasify.load_project()
+    prj.stacks.cmd_stack_recreate(stacks=stack)
+
 
 # Top levels helpers
 # ==============================

@@ -272,7 +272,7 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
                     value = tpl.substitute(**result)
                 except KeyError as err:
                     self.log.warning(
-                        f"Variable {err} is not defined in: {var.name}='{value}' => {self.log}"
+                        f"Variable {err} is not defined in: {var.name}='{value}'"
                     )
 
                 except Exception as err:

@@ -367,6 +367,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             ext_vars[key] = json.dumps(val)
 
         # Process jsonnet tag
+        self.log.trace(f"Process jsonnet: {file}")
         try:
             # pylint: disable=c-extension-no-member
             result = _jsonnet.evaluate_file(
@@ -778,27 +779,32 @@ class PaasifyStackManager(NodeList, PaasifyObj):
     def cmd_stack_assemble(self, stacks=None):
         "Assemble a stack"
 
+        self.log.notice("Asemble stacks:")
         stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
         for stack in stack_list:
-            self.log.notice(f"Assemble stack: {stack}")
+            self.log.notice(f"  Assemble stack: {stack}")
             stack.assemble()
 
     def cmd_stack_up(self, stacks=None):
         "Start a stack"
 
+        self.log.notice("Start stacks:")
         stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
         for stack in stack_list:
+            self.log.notice(f"  Start stack: {stack.stack_name}")
             stack.engine.up()
-            self.log.notice(f"Started stack: {stack.stack_name}")
+            
 
     def cmd_stack_down(self, stacks=None):
         "Stop a stack"
 
+        self.log.notice("Stop stacks:")
         stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
         stack_list.reverse()
         for stack in stack_list:
+            self.log.notice(f"  Stop stack: {stack.stack_name}")
             stack.engine.down()
-            self.log.notice(f"Stopped stack: {stack.stack_name}")
+            
 
     def cmd_stack_ps(self, stacks=None):
         "List stacks process"
@@ -816,20 +822,23 @@ class PaasifyStackManager(NodeList, PaasifyObj):
     # Shortcuts
     # ======================
 
+    def cmd_stack_apply(self, stacks=None):
+        "Apply a stack"
+
+        self.log.notice("Apply stacks")
+        self.cmd_stack_assemble(stacks=stacks)
+        self.cmd_stack_up(stacks=stacks)
+        self.log.notice("Stack has been applied")
+
     def cmd_stack_recreate(self, stacks=None):
         "Recreate a stack"
 
+        self.log.notice("Recreate stacks")
         self.cmd_stack_down(stacks=stacks)
         self.cmd_stack_assemble(stacks=stacks)
         self.cmd_stack_up(stacks=stacks)
         self.log.notice("Stack has been recreated")
 
-    def cmd_stack_apply(self, stacks=None):
-        "Apply a stack"
-
-        self.cmd_stack_assemble(stacks=stacks)
-        self.cmd_stack_up(stacks=stacks)
-        self.log.notice("Stack has been applied")
 
     # Other commands
     # ======================
