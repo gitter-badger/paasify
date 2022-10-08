@@ -30,6 +30,7 @@ COPY dist/requirements.txt /requirements.txt
 RUN pip3 install -r /requirements.txt
 # See: https://towardsdatascience.com/how-to-build-slim-docker-images-fast-ecc246d7f4a7
 # See: https://testdriven.io/blog/docker-best-practices/#lint-and-scan-your-dockerfiles-and-images
+# See: https://sysdig.com/blog/dockerfile-best-practices/
 
 
 # App image
