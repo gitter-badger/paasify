@@ -20,7 +20,7 @@ import paasify.errors as error
 _log = logging.getLogger()
 
 
-class PaasifyObj(MixInLog, Base):
+class PaasifyObj(Base, MixInLog):
     "Default Paasify base object"
 
     module = "paasify.api"
@@ -102,7 +102,7 @@ class PaasifyConfigVar(NodeMap, PaasifyObj):
 
         return result
 
-    def node_hook_children(self):
+    def node_hook_final(self):
         "Ensure the loggre is loaded early"
 
         # Start logger
@@ -250,8 +250,8 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
         # print (f"INIT NEW VARSSSS: {type(payload)} {result} VS {payload}")
         return result
 
-    def node_hook_children(self):
-        "Ensure the loggre is loaded early"
+    def node_hook_final(self):
+        "Ensure the logger is loaded early"
 
         # Start logger
         self.set_logger("paasify.cli.ConfigVarsManager")

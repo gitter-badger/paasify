@@ -30,6 +30,7 @@ from typing import Optional
 
 from pprint import pprint
 from pathlib import Path
+import yaml
 
 import typer
 from cafram.utils import get_logger
@@ -286,6 +287,9 @@ def build(
 @cli_app.command()
 def up(
     ctx: typer.Context,
+    logs: bool = typer.Option(False, "--logs", "-l",
+        help="Show running logs after action"
+        ),
     stack: Optional[str] = typer.Argument(
         None,
         help="Stack to target, current cirectory or all",
@@ -295,6 +299,9 @@ def up(
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
     prj.stacks.cmd_stack_up(stacks=stack)
+
+    if logs:
+        prj.stacks.cmd_stack_logs(stacks=stack, follow=True)
 
 
 @cli_app.command()
@@ -347,6 +354,9 @@ def logs(
 @cli_app.command()
 def apply(
     ctx: typer.Context,
+    logs: bool = typer.Option(False, "--logs", "-l",
+        help="Show running logs after action"
+        ),
     stack: Optional[str] = typer.Argument(
         None,
         help="Stack to target, current cirectory or all",
@@ -357,10 +367,16 @@ def apply(
     prj = paasify.load_project()
     prj.stacks.cmd_stack_apply(stacks=stack)
 
+    if logs:
+        prj.stacks.cmd_stack_logs(stacks=stack, follow=True)
+
 
 @cli_app.command()
 def recreate(
     ctx: typer.Context,
+    logs: bool = typer.Option(False, "--logs", "-l",
+        help="Show running logs after action"
+        ),
     stack: Optional[str] = typer.Argument(
         None,
         help="Stack to target, current cirectory or all",
@@ -370,6 +386,9 @@ def recreate(
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
     prj.stacks.cmd_stack_recreate(stacks=stack)
+
+    if logs:
+        prj.stacks.cmd_stack_logs(stacks=stack, follow=True)
 
 
 # Top levels helpers
@@ -395,7 +414,12 @@ def clean_terminate(err):
         log.critical(f"Paasify exited with error {err.rc}: {err_name}")
         sys.exit(err.rc)
 
-    elif err.__class__ in oserrors:
+    if isinstance(err, yaml.parser.ParserError):
+        log.critical(err)
+        log.critical(f"Paasify exited with YAML error")
+        sys.exit(error.YAMLError.rc)
+
+    if err.__class__ in oserrors:
 
         # Decode OS errors
         # errno = os.strerror(err.errno)
@@ -417,8 +441,9 @@ def app():
         clean_terminate(err)
 
         # Developper catchall
-        log.critical ("Uncatched error happened, this may be a bug!")
         log.error(traceback.format_exc())
+        log.critical (f"Uncatched error {err.__class__}; this may be a bug!")
+        log.critical ("Exit 1 with bugs")
         sys.exit(1)
 
 

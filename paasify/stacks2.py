@@ -189,8 +189,11 @@ class PaasifyStack(NodeMap, PaasifyObj):
             parent=self, ident="StackTagMgr", payload=tag_list
         )
 
+    def node_hook_final(self):
+        "Enable CLI debugging"
+
         # Enable cli logging
-        self.set_logger("paasify.cli.Stack")
+        self.set_logger(f"paasify.cli.Stack.{self.name}")
 
     # Local functions
     # ---------------------
@@ -438,21 +441,22 @@ class PaasifyStack(NodeMap, PaasifyObj):
             vars_run.update(conf)
 
 
-        # 7. Loop again on tags and override/process tags vars
-        # Overrides unset vars only
-        for jsonnet_file in jsonnet_cand:
+        # TMP disabled: As it is not that useful in the end ...
+        # # 7. Loop again on tags and override/process tags vars
+        # # Overrides unset vars only
+        # for jsonnet_file in jsonnet_cand:
 
-            # Parse jsonnet file
-            ext_vars = {
-                "user_data": vars_run,
-            }
-            payload = self.process_jsonnet(jsonnet_file, "vars_override", ext_vars)
+        #     # Parse jsonnet file
+        #     ext_vars = {
+        #         "user_data": vars_run,
+        #     }
+        #     payload = self.process_jsonnet(jsonnet_file, "vars_override", ext_vars)
 
-            # Update result if current value is kinda null
-            for key, val in payload["vars_override"].items():
-                dst = vars_run.get(key, None)
-                if not dst:
-                    vars_run[key] = val
+        #     # Update result if current value is kinda null
+        #     for key, val in payload["vars_override"].items():
+        #         dst = vars_run.get(key, None)
+        #         if not dst:
+        #             vars_run[key] = val
 
         return vars_run
 
@@ -516,6 +520,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # 7. Build jsonnet files
         self.log.info("Jsonnet files:")
 
+        
+
         for cand in all_tags:
             docker_file = cand.get("docker_file")
 
@@ -531,6 +537,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
             jsonnet_data = cand.get("tag").vars or {}
             env_vars = dict(vars_run)
             env_vars.update(jsonnet_data)
+
+            # Remove all null values
+            env_vars = {k: v for k, v in env_vars.items() if v is not None}
 
             # Parse jsonnet file
             ext_vars = {
@@ -707,8 +716,8 @@ class PaasifyStackManager(NodeList, PaasifyObj):
 
     conf_children = PaasifyStack
 
-    def node_hook_children(self):
-        "Enalbe CLI logging"
+    def node_hook_final(self):
+        "Enable CLI logging and validate config"
 
         # Enable cli logging
         self.set_logger("paasify.cli.StacksManager")
@@ -718,6 +727,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         dup = duplicates(stack_paths)
         if len(dup) > 0:
             raise error.ProjectInvalidConfig(f"Cannot have duplicate paths: {dup}")
+
 
     # Stack management API
     # ======================
@@ -741,13 +751,14 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         If attr or value is None, return all instances
         Values must be an array of valid vallues.
         """
-
+        
         if isinstance(attr, str) and values is not None:
             if not isinstance(values, list):
-                value = [value]
-            return [
+                values = [values]
+            result = [
                 stack for stack in self.get_children() if getattr(stack, attr) in values
             ]
+            return result
 
         return self.get_children()
 
@@ -770,7 +781,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
         for stack in stack_list:
             self.log.notice(f"  Start stack: {stack.stack_name}")
-            stack.engine.up()
+            stack.engine.up(_fg=True)
             
 
     def cmd_stack_down(self, stacks=None):
@@ -781,7 +792,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         stack_list.reverse()
         for stack in stack_list:
             self.log.notice(f"  Stop stack: {stack.stack_name}")
-            stack.engine.down()
+            stack.engine.down(_fg=True)
             
 
     def cmd_stack_ps(self, stacks=None):
@@ -794,8 +805,8 @@ class PaasifyStackManager(NodeList, PaasifyObj):
 
         for stack in stack_list:
             self.log.notice(f"Process of stack: {stack.stack_name}")
-            out = stack.engine.ps()
-            print(out)
+            stack.engine.ps()
+
 
     # Shortcuts
     # ======================
@@ -833,12 +844,24 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         "Show informations on project plugins"
 
         if isinstance(mode, str):
-
             dst_path = mode
-            print("Generate documentation in dir:", dst_path)
+            self.log.notice("Generate documentation in dir:", dst_path)
             for stack in self.get_children():
                 stack.gen_doc(output_dir=dst_path)
 
         else:
             for stack in self.get_children():
                 stack.explain_tags()
+
+    def cmd_stack_logs(self, stacks=None, services=None, follow=False):
+        "Display stack/services logs"
+
+        stack_list = self.get_stacks_obj(attr="name", values=stacks)
+        if len(stack_list) > 1:
+            self.log.warning(f"Run action only on first stack of: {stack_list}")
+            stack_list = [stack_list[0]]
+            #raise error.OnlyOneStackAllowd("Not possible to do this action on more than one stack")
+        
+        for stack in stack_list:
+            self.log.notice(f"Logs of stack: {stack.stack_name}")
+            stack.engine.logs(follow)

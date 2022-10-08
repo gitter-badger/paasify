@@ -89,6 +89,10 @@ class EngineCompose(NodeMap, PaasifyObj):
             f"{stack_dir}",
         ]
 
+    # def node_hook_final(self):
+    #     "Enable cli logging"
+    #     self.set_logger("paasify.cli.engine")
+
     def require_stack(self):
         "Ensure stack context"
 
@@ -156,11 +160,19 @@ class EngineCompose(NodeMap, PaasifyObj):
     def down(self, **kwargs):
         "Stop containers"
 
+        #pprint (self.__dict__)
+
         self.require_stack()
         cli_args = list(self.arg_prefix)
+        # cli_args = [
+        #     "--file",
+        #     self.docker_file_path,
+        #     "down",
+        #     "--remove-orphans",
+        # ]
         cli_args = [
-            "--file",
-            self.docker_file_path,
+            "--project-name",
+            self.stack_name,
             "down",
             "--remove-orphans",
         ]
@@ -183,17 +195,19 @@ class EngineCompose(NodeMap, PaasifyObj):
         "Return container logs"
 
         self.require_stack()
+
         sh_options = {}
         cli_args = [
-            "--file",
-            self.docker_file_path,
+            "--project-name",
+            self.stack_name,
             "logs",
         ]
         if follow:
             cli_args.append("-f")
             sh_options["_fg"] = True
 
-        _exec("docker-compose", cli_args, **sh_options)
+        out = _exec("docker-compose", cli_args, **sh_options)
+        print (out)
 
     # pylint: disable=invalid-name
     def ps(self):
@@ -202,8 +216,8 @@ class EngineCompose(NodeMap, PaasifyObj):
         self.require_stack()
 
         cli_args = [
-            "--file",
-            self.docker_file_path,
+            "--project-name",
+            self.stack_name,
             "ps",
             "--all",
             "--format",
