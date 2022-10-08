@@ -87,3 +87,9 @@ class StackMissingDockerComposeFile(PaasifyError):
     """Raised when a stack can't find a docker-compose.yml"""
 
     rc = 38
+
+
+class BuildStackFirstError(PaasifyError):
+    """Raised when a trying to interact with stack but docker-compose.yml is missing"""
+
+    rc = 38

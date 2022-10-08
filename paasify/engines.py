@@ -89,7 +89,6 @@ class EngineCompose(NodeMap, PaasifyObj):
             f"{stack_dir}",
         ]
 
-
     def require_stack(self):
         "Ensure stack context"
 
@@ -275,8 +274,6 @@ class EngineCompose_16(EngineCompose):
     "Docker-engine: Support for version until 1.6"
 
     ident = "docker-compose-1.6"
-
-
 
 
 # class EngineDetect(PaasifyObj):

@@ -28,7 +28,7 @@ import traceback
 from typing import Optional
 
 
-# from pprint import pprint
+from pprint import pprint
 from pathlib import Path
 
 import typer
@@ -57,7 +57,7 @@ from paasify.app2 import PaasifyApp
 # import logging
 # log = logging.getLogger("paasify")
 
-log = get_logger(logger_name="paasify")
+log = get_logger(logger_name="paasify.cli")
 
 
 cli_app = typer.Typer(
@@ -70,7 +70,7 @@ cli_app = typer.Typer(
 @cli_app.callback()
 def main(
     ctx: typer.Context,
-    verbose: int = typer.Option(0, "--verbose", "-v", count=True, min=0, max=5),
+    verbose: int = typer.Option(1, "--verbose", "-v", count=True, min=0, max=5),
     working_dir: str = typer.Option(
         os.getcwd(),
         "-c",
@@ -112,11 +112,12 @@ def main(
     # log.critical("SHOW CRITICAL")
     # log.error("SHOW ERROR")
     # log.warning("SHOW WARNING")
-    log.notice("SHOW NOTICE")
-    log.info("SHOW INFO")
-    log.exec("SHOW EXEC")
-    log.debug("SHOW DEBUG")
-    log.trace("SHOW TRACE")
+
+    # log.notice("SHOW NOTICE")
+    # log.info("SHOW INFO")
+    # log.exec("SHOW EXEC")
+    # log.debug("SHOW DEBUG")
+    # log.trace("SHOW TRACE")
 
     # Init paasify
     app_conf = {
@@ -162,7 +163,7 @@ def explain(
     """Show project plugins"""
     psf = ctx.obj["paasify2"]
     prj = psf.load_project()
-    prj.explain_stacks(mode=mode)
+    prj.stacks.cmd_stack_explain(mode=mode)
 
 
 @cli_app.command()
@@ -170,9 +171,9 @@ def ls(
     ctx: typer.Context,
 ):
     """List all stacks"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_stacks_list()
+    prj.stacks.cmd_stack_ls()
 
 
 # pylint: disable=redefined-builtin
@@ -208,8 +209,9 @@ def init(
     ),
 ):
     """Create new project/namespace"""
+    # TODO: To fix
     paasify = ctx.obj["paasify"]
-    prj = paasify.init_project(name)
+    paasify.init_project(name)
 
 
 @cli_app.command()
@@ -222,12 +224,15 @@ def help(
 
 # Source commands
 # ==============================
+# TODO: To fix
+
+
 @cli_app.command()
 def src_ls(
     ctx: typer.Context,
 ):
     """List sources"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
     prj.cmd_src_list()
 
@@ -237,7 +242,7 @@ def src_install(
     ctx: typer.Context,
 ):
     """Install sources"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
     prj.cmd_src_install()
 
@@ -247,7 +252,7 @@ def src_update(
     ctx: typer.Context,
 ):
     """Update sources"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
     prj.cmd_src_update()
 
@@ -257,7 +262,7 @@ def src_tree(
     ctx: typer.Context,
 ):
     """Show source tree"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
     prj.cmd_src_tree()
 
@@ -273,14 +278,14 @@ def apply(
     ),
 ):
     """Build and apply stack"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
 
     log.notice("Rebuild docker-compose ...")
-    prj.cmd_build(stack=stack)
+    prj.stacks.cmd_stack_assemble(stacks=stack)
 
     log.notice("Apply stack")
-    prj.cmd_up(stack=stack)
+    prj.stacks.cmd_stack_up(stacks=stack)
 
 
 @cli_app.command()
@@ -292,17 +297,17 @@ def recreate(
     ),
 ):
     """Stop, rebuild and create stack"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
 
-    # log.notice("Remove stacks")
-    prj.cmd_down(stack=stack)
+    log.notice("Remove stacks")
+    prj.stacks.cmd_stack_down(stacks=stack)
 
-    # log.notice("Rebuild docker-compose ...")
-    prj.cmd_build(stack=stack)
+    log.notice("Rebuild docker-compose ...")
+    prj.stacks.cmd_stack_assemble(stacks=stack)
 
-    # log.notice("Apply stack")
-    prj.cmd_up(stack=stack)
+    log.notice("Apply stack")
+    prj.stacks.cmd_stack_up(stacks=stack)
 
 
 @cli_app.command()
@@ -317,44 +322,9 @@ def build(
 
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_stack_cmd("assemble", stacks=stack)
-    # prj.cmd_stack_assemble(stack=stack)
+    prj.stacks.cmd_stack_assemble(stacks=stack)
 
     return
-
-    # sys.exit(1)
-
-    # print("\n\n")
-    # print ("PASSED: Dict")
-    # pprint (paasify.__dict__)
-    # print ("PASSED: SAerialized")
-    # pprint (paasify.serialize())
-    # print ("PASSED: Children")
-    # print (serialize(paasify.get_children_conf(), fmt='yml'))
-    # print ("PASSED: Config")
-    # pprint (paasify.config.serialize())
-    # print ("\n\n\n\n")
-
-    # #sys.exit(1)
-    # print ("\n\n\n\n")
-    # print ("PRJ: Dict")
-    # pprint (prj.__dict__)
-    # pprint (prj.stacks.__dict__)
-
-    # pprint (dir(prj))
-
-    # prj.cmd_stack_assemble(stack=stack)
-
-    # print ("Childs")
-    # print (serialize(paasify.get_config(), fmt='yml'))
-    # print (serialize(paasify.__dict__, fmt='json'))
-    # print (serialize(paasify.project.stacks.__dict__, fmt='json'))
-
-    # sys.exit(0)
-
-    # paasify = ctx.obj["paasify"]
-    # prj = paasify.load_project()
-    # prj.cmd_build(stack=stack)
 
 
 @cli_app.command()
@@ -366,9 +336,9 @@ def up(
     ),
 ):
     """Start docker stack"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_up(stack=stack)
+    prj.stacks.cmd_stack_up(stacks=stack)
 
 
 @cli_app.command()
@@ -380,9 +350,9 @@ def down(
     ),
 ):
     """Stop docker stack"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_down(stack=stack)
+    prj.stacks.cmd_stack_down(stacks=stack)
 
 
 @cli_app.command()
@@ -394,9 +364,9 @@ def ps(
     ),
 ):
     """Show docker stack instances"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_ps(stack=stack)
+    prj.stacks.cmd_stack_ps(stacks=stack)
 
 
 @cli_app.command()
@@ -409,9 +379,9 @@ def logs(
     ),
 ):
     """Show stack logs"""
-    paasify = ctx.obj["paasify"]
+    paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_logs(stack=stack, follow=follow)
+    prj.stacks.cmd_stack_logs(stacks=stack, follow=follow)
 
 
 @cli_app.command()
@@ -424,8 +394,8 @@ def reset(
     ),
 ):
     """Reset presistent application volume data (destructive!)"""
-    paasify = ctx.obj["paasify"]
-    prj = paasify.load_project()
+    paasify = ctx.obj["paasify2"]
+    paasify.load_project()
     raise Exception("Not implemented yet")
 
 
@@ -439,7 +409,7 @@ def app():
     except Exception as err:
         err_type = err.__class__.__module__ + "." + err.__class__.__name__
 
-        if hasattr(err, "paasify"):
+        if hasattr(err, "paasify2"):
             err_name = err.__class__.__name__
             if isinstance(err.advice, str):
                 log.warning(err.advice)

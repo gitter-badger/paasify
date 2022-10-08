@@ -1,3 +1,8 @@
+"""
+Stack components class
+
+"""
+
 import os
 
 from cafram.nodes import NodeList, NodeMap
@@ -13,6 +18,7 @@ from paasify.framework import PaasifyObj
 
 
 class PaasifyStackApp(NodeMap, PaasifyObj):
+    "Stack Applicationk Object"
 
     conf_default = {
         "app": None,
@@ -177,6 +183,7 @@ stack_ref_defs = {
 
 
 class PaasifyStackTag(NodeMap, PaasifyObj):
+    """Paasify Stack object"""
 
     conf_schema = {
         # "$schema": "http://json-schema.org/draft-07/schema#",
@@ -346,6 +353,7 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
 
 
 class PaasifyStackTagManager(NodeList, PaasifyObj):
+    "Manage Stacks"
 
     conf_schema = {
         # "$schema": "http://json-schema.org/draft-07/schema#",
@@ -404,6 +412,7 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
     conf_children = PaasifyStackTag
 
     def list_tags(self):
+        "List all tags (deprecated)"
         return self._nodes
 
     def resolve_tags_files(self, dirs):

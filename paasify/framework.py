@@ -11,7 +11,7 @@ import logging
 from pprint import pprint
 
 from cafram.nodes import NodeList, NodeMap, NodeDict
-from cafram.base import Log, Base, Hooks
+from cafram.base import MixInLog, Base, Hooks
 from cafram.utils import merge_dicts
 
 import paasify.errors as error
@@ -20,20 +20,22 @@ import paasify.errors as error
 _log = logging.getLogger()
 
 
-# class PaasifyObj(Conf,Family,Log,Base):
-class PaasifyObj(Log, Hooks, Base):
+class PaasifyObj(MixInLog, Base):
     "Default Paasify base object"
 
-    module = "paasify"
+    module = "paasify.api"
+    conf_logger = "paasify"
     log = _log
 
     def __init__(self, *args, **kwargs):
         # print ("INIT PaasifyObj", self, '->'.join([ x.__name__ for x in self.__class__.__mro__]), args, kwargs)
 
-        super(PaasifyObj, self).__init__(*args, **kwargs)
+        # Manually load classe
+        Base.__init__(self, *args, **kwargs)
+        MixInLog.__init__(self, *args, **kwargs)
 
-        # self.log.trace(f"__init__: PaasifyObj2/{self}")
-        # print(f"XXX: __init__: PaasifyObj2/{self}")
+        # Other things
+        # super().__init__(*args, **kwargs)
 
 
 class PaasifySimpleDict(NodeMap, PaasifyObj):
@@ -50,6 +52,8 @@ class PaasifyConfigVar(NodeMap, PaasifyObj):
         "name": None,
         "value": None,
     }
+
+    # conf_logger = "paasify.cli.ConfigVar"
 
     conf_schema = {
         "title": "Variable definition as key/value",
@@ -97,6 +101,12 @@ class PaasifyConfigVar(NodeMap, PaasifyObj):
             raise Exception(f"Unsupported () type {type(payload)}: {payload}")
 
         return result
+
+    def node_hook_children(self):
+        "Ensure the loggre is loaded early"
+
+        # Start logger
+        self.set_logger("paasify.cli.ConfigVar")
 
 
 vardef_schema_complex = {
@@ -240,6 +250,12 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
         # print (f"INIT NEW VARSSSS: {type(payload)} {result} VS {payload}")
         return result
 
+    def node_hook_children(self):
+        "Ensure the loggre is loaded early"
+
+        # Start logger
+        self.set_logger("paasify.cli.ConfigVarsManager")
+
     def parse_vars(self, current=None):
         "Parse vars and interpolate strings"
 
@@ -251,17 +267,19 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
 
                 # Safe usage of user input templating
                 tpl = Template(value)
+                # pylint: disable=broad-except
                 try:
                     value = tpl.substitute(**result)
                 except KeyError as err:
                     self.log.warning(
-                        f"Variable {err} is not defined in: {var.name}='{value}'"
+                        f"Variable {err} is not defined in: {var.name}='{value}' => {self.log}"
                     )
-                # pylint: disable=broad-except
+
                 except Exception as err:
                     self.log.warning(
                         f"Could not parse variable: {var.name}='{value}' ( => {err.__class__}/{err})"
                     )
+                    raise error.ProjectInvalidConfig(err)
 
             result[var.name] = value
 

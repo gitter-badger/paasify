@@ -349,28 +349,33 @@ class PaasifyProject(NodeMap, PaasifyObj):
 
         return prj
 
-    def cmd_stack_cmd(self, cmd, stacks=None):
-        "Forward command to stacks"
+    # def get_stack_names(self):
+    #     'Return a list of string og stacks names'
 
-        for stack in self.stacks.get_children():
-            fun = getattr(stack, cmd)
-            self.log.debug(f"Execute: {fun}")
-            fun()
+    #     result = []
+    #     for stack in self.stacks.get_children():
+    #         result.append(stack.name)
+    #     return result
 
-    def explain_stacks(self, mode=None):
-        "Show informations on project plugins"
+    # def cmd_stack_cmd(self, cmd, stacks=None, reverse=False):
+    #     "Forward command to stacks DEPRECATED, USE STACK MANAGER INSTEAD"
 
-        if isinstance(mode, str):
+    #     # Get stacks names
 
-            dst_path = mode
-            print("Generate documentation in dir:", dst_path)
+    #     assert False, "Forward command to stacks DEPRECATED, USE STACK MANAGER INSTEAD"
 
-            for stack in self.stacks.get_children():
+    #     # Cast stacks
+    #     stack_names = stacks
+    #     if stacks is None:
+    #         stack_names = self.get_stack_names()
+    #     elif not isinstance(stacks, list):
+    #         stack_names = [stacks]
 
-                stack.gen_doc(output_dir=dst_path)
+    #     for stack in self.stacks.get_children():
 
-        else:
+    #         if not stack.name in stack_names:
+    #             continue
 
-            for stack in self.stacks.get_children():
-
-                stack.explain_tags()
+    #         fun = getattr(stack, cmd)
+    #         self.log.debug(f"Execute: {fun}")
+    #         fun()

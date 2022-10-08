@@ -85,6 +85,7 @@ class Source(NodeMap, PaasifyObj):
         self.git_url = url if url else prefix % name
 
     def get_path(self):
+        "Return path of git repo"
         return os.path.join(self.collection_dir, self.name)
 
     def is_git(self):

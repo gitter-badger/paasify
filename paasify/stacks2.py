@@ -60,6 +60,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
     "Paasify Stack Instance"
 
     conf_ident = "{self.namespace}/{self.stack_name}"
+    # conf_logger = "paasify.cli.stack"
 
     conf_default = {
         "path": None,
@@ -115,7 +116,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
     engine = None
     prj = None
 
-    # TODO: State vars
+    # State vars
     docker_candidates = None
 
     # TODO: Fix those vars
@@ -170,11 +171,10 @@ class PaasifyStack(NodeMap, PaasifyObj):
         assert os.path.isdir(self.prj_dir)
 
         # Create engine instance
-        prj_name = f"{os.path.basename(self.prj_dir)}_{self.get_name()}"
         payload = {
-            "project_dir": self.prj_dir,
-            "project_name": prj_name,
-            "docker_file": os.path.join(self.prj_dir, "docker-compose.run.yml"),
+            "stack_name": self.stack_name,
+            "stack_dir": self.stack_dir,
+            "docker_file": os.path.join(self.stack_dir, "docker-compose.run.yml"),
         }
         self.engine = self.prj.engine_cls(parent=self, payload=payload)
 
@@ -188,6 +188,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.tag_manager = PaasifyStackTagManager(
             parent=self, ident="StackTagMgr", payload=tag_list
         )
+
+        # Enable cli logging
+        self.set_logger("paasify.cli.Stack")
 
     # Local functions
     # ---------------------
@@ -453,8 +456,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
     def assemble(self):
         "Generate docker-compose.run.yml and parse it with jsonnet"
 
-        print(f"Build the stack: {self}")
-
         # 1. Update sources
         # TOFIX: Be more selective on the source
         if not len(self.prj.sources.get_children()) > 0:
@@ -473,9 +474,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
         )
 
         # Report to user
-        self.log.info("Docker vars:")
+        self.log.debug("Docker vars:")
         for key, val in vars_run.items():
-            self.log.info(f"  {key}: {val}")
+            self.log.debug(f"  {key}: {val}")
 
         # 4. Build docker files list
         self.log.info("Docker files:")
@@ -667,7 +668,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             if "jsonschema" in tag_meta:
                 del tag_meta["jsonschema"]
 
-            dest_schema = os.path.join(dest_dir, f"jsonschema")
+            dest_schema = os.path.join(dest_dir, "jsonschema")
             if tag_schema:
                 print(f"Generated jsonschema files in: {dest_schema}.[json|yml]")
                 write_file(dest_schema + ".json", to_json(tag_schema))
@@ -709,7 +710,7 @@ Documentationfor tag: `{tag.name}`
 
 
                 """
-                dest_md = os.path.join(dest_dir, f"markdown.md")
+                dest_md = os.path.join(dest_dir, "markdown.md")
                 write_file(dest_md, markdown_doc)
                 print(f"Generated Markdown doc in: {dest_md}")
 
@@ -727,51 +728,93 @@ class PaasifyStackManager(NodeList, PaasifyObj):
 
     conf_children = PaasifyStack
 
-    def conf_post_build(self):
-        "(deprecated)"
+    def node_hook_children(self):
+        "Enalbe CLI logging"
 
-        stack_paths = self.list_stack_by("path")
-        # stack_names = self.list_stack_by("name")
+        # Enable cli logging
+        self.set_logger("paasify.cli.StacksManager")
 
+        # Safety checks
+        stack_paths = self.get_stacks_attr("path")
         dup = duplicates(stack_paths)
         if len(dup) > 0:
             raise error.ProjectInvalidConfig(f"Cannot have duplicate paths: {dup}")
+
+    # Stack management API
+    # ======================
 
     def list_stacks(self):
         "Get stacks children (deprecated)"
         return self.get_children()
 
-    def list_stack_by_ident(self):
+    def get_stacks_attr_ident(self):
         "List stack per idents"
         return [x.ident for x in self.get_children()]
 
-    def list_stack_by(self, attr="ident"):
+    def get_stacks_attr(self, attr="ident"):
         "List stacks by attribute"
         return [getattr(x, attr) for x in self.get_children()]
 
-    # TODO: IS THIS ONE USED AT SOME POINTS ?
+    def get_stacks_obj(self, attr=None, values=None):
+        """
+        Get stack instance matching in values
+
+        If attr or value is None, return all instances
+        Values must be an array of valid vallues.
+        """
+
+        if isinstance(attr, str) and values is not None:
+            if not isinstance(values, list):
+                value = [value]
+            return [
+                stack for stack in self.get_children() if getattr(stack, attr) in values
+            ]
+
+        return self.get_children()
+
+    # Command Base API
+    # ======================
+
     def cmd_stack_assemble(self, stacks=None):
         "Assemble a stack"
 
-        stacks = stacks or self._nodes
-        for stack in stacks:
-            print(stack)
-
-            # stack.assemble()
+        stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
+        for stack in stack_list:
+            self.log.notice(f"Assemble stack: {stack}")
+            stack.assemble()
 
     def cmd_stack_up(self, stacks=None):
         "Start a stack"
 
-        stacks = stacks or self._nodes
-        for stack in stacks:
-            stack.up()
+        stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
+        for stack in stack_list:
+            stack.engine.up()
+            self.log.notice(f"Started stack: {stack.stack_name}")
 
     def cmd_stack_down(self, stacks=None):
         "Stop a stack"
 
-        stacks = stacks or self._nodes
-        for stack in stacks:
-            stack.down()
+        stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
+        stack_list.reverse()
+        for stack in stack_list:
+            stack.engine.down()
+            self.log.notice(f"Stopped stack: {stack.stack_name}")
+
+    def cmd_stack_ps(self, stacks=None):
+        "List stacks process"
+
+        stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
+        if len(stack_list) < 1:
+            self.log.notice("  No process founds")
+            return
+
+        for stack in stack_list:
+            self.log.notice(f"Process of stack: {stack.stack_name}")
+            out = stack.engine.ps()
+            print(out)
+
+    # Shortcuts
+    # ======================
 
     def cmd_stack_recreate(self, stacks=None):
         "Recreate a stack"
@@ -779,9 +822,36 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         self.cmd_stack_down(stacks=stacks)
         self.cmd_stack_assemble(stacks=stacks)
         self.cmd_stack_up(stacks=stacks)
+        self.log.notice("Stack has been recreated")
 
     def cmd_stack_apply(self, stacks=None):
         "Apply a stack"
 
         self.cmd_stack_assemble(stacks=stacks)
         self.cmd_stack_up(stacks=stacks)
+        self.log.notice("Stack has been applied")
+
+    # Other commands
+    # ======================
+
+    def cmd_stack_ls(self, stacks=None):
+        "List command to stacks"
+
+        for stack in self.get_children():
+            print(f"  - {stack.name}:")
+            print(f"      app: {stack.app.app}")
+            print(f"      path: {stack.path}")
+
+    def cmd_stack_explain(self, mode=None):
+        "Show informations on project plugins"
+
+        if isinstance(mode, str):
+
+            dst_path = mode
+            print("Generate documentation in dir:", dst_path)
+            for stack in self.get_children():
+                stack.gen_doc(output_dir=dst_path)
+
+        else:
+            for stack in self.get_children():
+                stack.explain_tags()
