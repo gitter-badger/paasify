@@ -8,7 +8,7 @@ local _metadata_default =
 local _fn_default_vars(vars) =
   {};
 
-local _fn_docker_override (vars, docker_file) = {};
+local _fn_docker_override (vars, docker_file) = docker_file;
 
 
 
@@ -25,7 +25,7 @@ local _fn_docker_override (vars, docker_file) = {};
     // Get plugin config
     local metadata = std.get(plugin, "metadata", default=_metadata_default);
     local fn_default_vars = std.get(plugin, "default_vars", default=_fn_default_vars);
-    local fn_override_vars = std.get(plugin, "override_vars", default=_fn_default_vars);
+    // local fn_override_vars = std.get(plugin, "override_vars", default=_fn_default_vars);
     local fn_docker_override = std.get(plugin, "docker_override", default=_fn_docker_override);
 
     // Extract user input
@@ -47,11 +47,11 @@ local _fn_docker_override (vars, docker_file) = {};
         current_vars: vars,
         vars_default: fn_default_vars(vars),
       }
-    else if action == 'vars_override' then
-      out + {
-        current_vars: vars,
-        vars_override: fn_override_vars(vars),
-      }
+    // else if action == 'vars_override' then
+    //   out + {
+    //     current_vars: vars,
+    //     vars_override: fn_override_vars(vars),
+    //   }
     else if action == 'docker_override' then
       local docker_file = self.getConf('docker_file'); // expect a dict of docker-compose
       out + {

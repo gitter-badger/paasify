@@ -63,15 +63,15 @@ local plugin = {
         
     },
 
-  override_vars(vars):: 
-    assert assert_base_vars(vars);
-    assert std.assertEqual(vars.var1_UatoaL5seibis6Ee, "UatoaL5seibis6Ee");
-    assert std.assertEqual(vars.var2_UatoaL5seibis6Ee, "UatoaL5seibis6Ee");
-    {
-        var2_UatoaL5seibis6Ee: "overrided",
-        var3_UatoaL5seibis6Ee: "overrided",
+//   override_vars(vars):: 
+//     assert assert_base_vars(vars);
+//     assert std.assertEqual(vars.var1_UatoaL5seibis6Ee, "UatoaL5seibis6Ee");
+//     assert std.assertEqual(vars.var2_UatoaL5seibis6Ee, "UatoaL5seibis6Ee");
+//     {
+//         var2_UatoaL5seibis6Ee: "overrided",
+//         var3_UatoaL5seibis6Ee: "overrided",
 
-    },
+//     },
 
     // docker_override
   docker_override (vars, docker_file)::
