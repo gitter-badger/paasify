@@ -395,8 +395,38 @@ def reset(
 ):
     """Reset presistent application volume data (destructive!)"""
     paasify = ctx.obj["paasify2"]
-    paasify.load_project()
-    raise Exception("Not implemented yet")
+
+# Top levels helpers
+# ==============================
+
+def clean_terminate(err):
+    "Terminate nicely the program depending the exception"
+
+    oserrors = [
+            PermissionError, FileExistsError, 
+            FileNotFoundError, InterruptedError,
+            IsADirectoryError, NotADirectoryError, TimeoutError
+        ]
+
+
+    # Choose dead end way
+    if isinstance(err, error.PaasifyError):
+        err_name = err.__class__.__name__
+        if isinstance(err.advice, str):
+            log.warning(err.advice)
+
+        log.error(err)
+        log.critical(f"Paasify exited with error {err.rc}: {err_name}")
+        sys.exit(err.rc)
+
+    elif err.__class__ in oserrors:
+
+        # Decode OS errors
+        # errno = os.strerror(err.errno)
+        # errint = str(err.errno)
+
+        log.critical(f"Paasify exited with OS error: {err}")
+        sys.exit(err.errno)
 
 
 def app():
@@ -407,39 +437,82 @@ def app():
 
     # pylint: disable=broad-except
     except Exception as err:
-        err_type = err.__class__.__module__ + "." + err.__class__.__name__
 
-        if hasattr(err, "paasify2"):
-            err_name = err.__class__.__name__
-            if isinstance(err.advice, str):
-                log.warning(err.advice)
-            log.error(err)
-            log.critical(f"Error {err.rc}: {err_name}")
-            sys.exit(err.rc)
+        clean_terminate(err)
 
-        elif err_type.startswith("yaml"):
-            log.error(err)
-            log.critical(f"While parsing YAML file: {err_type}")
-            sys.exit(1)
+        # Developper catchall
+        log.critical ("Uncatched error happened, this may be a bug!")
+        log.error(traceback.format_exc())
+        sys.exit(1)
 
-        # elif err_type.startswith("sh"):
-        #     # pprint (dir(err))
-        #     # pprint (err.__dict__)
-        #     log.error(traceback.format_exc())
-        #     msg = []
-        #     if err.stdout:
-        #         msg.extend(["stdout:", err.stdout])
-        #     if err.stderr:
-        #         msg.extend(["stderr:", err.stderr])
-        #     if msg:
-        #         log.error (msg)
-        #     log.critical (f"Error '{err_type}' while executing command: {err.full_cmd}")
+
+
+
+
+        #assert False, "Bad app termination!!! => {err}"
+
+        #err_type = err.__class__.__module__ + "." + err.__class__.__name__
+
+
+        # # allowed_except = [
+        # #     PermissionError, FileExistsError, 
+        # #     FileNotFoundError, InterruptedError,
+        # #     IsADirectoryError, NotADirectoryError, TimeoutError
+        # # ]
+
+        # # Remap exceptions 
+        # if not isinstance(err, error.PaasifyError):
+        
+
+        #     if hasattr(err, 'errno'):
+        #         # Remap OS errors
+
+        #         raise error.OSError("Got System exception: {err}") from err
+
+
+        # if isinstance(err, error.PaasifyError):
+
+        # #if hasattr(err, "paasify2"):
+        #     err_name = err.__class__.__name__
+        #     if isinstance(err.advice, str):
+        #         log.warning(err.advice)
+        #     log.error(err)
+        #     log.critical(f"OK: Error {err.rc}: {err_name}")
+        #     sys.exit(err.rc)
+
+        # # elif hasattr(err, 'errno'):
+        # # #elif err.__class__ in allowed_except:
+
+        # #     errno = os.strerror(err.errno)
+        # #     errint = str(err.errno)
+
+        # #     pprint (err.__dict__)
+        # #     log.critical(f"Error {errint} ==> {errno}")
+        # #     sys.exit(err.errno)
+
+        # elif err_type.startswith("yaml"):
+        #     log.error(err)
+        #     log.critical(f"While parsing YAML file: {err_type}")
         #     sys.exit(1)
-        else:
-            log.error(traceback.format_exc())
-            log.error(err)
-            log.critical(f"Paasify exited with a BUG! ({type(err)}, {err_type})")
-            sys.exit(1)
+
+        # # elif err_type.startswith("sh"):
+        # #     # pprint (dir(err))
+        # #     # pprint (err.__dict__)
+        # #     log.error(traceback.format_exc())
+        # #     msg = []
+        # #     if err.stdout:
+        # #         msg.extend(["stdout:", err.stdout])
+        # #     if err.stderr:
+        # #         msg.extend(["stderr:", err.stderr])
+        # #     if msg:
+        # #         log.error (msg)
+        # #     log.critical (f"Error '{err_type}' while executing command: {err.full_cmd}")
+        # #     sys.exit(1)
+        # else:
+        #     log.error(traceback.format_exc())
+        #     log.error(err)
+        #     log.critical(f"Paasify exited with a BUG! ({type(err)}, {err_type})")
+        #     sys.exit(1)
 
 
 if __name__ == "__main__":
