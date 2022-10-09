@@ -95,15 +95,13 @@ class BuildStackFirstError(PaasifyError):
     rc = 39
 
 
-class OSError(PaasifyError):
-    """Used for OS errors"""
-
-    rc = 40
-
-class OnlyOneStackAllowd(PaasifyError):
+class OnlyOneStackAllowed(PaasifyError):
     """Raised when trying to apply command one more than one stack"""
+
     rc = 41
+
 
 class YAMLError(PaasifyError):
     """Raised when having issues with YAML file"""
+
     rc = 42

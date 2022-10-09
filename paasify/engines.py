@@ -63,7 +63,7 @@ class EngineCompose(NodeMap, PaasifyObj):
 
     conf_default = {
         "stack_name": None,
-        "stack_dir": None,
+        "stack_path": None,
         "docker_file": "docker-compose.yml",
     }
 
@@ -78,20 +78,20 @@ class EngineCompose(NodeMap, PaasifyObj):
 
         # Init object
         stack_name = stack.stack_name
-        stack_dir = stack.stack_dir
-        self.docker_file_path = os.path.join(stack_dir, self.docker_file)
+        stack_path = stack.stack_path
+        self.docker_file_path = os.path.join(stack_path, self.docker_file)
 
         # Pre build args
         self.arg_prefix = [
             "--project-name",
             f"{stack_name}",
             "--project-directory",
-            f"{stack_dir}",
+            f"{stack_path}",
         ]
 
-    # def node_hook_final(self):
-    #     "Enable cli logging"
-    #     self.set_logger("paasify.cli.engine")
+    def node_hook_final(self):
+        "Enable cli logging"
+        self.set_logger("paasify.cli.engine")
 
     def require_stack(self):
         "Ensure stack context"
@@ -160,16 +160,8 @@ class EngineCompose(NodeMap, PaasifyObj):
     def down(self, **kwargs):
         "Stop containers"
 
-        #pprint (self.__dict__)
-
         self.require_stack()
         cli_args = list(self.arg_prefix)
-        # cli_args = [
-        #     "--file",
-        #     self.docker_file_path,
-        #     "down",
-        #     "--remove-orphans",
-        # ]
         cli_args = [
             "--project-name",
             self.stack_name,
@@ -195,7 +187,6 @@ class EngineCompose(NodeMap, PaasifyObj):
         "Return container logs"
 
         self.require_stack()
-
         sh_options = {}
         cli_args = [
             "--project-name",
@@ -207,14 +198,13 @@ class EngineCompose(NodeMap, PaasifyObj):
             sh_options["_fg"] = True
 
         out = _exec("docker-compose", cli_args, **sh_options)
-        print (out)
+        print(out)
 
     # pylint: disable=invalid-name
     def ps(self):
         "Return container processes"
 
         self.require_stack()
-
         cli_args = [
             "--project-name",
             self.stack_name,

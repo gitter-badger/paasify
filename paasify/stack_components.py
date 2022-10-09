@@ -313,16 +313,7 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
 
         return result
 
-    # def node_hook_children(self):
-    #     "Self init object after loading of app"
 
-    # print("TAG", self, self.get_parents())
-    # totooo
-
-    # self.app_dir = os.path.join(
-    #     self.prj.runtime.project_root_dir,
-    #     '.paasify', 'collections',
-    #     self.app_source, self.app_path)
 
     def _lookup_file(self, dirs, pattern):
         "Lookup a specific file name in dirs"

@@ -12,8 +12,10 @@ This library provides two classes:
 
 import os
 
+import re
 import json
 from pprint import pprint
+from functools import wraps
 
 
 import _jsonnet
@@ -59,7 +61,6 @@ except ImportError:
 class PaasifyStack(NodeMap, PaasifyObj):
     "Paasify Stack Instance"
 
-    conf_ident = "{self.namespace}/{self.stack_name}"
     # conf_logger = "paasify.cli.stack"
 
     conf_default = {
@@ -80,7 +81,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             "key": "app",
             "cls": PaasifyStackApp,
             "action": "unset",
-            # "hook": "init_stack",
+            "hook": "node_hook_app_load",
         },
         {
             "key": "vars",
@@ -111,7 +112,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         },
     }
 
-    # Other objects
+    # Children objects
     tag_manager = None
     engine = None
     prj = None
@@ -119,19 +120,17 @@ class PaasifyStack(NodeMap, PaasifyObj):
     # State vars
     docker_candidates = None
 
-    # TODO: Fix those vars
+    # Stack vars
     stack_dir = None
-    prj_dir = None
-    # name = None
-    # path = None
     stack_name = None
-
-    namespace = None
+    prj_dir = None
+    prj_ns = None
 
     # CaFram functions
     # ---------------------
 
     def node_hook_transform(self, payload):
+        "PaasifyStack Init"
 
         # Internal attributes
         self.prj = self.get_parent().get_parent()
@@ -152,29 +151,82 @@ class PaasifyStack(NodeMap, PaasifyObj):
                     "path": payload,
                 }
 
+        # Check requirements
+        if (
+            not payload.get("name")
+            and not payload.get("path")
+            and not payload.get("app")
+        ):
+            assert False, "BUG, this should be handled by jsonschema !"
+
         return payload
 
-    def node_hook_children(self):
-        "Self init object after loading of app"
+    def node_hook_app_load(self):
+        "Modify stack depending app"
 
-        # Config update
-        self.stack_name = self.get_name()
-        self.name = self.stack_name  # Legacy code
+        # self.name = self.get_name()
+        # self.path = self.get_path()
 
-        self.path = self.get_path()  # legacy code
+        # Assert name,path,app
+        stack_name = self.name
+        stack_dir = self.path
+        stack_app = self.app
+
+        # Check name first
+        if not stack_name:
+
+            # Fetch from app
+            if stack_app:
+                stack_name = stack_app.app_name
+
+            # Fetch from path
+            if stack_dir:
+                stack_name = stack_dir.replace(os.path.sep, "_")
+
+            if not stack_name:
+                assert False, f"Missing name, or app or path for stack: {self}"
+
+        if not stack_dir:
+            stack_dir = stack_name
+
+        # Register required vars
+        self.stack_name = stack_name
+        self.stack_dir = stack_dir
+        self.prj_ns = self.prj.config.namespace
+        # pprint (self.prj.runtime.__dict__)
+        self.prj_path = self.prj.runtime.root_path
+        self.stack_path = os.path.join(self.prj.runtime.root_path, stack_dir)
+        self.ident = self.stack_name
+
+        # Resolve some paths
+        stack_path = self.stack_path
+        stack_path_abs = os.path.abspath(stack_path)
+        if not os.path.isabs(self.prj_path):
+            stack_path = os.path.relpath(stack_path_abs)
+
+        # Save new settings
+        self.stack_path = stack_path
+        self.stack_path_abs = stack_path_abs
+
+        # Check
         assert self.stack_name, f"Bug here, should not be empty, got: {self.stack_name}"
+        assert re.search("^[a-zA-Z0-9_].*$", self.stack_name), f"Got: {self.stack_name}"
+        assert re.search("^[a-zA-Z0-9_/].*$", self.stack_dir), f"Got: {self.stack_dir}"
+        # print (f"New stack: {stack_name} in dir: {stack_dir} with app: {self.app}")
 
-        self.prj_dir = self.prj.runtime.root_path
-        self.stack_dir = os.path.join(self.prj.runtime.root_path, self.stack_name)
-        self.namespace = self.prj.config.namespace or os.path.basename(self.prj_dir)
 
-        assert os.path.isdir(self.prj_dir)
+
+    def node_hook_final(self):
+        "Enable CLI debugging"
+
+        # Enable cli logging
+        self.set_logger(f"paasify.cli.Stack.{self.name}")
 
         # Create engine instance
         payload = {
             "stack_name": self.stack_name,
-            "stack_dir": self.stack_dir,
-            "docker_file": os.path.join(self.stack_dir, "docker-compose.run.yml"),
+            "stack_path": self.stack_path,
+            "docker_file": "docker-compose.run.yml",  # os.path.join(self.stack_dir, "docker-compose.run.yml"),
         }
         self.engine = self.prj.engine_cls(parent=self, payload=payload)
 
@@ -189,36 +241,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             parent=self, ident="StackTagMgr", payload=tag_list
         )
 
-    def node_hook_final(self):
-        "Enable CLI debugging"
 
-        # Enable cli logging
-        self.set_logger(f"paasify.cli.Stack.{self.name}")
-
-    # Local functions
-    # ---------------------
-
-    def get_path(self):
-        "Return stack relative path"
-
-        result = self.path or self.name
-        if self.app:
-            result = result or self.app.app_name
-
-        if not result:
-            pprint(self.__dict__)
-            print(self.path, self.name)
-        assert result, f"Error while getting path: {result}"
-        return result
-
-    def get_name(self):
-        "Return stack name"
-
-        result = self.name or self.get_path()
-        if self.app:
-            result = result or self.app.app_name
-
-        return result.replace(os.path.sep, "_")
 
     # Local functions
     # ---------------------
@@ -321,22 +344,23 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # flat_dict = to_dict(dfile)
         # default_svc = flat_dict.get("services", {}).get(default_service)
 
-        # pprint (self.__dict__)
         # dsfsdf
 
         # Build default
         # app_dir = self.path
         result = {
             "paasify_sep": "-",
-            "prj_path": self.prj_dir,
-            "prj_namespace": self.namespace,
-            "prj_domain": to_domain(self.namespace),
+            "prj_path": self.prj_path,
+            "prj_namespace": self.prj_ns,
+            "prj_domain": to_domain(self.prj_ns),
             "stack_name": self.stack_name,
+            "stack_path": self.stack_path,
+            "stack_path_abs": self.stack_path_abs,
             "stack_network": default_network,
             "stack_service": default_service,
-            "stack_path": self.stack_dir,
             "stack_app_path": self.app.app_dir,
             "stack_collection_app_path": self.app.collection_dir,
+
             # "app_network_name": self.namespace,
             # # "app_image": "TOTO",
             # "app_service": default_service,
@@ -397,7 +421,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         vars_global = globvars.parse_vars(current=vars_base)
         vars_run = localvars.parse_vars(current=vars_global)
 
-
         # 2. Read tag vars
         # Run each tag and get default variables
         all_tags = all_tags or []
@@ -440,7 +463,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
             conf = anyconfig.load(cand, ac_parser="yaml")
             vars_run.update(conf)
 
-
         # TMP disabled: As it is not that useful in the end ...
         # # 7. Loop again on tags and override/process tags vars
         # # Overrides unset vars only
@@ -469,6 +491,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
             msg = f"Missing default source for stack: {self.serialize(mode='raw')}"
             raise error.StackMissingOrigin(msg)
 
+        # Fix this piece of code
+        # pylint: disable=unused-variable
         for src_name, src in self.prj.sources.get_children().items():
             src.install(update=False)
 
@@ -495,10 +519,11 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 self.log.info(f"  Insert: {docker_file}")
 
         # 5. Prepare docker-file output directory
-        outfile = os.path.join(self.stack_dir, "docker-compose.run.yml")
-        if not os.path.isdir(self.stack_dir):
-            self.log.info(f"Create missing directory: {self.stack_dir}")
-            os.mkdir(self.stack_dir)
+        outfile = os.path.join(self.stack_path, "docker-compose.run.yml")
+        if not os.path.isdir(self.stack_path):
+            self.log.info(f"Create missing directory: {self.stack_path}")
+            os.mkdir(self.stack_path)
+
 
         # 6. Build final docker file
         engine = self.engine
@@ -519,8 +544,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # 7. Build jsonnet files
         self.log.info("Jsonnet files:")
-
-        
 
         for cand in all_tags:
             docker_file = cand.get("docker_file")
@@ -703,6 +726,69 @@ Documentationfor tag: `{tag.name}`
                 print(f"Generated Markdown doc in: {dest_md}")
 
 
+def guess_target(fn):
+    @wraps(fn)
+    def wrapper(self, *args, stacks=None, stack_names=None, **kw):
+
+        self.set_logger("paasify.cli")
+
+        # Inteligently guess stack to use
+        if not stacks:
+
+            if isinstance(stack_names, str):
+                stack_names = stack_names.split(",")
+
+            sub_dir = self._node_parent.runtime.sub_dir
+            if not stack_names and sub_dir:
+
+                # Use current dir stacks if in subdir
+                stack_path = sub_dir.split(os.path.sep)[0]
+                stacks = [
+                    stack
+                    for stack in self.get_children()
+                    if stack.stack_dir in stack_path
+                ]
+                self.log.debug(f"Use current directory stack: {stack_path}")
+
+            elif stack_names is None:
+                # Use all stacks is set to None
+                self.log.debug("Use all stacks")
+                stacks = self.get_children()
+
+            else:
+                # Loop over specified list of tasks
+                assert isinstance(stack_names, list), f"Got: {stack_names}"
+                stack_names = [name for name in stack_names if name]
+
+                stacks = [
+                    stack
+                    for stack in self.get_children()
+                    if stack.stack_name in stack_names
+                ]
+
+                # Sanity check
+                if len(stack_names) != len(stacks):
+                    mising_stacks = list(stack_names)
+                    for stack in stacks:
+                        mising_stacks.remove(stack.stack_name)
+                    raise error.StackNotFound(
+                        f"Impossible to find stack in config: {','.join(mising_stacks)}"
+                    )
+
+                self.log.debug(f"Select stacks: {','.join(stack_names)}")
+
+            # print (f"RESOLUTION: {stack_names} => {stacks}")
+
+        # Clean decorator argument
+        if "stacks_names" in kw:
+            del kw["stacks_names"]
+
+        assert isinstance(stacks, list), f"Got: {stacks}"
+        return fn(self, *args, stacks=stacks, **kw)
+
+    return wrapper
+
+
 class PaasifyStackManager(NodeList, PaasifyObj):
     "Manage a list of stacks"
 
@@ -723,11 +809,10 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         self.set_logger("paasify.cli.StacksManager")
 
         # Safety checks
-        stack_paths = self.get_stacks_attr("path")
+        stack_paths = self.get_stacks_attr("stack_dir")
         dup = duplicates(stack_paths)
         if len(dup) > 0:
             raise error.ProjectInvalidConfig(f"Cannot have duplicate paths: {dup}")
-
 
     # Stack management API
     # ======================
@@ -751,7 +836,13 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         If attr or value is None, return all instances
         Values must be an array of valid vallues.
         """
-        
+
+        sub_dir = self._node_parent.runtime.sub_dir
+        if values is None and sub_dir:
+            # attr = path
+            values = sub_dir.split(os.path.sep)[0]
+            print(f"Automatch subdir: {values}")
+
         if isinstance(attr, str) and values is not None:
             if not isinstance(values, list):
                 values = [values]
@@ -765,52 +856,50 @@ class PaasifyStackManager(NodeList, PaasifyObj):
     # Command Base API
     # ======================
 
+    @guess_target
     def cmd_stack_assemble(self, stacks=None):
         "Assemble a stack"
 
         self.log.notice("Asemble stacks:")
-        stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
-        for stack in stack_list:
+        for stack in stacks:
             self.log.notice(f"  Assemble stack: {stack}")
             stack.assemble()
 
+    @guess_target
     def cmd_stack_up(self, stacks=None):
         "Start a stack"
 
         self.log.notice("Start stacks:")
-        stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
-        for stack in stack_list:
+        for stack in stacks:
             self.log.notice(f"  Start stack: {stack.stack_name}")
             stack.engine.up(_fg=True)
-            
 
+    @guess_target
     def cmd_stack_down(self, stacks=None):
         "Stop a stack"
 
+        stacks.reverse()
         self.log.notice("Stop stacks:")
-        stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
-        stack_list.reverse()
-        for stack in stack_list:
+        for stack in stacks:
             self.log.notice(f"  Stop stack: {stack.stack_name}")
             stack.engine.down(_fg=True)
-            
 
+    @guess_target
     def cmd_stack_ps(self, stacks=None):
         "List stacks process"
 
-        stack_list = self.get_stacks_obj(attr="stack_name", values=stacks)
-        if len(stack_list) < 1:
+        if len(stacks) < 1:
             self.log.notice("  No process founds")
             return
 
-        for stack in stack_list:
-            self.log.notice(f"Process of stack: {stack.stack_name}")
+        # self.log.notice("List of processes:")
+        for stack in stacks:
+            # self.log.notice(f"Process of stack: {stack.stack_name}")
             stack.engine.ps()
-
 
     # Shortcuts
     # ======================
-
+    @guess_target
     def cmd_stack_apply(self, stacks=None):
         "Apply a stack"
 
@@ -819,6 +908,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         self.cmd_stack_up(stacks=stacks)
         self.log.notice("Stack has been applied")
 
+    @guess_target
     def cmd_stack_recreate(self, stacks=None):
         "Recreate a stack"
 
@@ -828,7 +918,6 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         self.cmd_stack_up(stacks=stacks)
         self.log.notice("Stack has been recreated")
 
-
     # Other commands
     # ======================
 
@@ -836,11 +925,12 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         "List command to stacks"
 
         for stack in self.get_children():
-            print(f"  - {stack.name}:")
+            print(f"  - {stack.stack_name}:")
             print(f"      app: {stack.app.app}")
-            print(f"      path: {stack.path}")
+            print(f"      path: {stack.stack_path}")
 
-    def cmd_stack_explain(self, mode=None):
+    @guess_target
+    def cmd_stack_explain(self, stacks=None, mode=None):
         "Show informations on project plugins"
 
         if isinstance(mode, str):
@@ -850,18 +940,20 @@ class PaasifyStackManager(NodeList, PaasifyObj):
                 stack.gen_doc(output_dir=dst_path)
 
         else:
-            for stack in self.get_children():
+            for stack in stacks:
                 stack.explain_tags()
 
-    def cmd_stack_logs(self, stacks=None, services=None, follow=False):
+    @guess_target
+    def cmd_stack_logs(self, stacks=None, follow=False):
         "Display stack/services logs"
 
-        stack_list = self.get_stacks_obj(attr="name", values=stacks)
-        if len(stack_list) > 1:
-            self.log.warning(f"Run action only on first stack of: {stack_list}")
-            stack_list = [stack_list[0]]
-            #raise error.OnlyOneStackAllowd("Not possible to do this action on more than one stack")
-        
-        for stack in stack_list:
+        if follow and len(stacks) > 1:
+            stacks = ",".join([stack.stack_name for stack in stacks])
+            msg = (
+                f"Only one stack is allowed when follow mode is enabled, got: {stacks}"
+            )
+            raise error.OnlyOneStackAllowed(msg)
+
+        for stack in stacks:
             self.log.notice(f"Logs of stack: {stack.stack_name}")
             stack.engine.logs(follow)

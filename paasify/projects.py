@@ -152,40 +152,190 @@ class PaasifyProjectConfig(NodeMap, PaasifyObj):
 class PaasifyProjectRuntime(NodeMap, PaasifyObj):
     "Paasify Runtime Object (deprecated)"
 
+    conf_schema = {
+        # TODO: "$schema": "http://json-schema.org/draft-07/schema#",
+        "type": "object",
+        "title": "Paasify Project settings",
+        "additionalProperties": False,
+        "properties": {
+            "default_source": {
+                "title": "",
+                "description": "",
+                "type": "string",
+            },
+            "cwd": {
+                "title": "",
+                "description": "",
+                "type": "string",
+            },
+            "working_dir": {
+                "title": "",
+                "description": "",
+                "oneOf": [
+                    {"type": "string"},
+                    {"type": "null"},
+                ],
+            },
+            "engine": {
+                "title": "Docker backend engine",
+                "oneOf": [
+                    {
+                        "description": "Docker engine",
+                        "type": "string",
+                    },
+                    {
+                        "description": "Automatic",
+                        "type": "null",
+                    },
+                ],
+            },
+            "filenames": {
+                "oneOf": [
+                    {
+                        "title": "List of file to lookup",
+                        "description": "List of string file names to lookup paasify.yaml files",
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                        },
+                    },
+                ],
+            },
+        },
+    }
+
+    conf_default = {
+        "load_file": None,
+        "root_hint": None,
+        # TO CONFIRM
+        "default_source": "default",
+        "cwd": os.getcwd(),
+        # "working_dir": os.getcwd(),
+        # "working_dir": ".",
+        "working_dir": None,
+        "engine": None,
+        "filenames": ["paasify.yml", "paasify.yaml"],
+        "relative": None,
+    }
+
     def node_hook_transform(self, payload):
+        """Init PassifyRuntime"""
 
-        self.log.info("Build ProjectRuntime")
+        # Allow config as string !
+        if isinstance(payload, str):
+            root_hint = payload
+            payload = {
+                "root_hint": root_hint,
+                "load_file": True,
+            }
 
-        # Build default runtime
-        root_path = payload.get("root_path") or os.getcwd()
-        config_file = payload.get("config_file")
+        # Create default config
+        result = {}
+        result = dict(self.conf_default)
+        result.update(payload)
+
+        # The payload is a dir or a config file
+        root_hint = result.get("root_hint")
+        filenames = result.get("filenames")
+        _payload1 = self.get_ctx(root_hint, config_files=filenames)
+        result.update(_payload1)
+
+        # Build default runtime from root path
+        root_path = result["root_path"]
+
         private_dir = os.path.join(root_path, ".paasify")
-        namespace = payload.get("namespace") or os.path.basename(root_path)
-
         collection_dir = os.path.join(private_dir, "collections")
         jsonnet_dir = os.path.join(private_dir, "plugins")
 
-        _payload = {
-            "root_path": root_path,
-            "config_file": config_file,
-            "project_root_dir": os.path.dirname(root_path),
+        _payload2 = {
             "project_private_dir": private_dir,
             "project_collection_dir": collection_dir,
             "project_jsonnet_dir": jsonnet_dir,
-            "namespace": namespace,
-            "engine": None,
         }
+        result.update(_payload2)
 
-        # Update runtime
-        _payload.update(payload)
+        # Allow user to override parts
+        result.update(payload)
+        return result
 
-        return _payload
+    @classmethod
+    def get_project_path2(cls, path, filenames=None):
+        "Find the closest paasify config file"
 
-        # # Determine namespace
-        # if not self.namespace:
-        #     #namespace = self.config['namespace'] or self._runtime["project_root_dir"]
-        #     namespace = self.config.namespace or self.runtime.project_root_dir
-        #     self.namespace = os.path.basename(namespace)
+        # if not path.startswith('/'):
+
+        filenames = filenames or cls.filenames
+        # filenames = self._node_root.config.filenames
+
+        paths = list_parent_dirs(path)
+        result = find_file_up(filenames, paths)
+
+        return result
+
+    @staticmethod
+    def get_ctx(project_hint, config_files=None, cwd=None, relative=None):
+        "Return a list of directory context"
+
+        config_files = config_files or ["paasify.yml", "paasify.yaml"]
+        cwd = cwd or os.getcwd()
+
+        # Autofind config file in parents if None
+        if project_hint is None:
+            # Show relative by default when project_hint is None
+            relative = True if relative is None else relative
+
+            try:
+                project_hint = PaasifyProjectRuntime.get_project_path2(
+                    cwd, filenames=config_files
+                )[0]
+            except IndexError as err:
+                config_files = "' or '".join(config_files)
+                msg = f"Impossible to find any '{config_files}' in '{cwd}', or in above directories."
+                raise error.ProjectNotFound(msg) from err
+
+        # Check the project root:
+        if os.path.isdir(project_hint):
+            root_path = project_hint
+            # TODO: Lookup for candidates instead taking the first
+            config_file_name = config_files[0]
+
+        elif os.path.isfile(project_hint):
+            root_path = os.path.dirname(project_hint)
+            config_file_name = os.path.basename(project_hint)
+        else:
+            msg = f"Impossible to find paasify project in: {project_hint}"
+            raise error.ProjectNotFound(msg)
+
+        assert root_path
+
+        # Get more context
+        if relative is None:
+            relative = not os.path.isabs(project_hint)
+        project_rel = os.path.relpath(root_path, start=cwd)
+        project_abs = os.path.abspath(root_path)
+
+        # Check if cwd inside
+        sub_dir = None
+        if project_abs != cwd and project_abs in cwd:
+            sub_dir = cwd.replace(project_abs, "").strip("/")
+        # elif project_abs != cwd:
+        #     relative = False
+
+        # Convert root_path
+        root_path = project_rel if relative else project_abs
+
+        result = {
+            "namespace": os.path.basename(project_abs),
+            "root_path": root_path,
+            "config_file": config_file_name,
+            "config_file_path": os.path.join(root_path, config_file_name),
+            "relative": relative,
+            "cwd": cwd,
+            "sub_dir": sub_dir,
+        }
+        return result
+
+
 
 
 class PaasifyProject(NodeMap, PaasifyObj):
@@ -200,16 +350,8 @@ class PaasifyProject(NodeMap, PaasifyObj):
 
     conf_children = [
         {
-            "key": "_runtime",
-            "cls": PaasifyProjectRuntime,
-            "attr": "runtime",
-            # "default": {},
-        },
-        {
             "key": "config",
             "cls": PaasifyProjectConfig,
-            # "attr": "config",
-            "hook": "_post_config",
         },
         {
             "key": "sources",
@@ -250,124 +392,30 @@ class PaasifyProject(NodeMap, PaasifyObj):
     }
 
     ident = "PaasifyProject"
-    filenames = ["paasify.yml", "paasify.yaml"]
     engine_cls = None
+    runtime = None
 
-    def _post_config(self):
-        "Ensure the settings are correctly set"
-        # Availalable for modifications, only for remaining childrens!:
-        # self._node_conf_parsed
-        # self._nodes
+    def node_hook_transform(self, payload):
+        "Init configuration Project"
+
+        # Create runtime instance child
+        _runtime = payload.get("_runtime") or payload
+        self.runtime = PaasifyProjectRuntime(
+            parent=self, payload=_runtime, ident="ProjectRuntime"
+        )
+
+        # Inject payload
+        if self.runtime.load_file is not False:
+            self.log.debug(f"Load file: {self.runtime.config_file_path}")
+            _payload = anyconfig.load(self.runtime.config_file_path)
+            payload.update(_payload)
 
         # Create engine
         if not self.engine_cls:
             engine_name = self.runtime.engine or None
             self.engine_cls = EngineDetect().detect(engine=engine_name)
 
-    # Internal methods
-    # ==================
-
-    @property
-    def namespace(self):
-        "Return project namespace"
-
-        result = self.config.namespace or self.runtime.namespace
-        assert isinstance(result, str)
-
-        return result
-
-    # Internal methods
-    # ==================
-
-    @classmethod
-    def get_project_path(cls, path, filenames=None):
-        "Find the closest paasify config file"
-
-        # if not path.startswith('/'):
-
-        filenames = filenames or cls.filenames
-        # filenames = self._node_root.config.filenames
-
-        paths = list_parent_dirs(path)
-        result = find_file_up(filenames, paths)
-
-        if len(result) > 0:
-            result = result[0]
-
-        return result
-
-    @classmethod
-    # def discover(self, conf=None, path=None, filenames=None):
-    def discover_project(cls, parent=None, path=None, filenames=None, runtime=None):
-        """Discover project
-
-        Generate a project instance with payload as
-        payload into the config that will
-        be found in path with filename filenames
-
-        Args:
-            parent (_type_, optional): _description_. Defaults to None.
-            path (_type_, optional): _description_. Defaults to None.
-            filenames (_type_, optional): Name of file names to lookup. Defaults to None.
-            runtime (_type_, optional): _description_. Defaults to None.
-
-        Raises:
-            error.ProjectNotFound: Raise error when project is not found
-
-        Returns:
-            _type_: _description_
-        """
-        
-
-        config_file = path or os.getcwd()
-        filenames = filenames or ["paasify.yml", "paasify.yaml"]
-
-        # Find for project candidates
-        if os.path.isdir(config_file):
-            _path = cls.get_project_path(config_file, filenames=filenames)
-            if len(_path) == 0:
-                # TOFIX: Not the good logger
-                # cls.log.warning("Please specify project path via `-c` flag or `PAASIFY_APP_WORKING_DIR` variable")
-                raise error.ProjectNotFound(
-                    f"Could not find any {' or '.join(filenames)} files in path: {path}"
-                )
-            config_file = _path
-
-        if not os.path.isfile(config_file):
-            raise error.ProjectNotFound(
-                f"Not a configuration file, got something else: {path}"
-            )
-
-        return cls.load_from_file(config_file, runtime=runtime, parent=parent)
-
-    @classmethod
-    # def discover(self, conf=None, path=None, filenames=None):
-    def load_from_file(cls, config_file, parent=None, runtime=None):
-        """Load project from config file
-
-        Args:
-            config_file (_type_): _description_
-            parent (_type_, optional): _description_. Defaults to None.
-            runtime (_type_, optional): _description_. Defaults to None.
-
-        Returns:
-            _type_: _description_
-        """
+        return payload
 
 
-        runtime = runtime or {}
 
-        # Create project config
-        _payload = {}
-        _runtime = {
-            "config_file": config_file,
-            "root_path": os.path.dirname(config_file),
-        }
-        _runtime.update(runtime)
-        if config_file:
-            _payload.update(anyconfig.load(config_file))
-        _payload["_runtime"] = _runtime
-
-        prj = PaasifyProject(parent=parent, payload=_payload)
-
-        return prj

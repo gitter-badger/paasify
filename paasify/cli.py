@@ -73,7 +73,9 @@ def main(
     ctx: typer.Context,
     verbose: int = typer.Option(1, "--verbose", "-v", count=True, min=0, max=5),
     working_dir: str = typer.Option(
-        os.getcwd(),
+        # os.getcwd(),  # For absolute paths
+        # ".",          # For relative paths
+        None,           # For automagic
         "-c",
         "--config",
         help="Path of paasify.yml configuration file.",
@@ -125,7 +127,7 @@ def main(
         "config": {
             "default_source": "default",
             "cwd": os.getcwd(),
-            "working_dir": working_dir,
+            "root_hint": working_dir,
             # "collections_dir": collections_dir,
         }
     }
@@ -143,31 +145,35 @@ def main(
 
 # Generic commands
 # ==============================
-@cli_app.command()
-def info(
+@cli_app.command("info")
+def cli_info(
     ctx: typer.Context,
 ):
     """Show context infos"""
     psf = ctx.obj["paasify2"]
-    psf.info(autoload=None)
+    psf.info(autoload=True)
 
 
-@cli_app.command()
-def explain(
+@cli_app.command("explain")
+def cli_explain(
     ctx: typer.Context,
     mode: Optional[str] = typer.Option(
         None,
         help="If a path, generate the doc, if none, report stdout",
     ),
+    stack: Optional[str] = typer.Argument(
+        None,
+        help="Stack to target, current cirectory or all",
+    ),
 ):
     """Show project plugins"""
     psf = ctx.obj["paasify2"]
     prj = psf.load_project()
-    prj.stacks.cmd_stack_explain(mode=mode)
+    prj.stacks.cmd_stack_explain(stack_names=stack, mode=mode)
 
 
-@cli_app.command()
-def ls(
+@cli_app.command("ls")
+def cli_ls(
     ctx: typer.Context,
 ):
     """List all stacks"""
@@ -177,8 +183,8 @@ def ls(
 
 
 # pylint: disable=redefined-builtin
-@cli_app.command()
-def schema(
+@cli_app.command("schema")
+def cli_schema(
     ctx: typer.Context,
     format: OutputFormat = OutputFormat.yaml,
     target: Optional[str] = typer.Argument(
@@ -200,22 +206,21 @@ def schema(
     print(out)
 
 
-@cli_app.command()
-def init(
-    ctx: typer.Context,
-    name: Optional[str] = typer.Argument(
-        None,
-        help="Name of reference project to create",
-    ),
-):
-    """Create new project/namespace"""
-    # TODO: To fix
-    paasify = ctx.obj["paasify"]
-    paasify.init_project(name)
+# @cli_app.command("init")
+# def cli_init(
+#     ctx: typer.Context,
+#     name: Optional[str] = typer.Argument(
+#         None,
+#         help="Name of reference project to create",
+#     ),
+# ):
+#     """Create new project/namespace"""
+#     paasify = ctx.obj["paasify"]
+#     paasify.init_project(name)
 
 
-@cli_app.command()
-def help(
+@cli_app.command("help")
+def cli_help(
     ctx: typer.Context,
 ):
     """Show this help message"""
@@ -224,7 +229,7 @@ def help(
 
 # Source commands
 # ==============================
-# TODO: To fix
+# TODO: Fix source commands
 
 
 @cli_app.command()
@@ -270,8 +275,9 @@ def src_tree(
 # Stack commands (Base)
 # ==============================
 
-@cli_app.command()
-def build(
+
+@cli_app.command("build")
+def cli_assemble(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(
         None,
@@ -282,14 +288,15 @@ def build(
 
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.stacks.cmd_stack_assemble(stacks=stack)
+    prj.stacks.cmd_stack_assemble(stack_names=stack)
 
-@cli_app.command()
-def up(
+
+@cli_app.command("up")
+def cli_up(
     ctx: typer.Context,
-    logs: bool = typer.Option(False, "--logs", "-l",
-        help="Show running logs after action"
-        ),
+    logs: bool = typer.Option(
+        False, "--logs", "-l", help="Show running logs after action"
+    ),
     stack: Optional[str] = typer.Argument(
         None,
         help="Stack to target, current cirectory or all",
@@ -298,14 +305,14 @@ def up(
     """Start docker stack"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.stacks.cmd_stack_up(stacks=stack)
+    prj.stacks.cmd_stack_up(stack_names=stack)
 
     if logs:
-        prj.stacks.cmd_stack_logs(stacks=stack, follow=True)
+        prj.stacks.cmd_stack_logs(stack_names=stack, follow=True)
 
 
-@cli_app.command()
-def down(
+@cli_app.command("down")
+def cli_down(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(
         None,
@@ -315,11 +322,11 @@ def down(
     """Stop docker stack"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.stacks.cmd_stack_down(stacks=stack)
+    prj.stacks.cmd_stack_down(stack_names=stack)
 
 
-@cli_app.command()
-def ps(
+@cli_app.command("ps")
+def cli_ps(
     ctx: typer.Context,
     stack: Optional[str] = typer.Argument(
         None,
@@ -329,11 +336,11 @@ def ps(
     """Show docker stack instances"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.stacks.cmd_stack_ps(stacks=stack)
+    prj.stacks.cmd_stack_ps(stack_names=stack)
 
 
-@cli_app.command()
-def logs(
+@cli_app.command("logs")
+def cli_logs(
     ctx: typer.Context,
     follow: bool = typer.Option(False, "--follow", "-f"),
     stack: Optional[str] = typer.Argument(
@@ -344,19 +351,19 @@ def logs(
     """Show stack logs"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.stacks.cmd_stack_logs(stacks=stack, follow=follow)
+    prj.stacks.cmd_stack_logs(stack_names=stack, follow=follow)
 
 
 # Stack commands (Helpers)
 # ==============================
 
 
-@cli_app.command()
-def apply(
+@cli_app.command("apply")
+def cli_apply(
     ctx: typer.Context,
-    logs: bool = typer.Option(False, "--logs", "-l",
-        help="Show running logs after action"
-        ),
+    logs: bool = typer.Option(
+        False, "--logs", "-l", help="Show running logs after action"
+    ),
     stack: Optional[str] = typer.Argument(
         None,
         help="Stack to target, current cirectory or all",
@@ -365,18 +372,18 @@ def apply(
     """Build and apply stack"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.stacks.cmd_stack_apply(stacks=stack)
+    prj.stacks.cmd_stack_apply(stack_names=stack)
 
     if logs:
-        prj.stacks.cmd_stack_logs(stacks=stack, follow=True)
+        prj.stacks.cmd_stack_logs(stack_names=stack, follow=True)
 
 
-@cli_app.command()
-def recreate(
+@cli_app.command("recreate")
+def cli_recreate(
     ctx: typer.Context,
-    logs: bool = typer.Option(False, "--logs", "-l",
-        help="Show running logs after action"
-        ),
+    logs: bool = typer.Option(
+        False, "--logs", "-l", help="Show running logs after action"
+    ),
     stack: Optional[str] = typer.Argument(
         None,
         help="Stack to target, current cirectory or all",
@@ -385,10 +392,10 @@ def recreate(
     """Stop, rebuild and create stack"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.stacks.cmd_stack_recreate(stacks=stack)
+    prj.stacks.cmd_stack_recreate(stack_names=stack)
 
     if logs:
-        prj.stacks.cmd_stack_logs(stacks=stack, follow=True)
+        prj.stacks.cmd_stack_logs(stack_names=stack, follow=True)
 
 
 # Top levels helpers
@@ -398,11 +405,14 @@ def clean_terminate(err):
     "Terminate nicely the program depending the exception"
 
     oserrors = [
-            PermissionError, FileExistsError, 
-            FileNotFoundError, InterruptedError,
-            IsADirectoryError, NotADirectoryError, TimeoutError
-        ]
-
+        PermissionError,
+        FileExistsError,
+        FileNotFoundError,
+        InterruptedError,
+        IsADirectoryError,
+        NotADirectoryError,
+        TimeoutError,
+    ]
 
     # Choose dead end way
     if isinstance(err, error.PaasifyError):
@@ -416,7 +426,7 @@ def clean_terminate(err):
 
     if isinstance(err, yaml.parser.ParserError):
         log.critical(err)
-        log.critical(f"Paasify exited with YAML error")
+        log.critical("Paasify exited with YAML error")
         sys.exit(error.YAMLError.rc)
 
     if err.__class__ in oserrors:
@@ -442,79 +452,9 @@ def app():
 
         # Developper catchall
         log.error(traceback.format_exc())
-        log.critical (f"Uncatched error {err.__class__}; this may be a bug!")
-        log.critical ("Exit 1 with bugs")
+        log.critical(f"Uncatched error {err.__class__}; this may be a bug!")
+        log.critical("Exit 1 with bugs")
         sys.exit(1)
-
-
-
-
-
-        #assert False, "Bad app termination!!! => {err}"
-
-        #err_type = err.__class__.__module__ + "." + err.__class__.__name__
-
-
-        # # allowed_except = [
-        # #     PermissionError, FileExistsError, 
-        # #     FileNotFoundError, InterruptedError,
-        # #     IsADirectoryError, NotADirectoryError, TimeoutError
-        # # ]
-
-        # # Remap exceptions 
-        # if not isinstance(err, error.PaasifyError):
-        
-
-        #     if hasattr(err, 'errno'):
-        #         # Remap OS errors
-
-        #         raise error.OSError("Got System exception: {err}") from err
-
-
-        # if isinstance(err, error.PaasifyError):
-
-        # #if hasattr(err, "paasify2"):
-        #     err_name = err.__class__.__name__
-        #     if isinstance(err.advice, str):
-        #         log.warning(err.advice)
-        #     log.error(err)
-        #     log.critical(f"OK: Error {err.rc}: {err_name}")
-        #     sys.exit(err.rc)
-
-        # # elif hasattr(err, 'errno'):
-        # # #elif err.__class__ in allowed_except:
-
-        # #     errno = os.strerror(err.errno)
-        # #     errint = str(err.errno)
-
-        # #     pprint (err.__dict__)
-        # #     log.critical(f"Error {errint} ==> {errno}")
-        # #     sys.exit(err.errno)
-
-        # elif err_type.startswith("yaml"):
-        #     log.error(err)
-        #     log.critical(f"While parsing YAML file: {err_type}")
-        #     sys.exit(1)
-
-        # # elif err_type.startswith("sh"):
-        # #     # pprint (dir(err))
-        # #     # pprint (err.__dict__)
-        # #     log.error(traceback.format_exc())
-        # #     msg = []
-        # #     if err.stdout:
-        # #         msg.extend(["stdout:", err.stdout])
-        # #     if err.stderr:
-        # #         msg.extend(["stderr:", err.stderr])
-        # #     if msg:
-        # #         log.error (msg)
-        # #     log.critical (f"Error '{err_type}' while executing command: {err.full_cmd}")
-        # #     sys.exit(1)
-        # else:
-        #     log.error(traceback.format_exc())
-        #     log.error(err)
-        #     log.critical(f"Paasify exited with a BUG! ({type(err)}, {err_type})")
-        #     sys.exit(1)
-
 
 if __name__ == "__main__":
     app()

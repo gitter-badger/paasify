@@ -130,6 +130,7 @@ class Source(NodeMap, PaasifyObj):
 
 
 class SourcesManager(NodeDict, PaasifyObj):
+    "Source manager"
 
     schema_def = {
         "$schema": "http://json-schema.org/draft-07/schema#",
@@ -173,6 +174,7 @@ class SourcesManager(NodeDict, PaasifyObj):
         return r1 + r2
 
     def get_source(self, src_name):
+        "Get source"
 
         result = [src for src in self.store if src_name == src.name] or [
             src for src in self.store if src_name == src.alias
