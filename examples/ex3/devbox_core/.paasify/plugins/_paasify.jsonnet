@@ -57,7 +57,7 @@ local plugin = {
 
   // Return global vars
   default_vars(vars)::
-    local dir_prefix = vars.stack_path + '/';
+    local dir_prefix = vars.stack_path_abs + '/';
     {
 
       # Default settings
@@ -82,8 +82,14 @@ local plugin = {
       # App exposition
       # --------------------------
       app_expose: false,
+
+      # IP to expose service
       app_expose_ip: '0.0.0.0',
+      # Port to expose service
       app_expose_port: null,
+      # Protocol to expose, tcp or UDP
+      app_expose_prot: null,
+
 
       app_port: '80',
       app_prot: 'http', # http,tcp,udp
@@ -114,6 +120,16 @@ local plugin = {
       app_user_login: 'user',
       app_user_email: 'user@' + self.app_domain,
       app_user_passwd: 'user',
+
+      # App Backend info
+      # --------------------------
+      app_db_type: null,
+      
+      app_db_host: null,
+      app_db_port: null,
+      app_db_name: self.app_service,
+      app_db_user: self.app_service,
+      app_db_passwd: null,
 
 
       # App directories

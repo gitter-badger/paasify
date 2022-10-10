@@ -13,12 +13,9 @@ This library provides two classes:
 import os
 
 import re
-import json
 from pprint import pprint
 from functools import wraps
 
-
-import _jsonnet
 import anyconfig
 
 
@@ -38,9 +35,17 @@ from cafram.utils import (
 )
 
 from paasify.common import lookup_candidates  # serialize, , json_validate, duplicates
-from paasify.framework import PaasifyObj, PaasifyConfigVars  # , PaasifySimpleDict
+from paasify.framework import (
+    PaasifyObj,
+    PaasifyConfigVars,
+    # PaasifyConfigVar,
+)  # , PaasifySimpleDict
 from paasify.engines import bin2utf8
-from paasify.stack_components import PaasifyStackTagManager, PaasifyStackApp
+from paasify.stack_components import (
+    PaasifyStackTagManager,
+    PaasifyStackApp,
+    StackAssembler,
+)
 import paasify.errors as error
 
 
@@ -192,7 +197,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # Register required vars
         self.stack_name = stack_name
         self.stack_dir = stack_dir
-        self.prj_ns = self.prj.config.namespace
+        self.prj_ns = self.prj.config.namespace or self.prj.runtime.namespace
         # pprint (self.prj.runtime.__dict__)
         self.prj_path = self.prj.runtime.root_path
         self.stack_path = os.path.join(self.prj.runtime.root_path, stack_dir)
@@ -213,8 +218,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         assert re.search("^[a-zA-Z0-9_].*$", self.stack_name), f"Got: {self.stack_name}"
         assert re.search("^[a-zA-Z0-9_/].*$", self.stack_dir), f"Got: {self.stack_dir}"
         # print (f"New stack: {stack_name} in dir: {stack_dir} with app: {self.app}")
-
-
 
     def node_hook_final(self):
         "Enable CLI debugging"
@@ -240,8 +243,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.tag_manager = PaasifyStackTagManager(
             parent=self, ident="StackTagMgr", payload=tag_list
         )
-
-
 
     # Local functions
     # ---------------------
@@ -346,6 +347,13 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # dsfsdf
 
+        assert isinstance(self.prj_ns, str)
+        assert isinstance(self.prj_path, str)
+        assert isinstance(self.stack_name, str)
+        assert isinstance(self.prj_path, str)
+        assert isinstance(self.prj_path, str)
+        assert self.stack_path_abs.startswith("/")
+
         # Build default
         # app_dir = self.path
         result = {
@@ -358,9 +366,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
             "stack_path_abs": self.stack_path_abs,
             "stack_network": default_network,
             "stack_service": default_service,
-            "stack_app_path": self.app.app_dir,
+            "stack_app_name": self.app.app_name if self.app else None,
+            "stack_app_path": self.app.app_dir if self.app else None,
             "stack_collection_app_path": self.app.collection_dir,
-
             # "app_network_name": self.namespace,
             # # "app_image": "TOTO",
             # "app_service": default_service,
@@ -373,80 +381,31 @@ class PaasifyStack(NodeMap, PaasifyObj):
         }
         return result
 
-    def process_jsonnet(self, file, action, data):
-        "Process jsonnet file"
+    def assemble(self):
+        "Generate docker-compose.run.yml and parse it with jsonnet"
 
-        # Developper init
-        data = data or {}
-        assert isinstance(data, dict), f"DAta must be dict, got: {data}"
-        assert action in [
-            "metadata",
-            "vars_default",
-            "vars_override",
-            "docker_override",
-        ], f"Action not supported: {action}"
-
-        # Prepare input variables
-        ext_vars = {
-            "action": json.dumps(action),
-        }
-        for key, val in data.items():
-            ext_vars[key] = json.dumps(val)
-
-        # Process jsonnet tag
-        self.log.trace(f"Process jsonnet: {file}")
-        try:
-            # pylint: disable=c-extension-no-member
-            result = _jsonnet.evaluate_file(
-                file,
-                ext_vars=ext_vars,
-            )
-        except RuntimeError as err:
-            self.log.critical(f"Can't parse jsonnet file: {file}")
-            raise error.JsonnetBuildFailed(err)
-
-        # Return python object from json output
-        return json.loads(result)
-
-    def gen_stacks_vars(self, docker_file=None, all_tags=None):
-        "Generate global and local vars"
+        all_tags = self.get_tag_plan()
         globvars = self.prj.config.vars
         localvars = self.vars
 
-        # 1. Define default generic local stack vars
-        #   - Generate convenients vars
-        #   - Read project vars with parsing
-        #   - Read stack vars with parsing
-        vars_base = self.gen_conveniant_vars(docker_file=docker_file)
-        vars_global = globvars.parse_vars(current=vars_base)
-        vars_run = localvars.parse_vars(current=vars_global)
-
-        # 2. Read tag vars
-        # Run each tag and get default variables
-        all_tags = all_tags or []
-        jsonnet_cand = flatten(
-            [x["jsonnet_file"] for x in all_tags if x["jsonnet_file"]]
+        # New vars as LIST MANAGED
+        vars_manager = StackAssembler(
+            parent=self, ident=f"StackVarsManager.{self.stack_name}"
         )
 
-        # 3. Process default tags vars !
-        for jsonnet_file in jsonnet_cand:
+        docker_file = all_tags[0]["docker_file"]
+        vars_manager.add_as_dict(self.gen_conveniant_vars(docker_file=docker_file))
+        vars_manager.add_as_list(globvars.get_vars_list())
+        vars_manager.add_as_list(localvars.get_vars_list())
 
-            # Parse jsonnet file
-            ext_vars = {
-                "user_data": vars_run,
-            }
-            payload = self.process_jsonnet(jsonnet_file, "vars_default", ext_vars)
+        # tag_manager = StackTagBuilder(parent=self,
+        #     ident=f"StackTagBuilder.{self.stack_name}")
+        # tag_manager.define_tags(all_tags)
 
-            # Update result
-            for key, val in payload["vars_default"].items():
-                curr_val = vars_run.get(key, None)
-                # Set variable only if not already set
-                if curr_val is None:
-                    vars_run[key] = val
+        # Process yaml files
 
-        # 4. Read static files:
-        # Read <collection>/<stack>/vars.yml
-        # Read <stack>/vars.yml
+        # Process jsonnet vars
+
         lookup = [
             {
                 "path": self.app.app_dir,
@@ -457,122 +416,21 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 "pattern": ["vars.yml", "vars.yaml"],
             },
         ]
-        vars_cand = lookup_candidates(lookup)
-        vars_cand = flatten([x["matches"] for x in vars_cand])
-        for cand in vars_cand:
-            conf = anyconfig.load(cand, ac_parser="yaml")
-            vars_run.update(conf)
+        vars_manager.process_yml_vars(lookup)
+        vars_manager.process_jsonnet_vars(all_tags)
 
-        # TMP disabled: As it is not that useful in the end ...
-        # # 7. Loop again on tags and override/process tags vars
-        # # Overrides unset vars only
-        # for jsonnet_file in jsonnet_cand:
-
-        #     # Parse jsonnet file
-        #     ext_vars = {
-        #         "user_data": vars_run,
-        #     }
-        #     payload = self.process_jsonnet(jsonnet_file, "vars_override", ext_vars)
-
-        #     # Update result if current value is kinda null
-        #     for key, val in payload["vars_override"].items():
-        #         dst = vars_run.get(key, None)
-        #         if not dst:
-        #             vars_run[key] = val
-
-        return vars_run
-
-    def assemble(self):
-        "Generate docker-compose.run.yml and parse it with jsonnet"
-
-        # 1. Update sources
-        # TOFIX: Be more selective on the source
-        if not len(self.prj.sources.get_children()) > 0:
-            msg = f"Missing default source for stack: {self.serialize(mode='raw')}"
-            raise error.StackMissingOrigin(msg)
-
-        # Fix this piece of code
-        # pylint: disable=unused-variable
-        for src_name, src in self.prj.sources.get_children().items():
-            src.install(update=False)
-
-        # 2. Resolve all tags files
-        all_tags = self.get_tag_plan()
-
-        # 3. Parse stack vars
-        vars_run = self.gen_stacks_vars(
-            docker_file=all_tags[0]["docker_file"], all_tags=all_tags
+        docker_run_payload = vars_manager.assemble_docker_compose(all_tags, self.engine)
+        docker_run_payload = vars_manager.process_jsonnet_transforms(
+            all_tags, docker_run_payload
         )
 
-        # Report to user
-        self.log.debug("Docker vars:")
-        for key, val in vars_run.items():
-            self.log.debug(f"  {key}: {val}")
-
-        # 4. Build docker files list
-        self.log.info("Docker files:")
-        docker_files = []
-        for cand in all_tags:
-            docker_file = cand.get("docker_file")
-            if docker_file:
-                docker_files.append(docker_file)
-                self.log.info(f"  Insert: {docker_file}")
-
         # 5. Prepare docker-file output directory
-        outfile = os.path.join(self.stack_path, "docker-compose.run.yml")
         if not os.path.isdir(self.stack_path):
             self.log.info(f"Create missing directory: {self.stack_path}")
             os.mkdir(self.stack_path)
 
-
-        # 6. Build final docker file
-        engine = self.engine
-        try:
-            out = engine.assemble(docker_files, env=vars_run)
-        except Exception as err:
-            err = bin2utf8(err)
-            # pylint: disable=no-member
-            self.log.critical(err.txterr)
-            raise err
-            # raise error.DockerBuildConfig(
-            #     f"Impossible to build docker-compose files: {err}"
-            # ) from err
-
-        # Fetch output
-        docker_run_content = out.stdout.decode("utf-8")
-        docker_run_payload = anyconfig.loads(docker_run_content, ac_parser="yaml")
-
-        # 7. Build jsonnet files
-        self.log.info("Jsonnet files:")
-
-        for cand in all_tags:
-            docker_file = cand.get("docker_file")
-
-            # Fetch only jsonnet if docker_file is absent
-            if docker_file:
-                continue
-            jsonnet_file = cand.get("jsonnet_file")
-            if not jsonnet_file:
-                continue
-            self.log.info(f"  Insert: {jsonnet_file}")
-
-            # Create local environment vars
-            jsonnet_data = cand.get("tag").vars or {}
-            env_vars = dict(vars_run)
-            env_vars.update(jsonnet_data)
-
-            # Remove all null values
-            env_vars = {k: v for k, v in env_vars.items() if v is not None}
-
-            # Parse jsonnet file
-            ext_vars = {
-                "user_data": env_vars,
-                "docker_file": docker_run_payload,
-            }
-            payload = self.process_jsonnet(jsonnet_file, "docker_override", ext_vars)
-            docker_run_payload = payload["docker_override"]
-
         # 8. Save the final docker-compose.run.yml file
+        outfile = os.path.join(self.stack_path, "docker-compose.run.yml")
         self.log.info(f"Writing docker-compose file: {outfile}")
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
@@ -640,10 +498,10 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 cand = match.get("docker_file")
                 print(f"        * base: {cand}")
                 continue
-            else:
-                cand = match.get("docker_file")
-                if cand:
-                    print(f"        - {tag.name}")
+
+            cand = match.get("docker_file")
+            if cand:
+                print(f"        - {tag.name}")
 
         # 2.3 Jsonnet loading
         print("      Loading jsonnet:")
@@ -726,9 +584,12 @@ Documentationfor tag: `{tag.name}`
                 print(f"Generated Markdown doc in: {dest_md}")
 
 
-def guess_target(fn):
+def stack_target(fn):
+    "Decorator to magically find the correct stack to apply"
+
     @wraps(fn)
     def wrapper(self, *args, stacks=None, stack_names=None, **kw):
+        "Decorator to magically find the correct stack to apply"
 
         self.set_logger("paasify.cli")
 
@@ -856,7 +717,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
     # Command Base API
     # ======================
 
-    @guess_target
+    @stack_target
     def cmd_stack_assemble(self, stacks=None):
         "Assemble a stack"
 
@@ -865,7 +726,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
             self.log.notice(f"  Assemble stack: {stack}")
             stack.assemble()
 
-    @guess_target
+    @stack_target
     def cmd_stack_up(self, stacks=None):
         "Start a stack"
 
@@ -874,7 +735,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
             self.log.notice(f"  Start stack: {stack.stack_name}")
             stack.engine.up(_fg=True)
 
-    @guess_target
+    @stack_target
     def cmd_stack_down(self, stacks=None):
         "Stop a stack"
 
@@ -884,7 +745,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
             self.log.notice(f"  Stop stack: {stack.stack_name}")
             stack.engine.down(_fg=True)
 
-    @guess_target
+    @stack_target
     def cmd_stack_ps(self, stacks=None):
         "List stacks process"
 
@@ -899,7 +760,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
 
     # Shortcuts
     # ======================
-    @guess_target
+    @stack_target
     def cmd_stack_apply(self, stacks=None):
         "Apply a stack"
 
@@ -908,7 +769,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         self.cmd_stack_up(stacks=stacks)
         self.log.notice("Stack has been applied")
 
-    @guess_target
+    @stack_target
     def cmd_stack_recreate(self, stacks=None):
         "Recreate a stack"
 
@@ -929,7 +790,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
             print(f"      app: {stack.app.app}")
             print(f"      path: {stack.stack_path}")
 
-    @guess_target
+    @stack_target
     def cmd_stack_explain(self, stacks=None, mode=None):
         "Show informations on project plugins"
 
@@ -943,7 +804,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
             for stack in stacks:
                 stack.explain_tags()
 
-    @guess_target
+    @stack_target
     def cmd_stack_logs(self, stacks=None, follow=False):
         "Display stack/services logs"
 

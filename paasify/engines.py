@@ -280,7 +280,6 @@ class EngineCompose_16(EngineCompose):
     ident = "docker-compose-1.6"
 
 
-# class EngineDetect(PaasifyObj):
 class EngineDetect:
     "Class helper to retrieve the appropriate docker-engine class"
 
@@ -326,7 +325,7 @@ class EngineDetect:
         curr_ver = version["version"]
 
         # Scan available versions
-        versions = [key for key in self.versions["docker-compose"]]
+        versions = list(self.versions["docker-compose"].keys())
         versions.sort(key=StrictVersion)
         versions.reverse()
         match = None

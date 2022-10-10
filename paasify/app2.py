@@ -39,9 +39,6 @@ from paasify.stacks2 import PaasifyStackManager
 from paasify.projects import PaasifyProject
 
 
-
-
-
 class PaasifyApp(NodeMap, PaasifyObj):
     "Paasify Main application Instance"
 
@@ -121,7 +118,6 @@ class PaasifyApp(NodeMap, PaasifyObj):
                 msg = err
                 if autoload is True:
                     raise error.ProjectNotFound(err) from err
-
 
         if self.project:
             # Report with active project if available

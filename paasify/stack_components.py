@@ -4,12 +4,262 @@ Stack components class
 """
 
 import os
+from string import Template
+
+import json
+import _jsonnet
+import anyconfig
 
 from cafram.nodes import NodeList, NodeMap
 from cafram.utils import flatten, first
 
 from paasify.common import lookup_candidates
-from paasify.framework import PaasifyObj
+from paasify.framework import PaasifyObj, PaasifyConfigVar
+import paasify.errors as error
+from paasify.engines import bin2utf8
+
+# =======================================================================================
+# Stack Assembler
+# =======================================================================================
+
+
+class StackAssembler(PaasifyObj):
+    "Object to manage stack assemblage"
+
+    _vars = []
+
+    conf_logger = "paasify.cli.builder"
+
+    # Vars management
+    # ===========================
+
+    def add_as_key(self, key, value):
+        "Add a list of vars into object"
+        obj = PaasifyConfigVar(
+            parent=None, ident="PaasifyStackVar", payload={key: value}
+        )
+        self._vars.append(obj)
+
+    def add_as_list(self, vars):
+        "Add a list of vars into object"
+        assert isinstance(vars, list)
+        self._vars.extend(vars)
+
+    def add_as_dict(self, vars):
+        "Add a list of vars into object"
+        assert isinstance(vars, dict)
+
+        for var_name, var_value in vars.items():
+            self.add_as_key(var_name, var_value)
+
+    def template_value(self, value, env, hint=None):
+        "Render a string with template engine"
+
+        if not isinstance(value, str):
+            return value
+
+        # Safe usage of user input templating
+        tpl = Template(value)
+
+        # pylint: disable=broad-except
+        try:
+            old_value = value
+            value = tpl.substitute(**env)
+            if old_value != value:
+                self.log.debug(f"Transformed template value: {old_value} => {value}")
+
+        except KeyError as err:
+            self.log.warning(f"Variable {err} is not defined in: {hint}='{value}'")
+
+        except Exception as err:
+            self.log.warning(
+                f"Could not parse variable: {hint}='{value}' ( => {err.__class__}/{err})"
+            )
+            raise error.ProjectInvalidConfig(err)
+
+        return value
+
+    def render_as_dict(self, parse=False, dict_override=None):
+        "Return a dict of the variable"
+
+        result = {}
+        for var in self._vars:
+            key = var.name
+            value = var.value
+
+            if parse:
+                value = self.template_value(value, result, hint=key)
+            result[key] = value
+
+        # Dict override
+        if dict_override:
+            result.update(dict_override)
+            if parse:
+                for key, value in dict_override.items():
+                    result[key] = self.template_value(value, result, hint=key)
+
+        return result
+
+    # Docker processors
+    # ===========================
+    def _get_docker_files(self, all_tags):
+        "Retrieve the list of tags docker-files"
+
+        self.log.info("Docker files:")
+        docker_files = []
+        for cand in all_tags:
+            docker_file = cand.get("docker_file")
+            if docker_file:
+                docker_files.append(docker_file)
+                self.log.info(f"  Insert: {docker_file}")
+
+        return docker_files
+
+    def assemble_docker_compose(self, all_tags, engine):
+        "Generate the docker-compose file"
+
+        docker_files = self._get_docker_files(all_tags)
+
+        # Report to user
+        env = self.render_as_dict(parse=True)
+
+        self.log.debug("Docker vars:")
+        for key, val in env.items():
+            self.log.debug(f"  {key}: {val}")
+
+        try:
+            out = engine.assemble(docker_files, env=env)
+        except Exception as err:
+            err = bin2utf8(err)
+            # pylint: disable=no-member
+            self.log.critical(err.txterr)
+            raise err
+            # raise error.DockerBuildConfig(
+            #     f"Impossible to build docker-compose files: {err}"
+            # ) from err
+
+        # Fetch output
+        docker_run_content = out.stdout.decode("utf-8")
+        docker_run_payload = anyconfig.loads(docker_run_content, ac_parser="yaml")
+        return docker_run_payload
+
+    # Vars processors
+    # ===========================
+
+    def process_yml_vars(self, lookup):
+        """Process yml vars from a tag_list"""
+
+        self.log.info("Process yaml vars")
+
+        vars_cand = lookup_candidates(lookup)
+        vars_cand = flatten([x["matches"] for x in vars_cand])
+        for cand in vars_cand:
+            conf = anyconfig.load(cand, ac_parser="yaml")
+            # assert isinstance(conf, dict)
+            # vars_run.update(conf)
+
+            self.add_as_dict(conf)
+
+    def process_jsonnet_vars(self, all_tags):
+        """Process jsonnet vars from a tag_list"""
+
+        for cand in all_tags:
+
+            jsonnet_file = cand.get("jsonnet_file")
+            if not jsonnet_file:
+                continue
+
+            current_vars = self.render_as_dict()
+            # Parse jsonnet file
+            ext_vars = {
+                "user_data": current_vars,
+            }
+            payload = self.process_jsonnet_exec(jsonnet_file, "vars_default", ext_vars)
+
+            # Update result
+            for key, val in payload["vars_default"].items():
+
+                # Set variable only if not already set
+                curr_val = current_vars.get(key, None)
+                if curr_val is None:
+                    self.add_as_key(key, val)
+
+        # return vars_run
+
+    def process_jsonnet_transforms(self, all_tags, docker_run_payload):
+        "Process jsonnet tag jsonnet transforms"
+
+        self.log.info("Jsonnet files:")
+
+        for cand in all_tags:
+            docker_file = cand.get("docker_file")
+
+            # Fetch only jsonnet if docker_file is absent
+            if docker_file:
+                continue
+            jsonnet_file = cand.get("jsonnet_file")
+            if not jsonnet_file:
+                continue
+            self.log.info(f"  Insert: {jsonnet_file}")
+
+            # Create local environment vars
+            jsonnet_data = cand.get("tag").vars or {}
+            # print ("UPDATING DOCKER VARS", jsonnet_data)
+
+            env_vars = self.render_as_dict(parse=True, dict_override=jsonnet_data)
+
+            # env_vars.update(jsonnet_data)
+
+            # Remove all null values
+            # Should I keep this ?
+            # => env_vars = {k: v for k, v in env_vars.items() if v is not None}
+
+            # Parse jsonnet file
+            ext_vars = {
+                "user_data": env_vars,
+                "docker_file": docker_run_payload,
+            }
+            payload = self.process_jsonnet_exec(
+                jsonnet_file, "docker_override", ext_vars
+            )
+            docker_run_payload = payload["docker_override"]
+
+        return docker_run_payload
+
+    def process_jsonnet_exec(self, file, action, data):
+        "Process jsonnet file"
+
+        # Developper init
+        data = data or {}
+        assert isinstance(data, dict), f"DAta must be dict, got: {data}"
+        assert action in [
+            "metadata",
+            "vars_default",
+            "vars_override",
+            "docker_override",
+        ], f"Action not supported: {action}"
+
+        # Prepare input variables
+        ext_vars = {
+            "action": json.dumps(action),
+        }
+        for key, val in data.items():
+            ext_vars[key] = json.dumps(val)
+
+        # Process jsonnet tag
+        self.log.trace(f"Process jsonnet: {file}")
+        try:
+            # pylint: disable=c-extension-no-member
+            result = _jsonnet.evaluate_file(
+                file,
+                ext_vars=ext_vars,
+            )
+        except RuntimeError as err:
+            self.log.critical(f"Can't parse jsonnet file: {file}")
+            raise error.JsonnetBuildFailed(err)
+
+        # Return python object from json output
+        return json.loads(result)
 
 
 # =======================================================================================
@@ -312,8 +562,6 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
             raise Exception(f"Not supported type: {payload}")
 
         return result
-
-
 
     def _lookup_file(self, dirs, pattern):
         "Lookup a specific file name in dirs"

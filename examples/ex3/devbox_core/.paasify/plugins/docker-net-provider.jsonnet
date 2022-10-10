@@ -92,19 +92,46 @@ local plugin = {
     //   app_dir_build: dir_prefix + 'build', # Build dir
     //   net_backup: vars.prj_namespace + vars.paasify_sep + 'backup', # For backup network
 
+        docker_net_ident: vars.app_network,
+        docker_net_name: vars.app_network_name,
+        #docker_net_name_full: vars.prj_namespace + self.traefik_sep + 'traefik', // vars.app_network_name
+        docker_net_external: false,
+
+        docker_svc_ident: vars.app_service,
+
     },
 
  
 
     // docker_override
-  docker_override (vars, docker_file)::
+  docker_override (in_vars, docker_file)::
+    local vars = self.default_vars(in_vars) + std.prune(in_vars);
+
+    #local service = std.get(conf, 'paasify_stack_service');
+    local services = std.split(vars.app_service, ',');
+
     docker_file + {
-      ["x-paasify-config"]: {
-          new_custom_service: null,
-        },
-      // ["x-paasify-debug-vars"]: vars,
+        ["x-paasify-debug"]: {
+            new_custom_service: null,
+            },
         
-      },
+
+        networks+: {
+        [vars.docker_net_ident]: {
+            name: vars.docker_net_name,
+            external: vars.docker_net_external,
+            }
+        },
+        services+: {
+            [vars.docker_svc_ident]+: 
+                { 
+                    networks+: { 
+                        [vars.docker_net_ident]: null 
+                    }
+
+                } for svc_name in services
+            },
+    },
     
 
 };

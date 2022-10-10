@@ -32,6 +32,7 @@ from pprint import pprint
 from pathlib import Path
 import yaml
 
+import sh
 import typer
 from cafram.utils import get_logger
 
@@ -421,13 +422,18 @@ def clean_terminate(err):
             log.warning(err.advice)
 
         log.error(err)
-        log.critical(f"Paasify exited with error {err.rc}: {err_name}")
+        log.critical(f"Paasify exited with: error {err.rc}: {err_name}")
         sys.exit(err.rc)
 
     if isinstance(err, yaml.parser.ParserError):
         log.critical(err)
-        log.critical("Paasify exited with YAML error")
+        log.critical("Paasify exited with: YAML error")
         sys.exit(error.YAMLError.rc)
+
+    if isinstance(err, sh.ErrorReturnCode):
+        log.critical(err)
+        log.critical(f"Paasify exited with: failed command returned {err.exit_code}")
+        sys.exit(error.ShellCommandFailed.rc)
 
     if err.__class__ in oserrors:
 
@@ -455,6 +461,7 @@ def app():
         log.critical(f"Uncatched error {err.__class__}; this may be a bug!")
         log.critical("Exit 1 with bugs")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     app()

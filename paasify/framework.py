@@ -4,17 +4,33 @@
 # pylint: disable=logging-fstring-interpolation
 
 import os
-from string import Template
 import logging
 
 
 from pprint import pprint
 
+
 from cafram.nodes import NodeList, NodeMap, NodeDict
-from cafram.base import MixInLog, Base, Hooks
-from cafram.utils import merge_dicts
+from cafram.base import MixInLog, Base
+
+from cafram.utils import (
+    # to_domain,
+    # to_yaml,
+    merge_dicts,
+    # flatten,
+    # duplicates,
+    # write_file,
+    # to_json,
+    # to_dict,
+    # from_yaml,
+    # serialize,
+    # json_validate,
+)
 
 import paasify.errors as error
+
+# from paasify.common import lookup_candidates  # serialize, , json_validate, duplicates
+# from paasify.engines import bin2utf8
 
 
 _log = logging.getLogger()
@@ -85,25 +101,33 @@ class PaasifyConfigVar(NodeMap, PaasifyObj):
     def node_hook_transform(self, payload):
 
         result = None
-        if isinstance(payload, dict):
-            for key, value in payload.items():
-                result = {
-                    "name": key,
-                    "value": value,
-                }
-        elif isinstance(payload, str):
+        if isinstance(payload, str):
             value = payload.split("=", 2)
             result = {
                 "name": value[0],
                 "value": value[1],
             }
-        else:
-            raise Exception(f"Unsupported () type {type(payload)}: {payload}")
+        if isinstance(payload, dict):
+            if "name" in payload and "value" in payload and len(payload.keys()) == 2:
+                result = {
+                    "name": payload["name"],
+                    "value": payload["value"],
+                }
+
+            elif len(payload.keys()) == 1:
+                for key, value in payload.items():
+                    result = {
+                        "name": key,
+                        "value": value,
+                    }
+
+        if result is None:
+            raise Exception(f"Unsupported type {type(payload)}: {payload}")
 
         return result
 
     def node_hook_final(self):
-        "Ensure the loggre is loaded early"
+        "Ensure the logger is loaded early"
 
         # Start logger
         self.set_logger("paasify.cli.ConfigVar")
@@ -256,33 +280,24 @@ class PaasifyConfigVars(NodeList, PaasifyObj):
         # Start logger
         self.set_logger("paasify.cli.ConfigVarsManager")
 
-    def parse_vars(self, current=None):
+    def get_vars(self, current=None):
         "Parse vars and interpolate strings"
 
         result = dict(current or {})
 
         for var in self._nodes:
             value = var.value
-            if isinstance(value, str):
-
-                # Safe usage of user input templating
-                tpl = Template(value)
-                # pylint: disable=broad-except
-                try:
-                    value = tpl.substitute(**result)
-                except KeyError as err:
-                    self.log.warning(
-                        f"Variable {err} is not defined in: {var.name}='{value}'"
-                    )
-
-                except Exception as err:
-                    self.log.warning(
-                        f"Could not parse variable: {var.name}='{value}' ( => {err.__class__}/{err})"
-                    )
-                    raise error.ProjectInvalidConfig(err)
-
             result[var.name] = value
+        return result
 
+    def get_vars_list(self, current=None):
+        "Parse vars and interpolate strings"
+
+        assert isinstance(current, list) or current is None
+
+        result = list(current or [])
+        for var in self._nodes:
+            result.append(var)
         return result
 
 

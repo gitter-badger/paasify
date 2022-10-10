@@ -336,8 +336,6 @@ class PaasifyProjectRuntime(NodeMap, PaasifyObj):
         return result
 
 
-
-
 class PaasifyProject(NodeMap, PaasifyObj):
     "Paasify Project instance"
 
@@ -416,6 +414,3 @@ class PaasifyProject(NodeMap, PaasifyObj):
             self.engine_cls = EngineDetect().detect(engine=engine_name)
 
         return payload
-
-
-
