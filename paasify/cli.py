@@ -76,7 +76,7 @@ def main(
     working_dir: str = typer.Option(
         # os.getcwd(),  # For absolute paths
         # ".",          # For relative paths
-        None,           # For automagic
+        None,  # For automagic
         "-c",
         "--config",
         help="Path of paasify.yml configuration file.",
@@ -401,6 +401,7 @@ def cli_recreate(
 
 # Top levels helpers
 # ==============================
+
 
 def clean_terminate(err):
     "Terminate nicely the program depending the exception"

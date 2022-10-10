@@ -5,6 +5,7 @@ Stack components class
 
 import os
 from string import Template
+from pprint import pprint
 
 import json
 import _jsonnet
@@ -18,6 +19,8 @@ from paasify.framework import PaasifyObj, PaasifyConfigVar
 import paasify.errors as error
 from paasify.engines import bin2utf8
 
+
+
 # =======================================================================================
 # Stack Assembler
 # =======================================================================================
@@ -29,6 +32,11 @@ class StackAssembler(PaasifyObj):
     _vars = []
 
     conf_logger = "paasify.cli.builder"
+
+    def __init__(self, *arsg, **kwargs):
+
+        self._vars = []
+        super().__init__(*arsg, **kwargs)
 
     # Vars management
     # ===========================
@@ -133,10 +141,9 @@ class StackAssembler(PaasifyObj):
             err = bin2utf8(err)
             # pylint: disable=no-member
             self.log.critical(err.txterr)
-            raise err
-            # raise error.DockerBuildConfig(
-            #     f"Impossible to build docker-compose files: {err}"
-            # ) from err
+            raise error.DockerBuildConfig(
+                f"Impossible to build docker-compose files: {err}"
+            ) from err
 
         # Fetch output
         docker_run_content = out.stdout.decode("utf-8")
@@ -154,10 +161,9 @@ class StackAssembler(PaasifyObj):
         vars_cand = lookup_candidates(lookup)
         vars_cand = flatten([x["matches"] for x in vars_cand])
         for cand in vars_cand:
+            self.log.debug(f"Loading vars file: {cand}")
             conf = anyconfig.load(cand, ac_parser="yaml")
-            # assert isinstance(conf, dict)
-            # vars_run.update(conf)
-
+            assert isinstance(conf, dict)
             self.add_as_dict(conf)
 
     def process_jsonnet_vars(self, all_tags):
@@ -174,6 +180,7 @@ class StackAssembler(PaasifyObj):
             ext_vars = {
                 "user_data": current_vars,
             }
+            self.log.debug(f"Loading jsonnet vars file: {jsonnet_file}")
             payload = self.process_jsonnet_exec(jsonnet_file, "vars_default", ext_vars)
 
             # Update result
@@ -189,7 +196,7 @@ class StackAssembler(PaasifyObj):
     def process_jsonnet_transforms(self, all_tags, docker_run_payload):
         "Process jsonnet tag jsonnet transforms"
 
-        self.log.info("Jsonnet files:")
+        self.log.info("Jsonnet files (transform):")
 
         for cand in all_tags:
             docker_file = cand.get("docker_file")
@@ -203,7 +210,10 @@ class StackAssembler(PaasifyObj):
             self.log.info(f"  Insert: {jsonnet_file}")
 
             # Create local environment vars
-            jsonnet_data = cand.get("tag").vars or {}
+            jsonnet_data = {}
+            tag = cand.get("tag")
+            if tag:
+                jsonnet_data = tag.vars or {}
             # print ("UPDATING DOCKER VARS", jsonnet_data)
 
             env_vars = self.render_as_dict(parse=True, dict_override=jsonnet_data)
@@ -219,6 +229,7 @@ class StackAssembler(PaasifyObj):
                 "user_data": env_vars,
                 "docker_file": docker_run_payload,
             }
+            #self.log.debug(f"Loading jsonnet transform file: {jsonnet_file}")
             payload = self.process_jsonnet_exec(
                 jsonnet_file, "docker_override", ext_vars
             )
@@ -247,7 +258,7 @@ class StackAssembler(PaasifyObj):
             ext_vars[key] = json.dumps(val)
 
         # Process jsonnet tag
-        self.log.trace(f"Process jsonnet: {file}")
+        self.log.trace(f"Process jsonnet: {file} (action={action})")
         try:
             # pylint: disable=c-extension-no-member
             result = _jsonnet.evaluate_file(

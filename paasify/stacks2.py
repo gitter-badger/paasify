@@ -341,11 +341,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         default_service = self.service or first(dfile.get("services", ["default"]))
         default_network = self.network or first(dfile.get("networks", ["default"]))
 
-        # default_volume = self.volume or first(dfile.get("volumes", ["default"]))
-        # flat_dict = to_dict(dfile)
-        # default_svc = flat_dict.get("services", {}).get(default_service)
-
-        # dsfsdf
 
         assert isinstance(self.prj_ns, str)
         assert isinstance(self.prj_path, str)
@@ -355,7 +350,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         assert self.stack_path_abs.startswith("/")
 
         # Build default
-        # app_dir = self.path
         result = {
             "paasify_sep": "-",
             "prj_path": self.prj_path,
@@ -369,43 +363,30 @@ class PaasifyStack(NodeMap, PaasifyObj):
             "stack_app_name": self.app.app_name if self.app else None,
             "stack_app_path": self.app.app_dir if self.app else None,
             "stack_collection_app_path": self.app.collection_dir,
-            # "app_network_name": self.namespace,
-            # # "app_image": "TOTO",
-            # "app_service": default_service,
-            # "app_volume": default_volume,
-            # "app_network": default_network,
-            # "app_dir": app_dir,
-            # "app_dir_conf": './' + os.path.join(app_dir, 'conf'),
-            # "app_dir_data": './' + os.path.join(app_dir, 'data'),
-            # "app_dir_logs": './' + os.path.join(app_dir, 'logs'),
         }
         return result
 
     def assemble(self):
         "Generate docker-compose.run.yml and parse it with jsonnet"
 
-        all_tags = self.get_tag_plan()
+        # 1. Prepare assemble context
+        # -------------------
+        
         globvars = self.prj.config.vars
         localvars = self.vars
-
-        # New vars as LIST MANAGED
-        vars_manager = StackAssembler(
+        
+        # Get tag plan
+        all_tags = self.get_tag_plan()
+        stack_assembler = StackAssembler(
             parent=self, ident=f"StackVarsManager.{self.stack_name}"
         )
 
+
+        # 2. Get default vars
+        # -------------------
+
+        # Config
         docker_file = all_tags[0]["docker_file"]
-        vars_manager.add_as_dict(self.gen_conveniant_vars(docker_file=docker_file))
-        vars_manager.add_as_list(globvars.get_vars_list())
-        vars_manager.add_as_list(localvars.get_vars_list())
-
-        # tag_manager = StackTagBuilder(parent=self,
-        #     ident=f"StackTagBuilder.{self.stack_name}")
-        # tag_manager.define_tags(all_tags)
-
-        # Process yaml files
-
-        # Process jsonnet vars
-
         lookup = [
             {
                 "path": self.app.app_dir,
@@ -416,24 +397,48 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 "pattern": ["vars.yml", "vars.yaml"],
             },
         ]
-        vars_manager.process_yml_vars(lookup)
-        vars_manager.process_jsonnet_vars(all_tags)
 
-        docker_run_payload = vars_manager.assemble_docker_compose(all_tags, self.engine)
-        docker_run_payload = vars_manager.process_jsonnet_transforms(
+        # Get default, project and stack vars
+        vars_default = self.gen_conveniant_vars(docker_file=docker_file)
+        vars_global = globvars.get_vars_list()
+        vars_local = localvars.get_vars_list()
+
+        # Update the var manager
+        stack_assembler.add_as_dict(vars_default)
+        stack_assembler.add_as_list(vars_global)
+        stack_assembler.add_as_list(vars_local)
+
+        # Process yaml and jsonnet varsfiles
+        stack_assembler.process_yml_vars(lookup)
+        stack_assembler.process_jsonnet_vars(all_tags)
+
+
+        # 3. Assemble components
+        # -------------------
+        
+        # Build docker-compose
+        docker_run_payload = stack_assembler.assemble_docker_compose(all_tags, self.engine)
+
+        # Apply transform tags
+        docker_run_payload = stack_assembler.process_jsonnet_transforms(
             all_tags, docker_run_payload
         )
 
-        # 5. Prepare docker-file output directory
+
+        # 4. Write output file
+        # -------------------
+
+        # Prepare docker-file output directory
         if not os.path.isdir(self.stack_path):
             self.log.info(f"Create missing directory: {self.stack_path}")
             os.mkdir(self.stack_path)
 
-        # 8. Save the final docker-compose.run.yml file
+        # Save the final docker-compose.run.yml file
         outfile = os.path.join(self.stack_path, "docker-compose.run.yml")
         self.log.info(f"Writing docker-compose file: {outfile}")
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
+
 
     def explain_tags(self):
         "Explain hos tags are processed on stack"
@@ -599,7 +604,7 @@ def stack_target(fn):
             if isinstance(stack_names, str):
                 stack_names = stack_names.split(",")
 
-            sub_dir = self._node_parent.runtime.sub_dir
+            sub_dir = self.get_parent().runtime.sub_dir
             if not stack_names and sub_dir:
 
                 # Use current dir stacks if in subdir
@@ -739,6 +744,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
     def cmd_stack_down(self, stacks=None):
         "Stop a stack"
 
+        stacks = list(stacks)
         stacks.reverse()
         self.log.notice("Stop stacks:")
         for stack in stacks:
