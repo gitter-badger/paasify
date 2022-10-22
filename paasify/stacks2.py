@@ -227,7 +227,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # Create engine instance
         payload = {
-            "stack_name": self.stack_name,
+            "stack_name": f"{self.prj_ns}_{self.stack_name}",
             "stack_path": self.stack_path,
             "docker_file": "docker-compose.run.yml",  # os.path.join(self.stack_dir, "docker-compose.run.yml"),
         }
@@ -307,7 +307,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # Objects:
         app = self.app or None
         # Vars:
-        stack_dir = self.stack_dir
+        stack_dir = self.stack_path
         project_jsonnet_dir = self.prj.runtime.project_jsonnet_dir
 
         # 1. Generate default tag (docker compose files only)
@@ -405,12 +405,13 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # Update the var manager
         stack_assembler.add_as_dict(vars_default)
-        stack_assembler.add_as_list(vars_global)
-        stack_assembler.add_as_list(vars_local)
 
         # Process yaml and jsonnet varsfiles
         stack_assembler.process_yml_vars(lookup)
         stack_assembler.process_jsonnet_vars(all_tags)
+
+        stack_assembler.add_as_list(vars_global)
+        stack_assembler.add_as_list(vars_local)
 
 
         # 3. Assemble components
