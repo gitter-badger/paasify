@@ -682,6 +682,12 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
             tag.jsonnet_candidates = jsonnet_files
             tag.docker_candidates = docker_files
 
+            # Sanity check
+            if len(jsonnet_files) + len(docker_files) == 0:
+                dirs = ', '.join(dirs)
+                msg = f"Could not find tag '{tag.name}' for stack '{tag.stack.stack_name}' in following directories: {dirs}"
+                raise error.MissingTag(msg)
+
             results.append(
                 {
                     "tag": tag,
