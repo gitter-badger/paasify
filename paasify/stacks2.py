@@ -792,8 +792,9 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         "List command to stacks"
 
         for stack in self.get_children():
+            stack_app = stack.app.app if stack.app else None
             print(f"  - {stack.stack_name}:")
-            print(f"      app: {stack.app.app}")
+            print(f"      app: {stack_app}")
             print(f"      path: {stack.stack_path}")
 
     @stack_target
