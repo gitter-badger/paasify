@@ -48,6 +48,11 @@ tasks:
     sources: &PAASIFY_MODULE
       - paasify/*.py
     cmds:
+      - >2
+        git status --porcelain | grep '^.M paasify/' && {
+          echo "ERROR: Uncommited files !";
+          exit 1;
+        } || exit 0
       - black paasify
 
   run_tests:
@@ -219,3 +224,4 @@ tasks:
     deps:
       - pkg_clean
       - docker_clean
+
