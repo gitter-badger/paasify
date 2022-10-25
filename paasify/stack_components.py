@@ -20,7 +20,6 @@ import paasify.errors as error
 from paasify.engines import bin2utf8
 
 
-
 # =======================================================================================
 # Stack Assembler
 # =======================================================================================
@@ -229,7 +228,7 @@ class StackAssembler(PaasifyObj):
                 "user_data": env_vars,
                 "docker_file": docker_run_payload,
             }
-            #self.log.debug(f"Loading jsonnet transform file: {jsonnet_file}")
+            # self.log.debug(f"Loading jsonnet transform file: {jsonnet_file}")
             payload = self.process_jsonnet_exec(
                 jsonnet_file, "docker_override", ext_vars
             )

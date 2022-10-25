@@ -54,6 +54,7 @@ def bin2utf8(obj):
 # v1 vs v2
 #  v2 fully support --project-name while v1 does not
 
+
 class EngineCompose(NodeMap, PaasifyObj):
     "Generic docker-engine compose API"
 
@@ -61,35 +62,34 @@ class EngineCompose(NodeMap, PaasifyObj):
 
     version = None
     docker_file_exists = False
-    #docker_file_path = None
+    # docker_file_path = None
     arg_prefix = []
 
     conf_default = {
         "stack_name": None,
         "stack_path": None,
         "docker_file": "docker-compose.yml",
-        #"docker_file_path": None,
+        # "docker_file_path": None,
     }
 
     ident = "default"
 
     compose_bin = "docker"
-    #compose_pre = [
+    # compose_pre = [
     #        "compose",
     #        "--file", "myfile.yml",
     #        "--project-name", "project-name",
     #        ]
 
-    #compose_bin = "docker-compose"
-    #compose_pre = [
+    # compose_bin = "docker-compose"
+    # compose_pre = [
     #        "--file", "myfile.yml",
     #        "--project-name", "project-name",
     #        ]
 
-
     def node_hook_init(self):
         "Create instance attributes"
-        
+
         self.docker_file_path = None
         self.arg_prefix_full = []
         self.arg_prefix = []
@@ -98,46 +98,47 @@ class EngineCompose(NodeMap, PaasifyObj):
         "Create stack context on start"
 
         # Get parents
-        #stack = self._node_parent
+        # stack = self._node_parent
         # prj = stack.prj
 
         # Init object
-        #self.stack_name = self.stack_name
-        #self.stack_path = self.stack_path
-        #self.docker_file_path = self.docker_file_path or os.path.join(self.stack_path, self.docker_file)
-        #pprint (self.__dict__)
+        # self.stack_name = self.stack_name
+        # self.stack_path = self.stack_path
+        # self.docker_file_path = self.docker_file_path or os.path.join(self.stack_path, self.docker_file)
+        # pprint (self.__dict__)
         self.docker_file_path = os.path.join(self.stack_path, self.docker_file)
-        #pprint (self.__dict__)
+        # pprint (self.__dict__)
 
-        #dsfsdf
+        # dsfsdf
 
         # Pre build args
         self.arg_prefix = [
             "compose",
-            "--project-name", f"{self.stack_name}",
+            "--project-name",
+            f"{self.stack_name}",
             # "--project-directory", f"{self.stack_path}",
         ]
         self.arg_prefix_full = [
             "compose",
-            "--project-name", f"{self.stack_name}",
-            "--file", f"{self.docker_file_path}",
+            "--project-name",
+            f"{self.stack_name}",
+            "--file",
+            f"{self.docker_file_path}",
         ]
-
 
     def node_hook_final(self):
         "Enable cli logging"
         self.set_logger("paasify.cli.engine")
 
-
     def run(self, cli_args=None, command=None, logger=None, **kwargs):
         "Wrapper to execute commands"
-        
+
         command = command or self.compose_bin
         cli_args = cli_args or []
 
-        #print ("RUN WRAPPER:", command, cli_args, self.log, kwargs)
+        # print ("RUN WRAPPER:", command, cli_args, self.log, kwargs)
         result = _exec(command, cli_args=cli_args, logger=self.log, **kwargs)
-        #bin2utf8(result)
+        # bin2utf8(result)
 
         if result:
             result = bin2utf8(result)
@@ -213,8 +214,8 @@ class EngineCompose(NodeMap, PaasifyObj):
 
         try:
             out = self.run(cli_args=cli_args, **kwargs)
-            #out = _exec("docker-compose", cli_args, **kwargs)
-            #if out:
+            # out = _exec("docker-compose", cli_args, **kwargs)
+            # if out:
             #    bin2utf8(out)
             #    log.notice(out.txtout)
 
@@ -232,8 +233,8 @@ class EngineCompose(NodeMap, PaasifyObj):
         self.require_stack()
         sh_options = {}
         cli_args = self.arg_prefix + [
-            #"--project-name",
-            #self.stack_name,
+            # "--project-name",
+            # self.stack_name,
             "logs",
         ]
         if follow:
@@ -260,7 +261,6 @@ class EngineCompose(NodeMap, PaasifyObj):
             "json",
         ]
         result = self.run(cli_args=cli_args, _out=None)
-
 
         # Report output from json
         stdout = result.txtout
@@ -335,10 +335,9 @@ class EngineDetect:
         "docker-compose": {
             "2.0.0": EngineCompose_v2,
             "1.0.0": EngineCompose_v1,
-
-            #"2.6.1": EngineCompose_26,
-            #"1.29.0": EngineCompose_129,
-            #"1.6.3": EngineCompose_16,
+            # "2.6.1": EngineCompose_26,
+            # "1.29.0": EngineCompose_129,
+            # "1.6.3": EngineCompose_16,
         },
         "podman-compose": {},
     }
@@ -358,9 +357,9 @@ class EngineDetect:
             # out = cmd('--version')
             bin2utf8(out)
         except sh.ErrorReturnCode as err:
-            #raise error.DockerUnsupportedVersion(
+            # raise error.DockerUnsupportedVersion(
             #    f"Impossible to guess docker-compose version: {out}"
-            #) from err
+            # ) from err
 
             # pylint: disable=no-member
             try:
