@@ -34,7 +34,7 @@ from cafram.utils import (
     # json_validate,
 )
 
-from paasify.common import lookup_candidates  # serialize, , json_validate, duplicates
+from paasify.common import lookup_candidates, get_paasify_pkg_dir
 from paasify.framework import (
     PaasifyObj,
     PaasifyConfigVars,
@@ -234,7 +234,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.engine = self.prj.engine_cls(parent=self, payload=payload)
 
         # Build tag list
-        tag_list = (
+        tag_list = ["_paasify"] + (
             self.tags_prefix
             or self.prj.config.tags_prefix + self.tags
             or self.prj.config.tags + self.tags_suffix
@@ -318,7 +318,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
         }
 
         # 2. Forward to StackTagManager: Generate directory lookup for tags
+        paasify_plugins_dir = self.prj.runtime.paasify_plugins_dir
         dirs = [
+            paasify_plugins_dir,
             stack_dir,
             project_jsonnet_dir,
         ]
@@ -340,7 +342,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         dfile = anyconfig.load(docker_file, ac_ordered=True, ac_parser="yaml")
         default_service = self.service or first(dfile.get("services", ["default"]))
         default_network = self.network or first(dfile.get("networks", ["default"]))
-
 
         assert isinstance(self.prj_ns, str)
         assert isinstance(self.prj_path, str)
@@ -371,16 +372,15 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # 1. Prepare assemble context
         # -------------------
-        
+
         globvars = self.prj.config.vars
         localvars = self.vars
-        
+
         # Get tag plan
         all_tags = self.get_tag_plan()
         stack_assembler = StackAssembler(
             parent=self, ident=f"StackVarsManager.{self.stack_name}"
         )
-
 
         # 2. Get default vars
         # -------------------
@@ -413,18 +413,18 @@ class PaasifyStack(NodeMap, PaasifyObj):
         stack_assembler.add_as_list(vars_global)
         stack_assembler.add_as_list(vars_local)
 
-
         # 3. Assemble components
         # -------------------
-        
+
         # Build docker-compose
-        docker_run_payload = stack_assembler.assemble_docker_compose(all_tags, self.engine)
+        docker_run_payload = stack_assembler.assemble_docker_compose(
+            all_tags, self.engine
+        )
 
         # Apply transform tags
         docker_run_payload = stack_assembler.process_jsonnet_transforms(
             all_tags, docker_run_payload
         )
-
 
         # 4. Write output file
         # -------------------
@@ -439,7 +439,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.log.info(f"Writing docker-compose file: {outfile}")
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
-
 
     def explain_tags(self):
         "Explain hos tags are processed on stack"

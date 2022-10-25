@@ -124,6 +124,14 @@ def merge_env_vars(obj):
     return obj, override_keys
 
 
+def get_paasify_pkg_dir():
+    """Return the dir where the actual paasify source code lives"""
+
+    import paasify as _
+
+    return os.path.dirname(_.__file__)
+
+
 # =====================================================================
 # Beta libs (DEPRECATED)
 # =====================================================================

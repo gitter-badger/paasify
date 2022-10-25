@@ -35,7 +35,7 @@ from paasify.framework import (
     PaasifySources,
     PaasifyConfigVars,
 )
-from paasify.common import list_parent_dirs, find_file_up
+from paasify.common import list_parent_dirs, find_file_up, get_paasify_pkg_dir
 
 from paasify.stacks2 import PaasifyStackTagManager, PaasifyStackManager
 
@@ -243,11 +243,15 @@ class PaasifyProjectRuntime(NodeMap, PaasifyObj):
         # Build default runtime from root path
         root_path = result["root_path"]
 
+        paasify_source_dir = get_paasify_pkg_dir()
+        paasify_plugins_dir = os.path.join(paasify_source_dir, "assets", "plugins")
         private_dir = os.path.join(root_path, ".paasify")
         collection_dir = os.path.join(private_dir, "collections")
         jsonnet_dir = os.path.join(private_dir, "plugins")
 
         _payload2 = {
+            "paasify_source_dir": paasify_source_dir,
+            "paasify_plugins_dir": paasify_plugins_dir,
             "project_private_dir": private_dir,
             "project_collection_dir": collection_dir,
             "project_jsonnet_dir": jsonnet_dir,
