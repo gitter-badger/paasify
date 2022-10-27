@@ -6,6 +6,7 @@ Holds common pieces of code
 
 import os
 from enum import Enum
+from string import Template
 
 from pprint import pprint
 
@@ -130,6 +131,59 @@ def get_paasify_pkg_dir():
     import paasify as _
 
     return os.path.dirname(_.__file__)
+
+
+
+# =====================================================================
+# Class overrides
+# =====================================================================
+
+class StringTemplate(Template):
+    """
+    String Template class override to support version of python below 3.11
+    
+    Source code: Source: https://github.com/python/cpython/commit/dce642f24418c58e67fa31a686575c980c31dd37
+    """
+
+    def get_identifiers(self):
+        """Returns a list of the valid identifiers in the template, in the order
+        they first appear, ignoring any invalid identifiers."""
+
+        ids = []
+        for mo in self.pattern.finditer(self.template):
+            named = mo.group('named') or mo.group('braced')
+            if named is not None and named not in ids:
+                # add a named group only the first time it appears
+                ids.append(named)
+            elif (named is None
+                and mo.group('invalid') is None
+                and mo.group('escaped') is None):
+                # If all the groups are None, there must be
+                # another group we're not expecting
+                raise ValueError('Unrecognized named group in pattern',
+                    self.pattern)
+        return ids
+
+    def is_valid(self):
+        """Returns false if the template has invalid placeholders that will cause
+        :meth:`substitute` to raise :exc:`ValueError`.
+        """
+
+        for mo in self.pattern.finditer(self.template):
+            if mo.group('invalid') is not None:
+                return False
+            if (mo.group('named') is None
+                and mo.group('braced') is None
+                and mo.group('escaped') is None):
+                # If all the groups are None, there must be
+                # another group we're not expecting
+                raise ValueError('Unrecognized named group in pattern',
+                    self.pattern)
+        return True
+
+# We override this method only if version of python is below 3.11
+if hasattr(Template, "get_identifiers"):
+    StringTemplate = Template
 
 
 # =====================================================================
