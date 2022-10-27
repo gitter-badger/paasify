@@ -209,7 +209,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         stack_path = self.stack_path
         stack_path_abs = os.path.abspath(stack_path)
         if not os.path.isabs(self.prj_path):
-        # if not self.prj_path.startswith("/"):
+            # if not self.prj_path.startswith("/"):
             stack_path = os.path.relpath(stack_path_abs)
 
         # Save new settings
@@ -293,7 +293,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # 4. Flatten result to matching candidates
         results = local_cand + app_cand
-        
+
         # 5. Sanity check
         for file in results:
             assert isinstance(file, str), f"Got: {file}"
@@ -307,7 +307,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # Set in cache and return value
         self._cache[_key_cache] = results
         return results
-
 
     def get_tag_plan(self) -> list:
         """
@@ -348,7 +347,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         results.extend(tag_list)
         return results
 
-
     def _gen_conveniant_vars(self, docker_file) -> dict:
         "Generate default core variables"
 
@@ -370,13 +368,11 @@ class PaasifyStack(NodeMap, PaasifyObj):
             "paasify_sep_dir": os.sep,
             # See: https://www.docker.com/blog/announcing-compose-v2-general-availability/
             "paasify_sep_net": "_",
-
             "_prj_path": self.prj_path,
             "_prj_namespace": self.prj_ns,
             "_prj_domain": to_domain(self.prj_ns),
             "_stack_name": self.stack_name,
             "_prj_namespacestack_path": self.stack_path,
-
             "_stack_path_abs": self.stack_path_abs,
             "_stack_network": default_network,
             "_stack_service": default_service,
@@ -386,31 +382,33 @@ class PaasifyStack(NodeMap, PaasifyObj):
         }
         return result
 
-
     @property
     def docker_files_lookup(self) -> list:
         "Return the lookup configuration for docker-files.yml location"
 
         # Lookup config
-        lookups = [{
+        lookups = [
+            {
                 "path": self.stack_path,
                 "pattern": ["vars.yml", "vars.yaml"],
-            }]
+            }
+        ]
         if self.app:
-            lookups.append({
-                "path": self.app.app_dir,
-                "pattern": ["vars.yml", "vars.yaml"],
-            })
+            lookups.append(
+                {
+                    "path": self.app.app_dir,
+                    "pattern": ["vars.yml", "vars.yaml"],
+                }
+            )
 
         return lookups
-
 
     def get_stack_vars(self, sta, all_tags, extra_user_vars=None):
         """
         Build a stack's variable context
-        
+
         It loads variables in this way:
-        
+
             * Grab stack variables
                 * Core variables
                 * Load varfiles `vars.yml` in path or app directory
@@ -419,7 +417,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 * Read stack env (from stack.env)
                 * Optional: Read tag env if provided
             * Grab each tags variables (only jsonnet tags)
-                * 
+                *
         """
 
         # 0. Get default, project and stack vars
@@ -432,7 +430,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
         docker_file = all_tags[0]["docker_file"]
         vars_default = self._gen_conveniant_vars(docker_file=docker_file)
 
-        vars_stack = VarsManager(parent=self, ident=f"VarsManager.{self.stack_name}.default")
+        vars_stack = VarsManager(
+            parent=self, ident=f"VarsManager.{self.stack_name}.default"
+        )
         vars_stack.add_as_dict(vars_default)
         vars_stack.process_yml_vars(lookups)
 
@@ -440,13 +440,17 @@ class PaasifyStack(NodeMap, PaasifyObj):
         vars_global = globvars.get_vars_list()
         vars_local = localvars.get_vars_list()
 
-        vars_user = VarsManager(parent=self, ident=f"VarsManager.{self.stack_name}.user")
+        vars_user = VarsManager(
+            parent=self, ident=f"VarsManager.{self.stack_name}.user"
+        )
         vars_user.add_as_list(vars_global)
         vars_user.add_as_list(vars_local)
         vars_user.add_as_dict(extra_user_vars)  # This is eventually local tag vars
 
         # Create Build VarManager
-        vars_build = VarsManager(parent=self, ident=f"VarsManager.{self.stack_name}.build")
+        vars_build = VarsManager(
+            parent=self, ident=f"VarsManager.{self.stack_name}.build"
+        )
         vars_build.add_as_dict(vars_stack.render_as_dict())
         vars_build.add_as_dict(vars_user.render_as_dict())
 
@@ -454,12 +458,12 @@ class PaasifyStack(NodeMap, PaasifyObj):
         for cand in all_tags:
 
             tag = cand.get("tag")
-            
+
             # Skip tags without jsonnet tag
             jsonnet_file = cand.get("jsonnet_file")
             if not jsonnet_file:
                 continue
-            
+
             # Build Var context
             ctx = vars_build.render_as_dict()
 
@@ -468,26 +472,24 @@ class PaasifyStack(NodeMap, PaasifyObj):
             defaults = sta.jsonnet_low_api_call(jsonnet_file, "global_default", ctx)
             ctx.update(defaults)
             assemble = sta.jsonnet_low_api_call(jsonnet_file, "global_assemble", ctx)
-            
+
             # Build result
             result = {}
             result.update(defaults)
             result.update(assemble)
-            
+
             # print ("Vars for global tag (docker-compose):", cand.get("tag"))
             # pprint (defaults)
             # pprint (assemble)
 
             vars_build.add_as_dict(result)
-        
-        
+
         # Override user config: If all plugins respect the contract of
         # not overriding, we're fine.
         # TODO: Assert raw user config has not been overriden by jsonnet plugins
         # vars_build.add_as_dict(vars_user.render_as_dict())
 
         return vars_build.render_as_dict(parse=True)
-
 
     def assemble(self):
         "Generate docker-compose.run.yml and parse it with jsonnet"
@@ -498,14 +500,12 @@ class PaasifyStack(NodeMap, PaasifyObj):
         all_tags = self.get_tag_plan()
         vars_build = self.get_stack_vars(sta, all_tags)
 
-
         # 2. Build docker-compose
         # -------------------
         docker_run_payload = sta.assemble_docker_compose(
             all_tags, self.engine, env=vars_build
         )
 
-        
         # 3. Assemble jsonnet tags
         # -------------------
         for cand in all_tags:
@@ -522,7 +522,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
             if tag:
                 tag_vars = tag.vars or {}
 
-
             # 3.1 Reload var context if overriden
             # --------------------
             result = vars_build
@@ -532,7 +531,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 # we need to reprocess all jsonnet files
                 result = self.get_stack_vars(sta, all_tags, extra_user_vars=tag_vars)
 
-
             # 3.2 Prepare jsonnet call
             # --------------------
             params = {
@@ -540,8 +538,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 "docker_data": docker_run_payload,
             }
             self.log.info(f"    Processing instance vars from tag: {tag}")
-            docker_run_payload = sta.process_jsonnet_exec(jsonnet_file, "docker_transform", params)
-
+            docker_run_payload = sta.process_jsonnet_exec(
+                jsonnet_file, "docker_transform", params
+            )
 
         # 4. Write output file
         # -------------------
@@ -556,7 +555,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.log.info(f"Writing docker-compose file: {outfile}")
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
-
 
     def explain_tags(self):
         "Explain hos tags are processed on stack"

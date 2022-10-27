@@ -69,7 +69,6 @@ class VarsManager(PaasifyObj):
         for var_name, var_value in vars.items():
             self.add_as_key(var_name, var_value)
 
-
     def resolve_dyn_vars(self, tpl, env, hint=None):
         "Resolver environment and secret vars"
 
@@ -86,11 +85,10 @@ class VarsManager(PaasifyObj):
             elif var.startswith("_secret_"):
                 msg = f"Support for secrets is not implemented yet: {hint}: {line}"
                 self.log.warning(msg)
-                env[var]= var
+                env[var] = var
                 # raise NotImplementedError(msg)
 
         return env
-
 
     def template_value(self, value, env, hint=None):
         "Render a string with template engine"
@@ -120,7 +118,6 @@ class VarsManager(PaasifyObj):
 
         return value
 
-
     def render_as_dict(self, parse=False):
         "Return a dict of the variable"
 
@@ -129,12 +126,11 @@ class VarsManager(PaasifyObj):
             key = var.name
             value = var.value
 
-            if parse:                
+            if parse:
                 value = self.template_value(value, result, hint=key)
             result[key] = value
 
         return result
-
 
     # Vars processors
     # ===========================
@@ -146,7 +142,7 @@ class VarsManager(PaasifyObj):
 
         vars_cand = lookup_candidates(lookup)
         vars_cand = flatten([x["matches"] for x in vars_cand])
-        
+
         for cand in vars_cand:
             self.log.debug(f"Loading vars file: {cand}")
             conf = anyconfig.load(cand, ac_parser="yaml")
@@ -187,7 +183,6 @@ class StackAssembler(PaasifyObj):
         env = env or self.render_as_dict(parse=True)
         assert isinstance(env, dict), f"Got: {env}"
 
-
         self.log.debug("Docker vars:")
         for key, val in sorted(env.items()):
             self.log.debug(f"  {key}: {val}")
@@ -207,18 +202,13 @@ class StackAssembler(PaasifyObj):
         docker_run_payload = anyconfig.loads(docker_run_content, ac_parser="yaml")
         return docker_run_payload
 
-
-
     # # Vars processors
     # # ===========================
 
     def jsonnet_low_api_call(self, jsonnet_file, action, args):
         "New low level API call for jsonnet plugins"
 
-        _payload = self.process_jsonnet_exec(
-                jsonnet_file,
-                action, 
-                {"args": args})
+        _payload = self.process_jsonnet_exec(jsonnet_file, action, {"args": args})
 
         return _payload
 
@@ -228,7 +218,7 @@ class StackAssembler(PaasifyObj):
         # Developper init
         data = data or {}
         assert isinstance(data, dict), f"Data must be dict, got: {data}"
-        
+
         # TODO: Enforce jsonnet API
         # assert action in [
         #     "metadata",
@@ -671,7 +661,7 @@ class PaasifyStackTagManager(NodeList, PaasifyObj):
 
             # Sanity check
             if len(jsonnet_files) + len(docker_files) == 0:
-                dirs = ', '.join(dirs)
+                dirs = ", ".join(dirs)
                 msg = f"Could not find tag '{tag.name}' for stack '{tag.stack.stack_name}' in following directories: {dirs}"
                 raise error.MissingTag(msg)
 

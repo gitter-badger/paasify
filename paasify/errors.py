@@ -106,6 +106,7 @@ class YAMLError(PaasifyError):
 
     rc = 42
 
+
 class MissingTag(PaasifyError):
     """Raised when referencing unexistant tag"""
 
