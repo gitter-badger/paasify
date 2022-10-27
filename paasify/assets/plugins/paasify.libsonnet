@@ -6,7 +6,7 @@ local _metadata_default =
     "ERROR": "Metadata is not set !"
   };
 
-local _fn_default_vars(vars) =
+local _fn_empty(vars) =
   {};
 
 local _fn_docker_override (vars, docker_file) = docker_file;
@@ -52,52 +52,138 @@ local DockerServiceNet(net_id, net_aliases=[], net_ipv4=null, net_ipv6=null) =
 {
   local lib_paasify = self,
 
+  // Internal lib
+  // =====================
+
   // Return the current value of input vars
   getConf(name)::
     std.parseJson(std.extVar(name)),
 
+
+  get_global_vars(vars, fn_global_default, fn_global_assemble)::
+    local defaults = fn_global_default(vars);
+    local assemble = fn_global_assemble(defaults + vars);
+    defaults + assemble,
+
+
   // Std lib
+  // =====================
   DockerServiceNet:: DockerServiceNet,
   DockerNetDef:: DockerNetDef,
 
   main(plugin)::
+    // Get plugin config
+    local metadata = std.get(plugin, "metadata", default=_metadata_default);
+
+    // local fn_global_default = std.get(plugin, "global_default", default=_fn_empty);
+    // local fn_global_assemble = std.get(plugin, "global_assemble", default=_fn_empty);
+
+    // local fn_instance_default = std.get(plugin, "instance_default", default=_fn_empty);
+    // local fn_instance_assemble = std.get(plugin, "instance_assemble", default=_fn_empty);
+
+    // local fn_docker_transform = std.get(plugin, "docker_transform", default=_fn_docker_override);
+
+    // Extract user input
+    local action = $.getConf('action'); // expect a string
+    local args = $.getConf('args'); // expect a dict
+
+    // Extract plugins function
+    
+    if action == 'docker_transform' then
+      local fn = std.get(plugin, "docker_transform", default=_fn_docker_override);
+      fn(args, $.getConf('docker_data'))
+    else
+      local fn = std.get(plugin, action, default=_fn_empty);
+      fn(args)
+    ,
+
+
+
+
+
+  main_OLD(plugin)::
 
     // Get plugin config
     local metadata = std.get(plugin, "metadata", default=_metadata_default);
-    local fn_default_vars = std.get(plugin, "default_vars", default=_fn_default_vars);
-    // local fn_override_vars = std.get(plugin, "override_vars", default=_fn_default_vars);
-    local fn_docker_override = std.get(plugin, "docker_override", default=_fn_docker_override);
+
+    local fn_global_default = std.get(plugin, "global_default", default=_fn_empty);
+    local fn_global_assemble = std.get(plugin, "global_assemble", default=_fn_empty);
+
+    local fn_instance_default = std.get(plugin, "instance_default", default=_fn_empty);
+    local fn_instance_assemble = std.get(plugin, "instance_assemble", default=_fn_empty);
+
+    local fn_docker_transform = std.get(plugin, "docker_transform", default=_fn_docker_override);
+
+
+    // local fn_override_instance_vars = std.get(plugin, "override_instance_vars", default=_fn_empty);
+    // local fn_docker_override = std.get(plugin, "docker_override", default=_fn_docker_override);
 
     // Extract user input
-    local action = self.getConf('action'); // expect a string
-    local vars = self.getConf('user_data'); // expect a dict
+    local action = $.getConf('action'); // expect a string
+    local vars = $.getConf('user_data'); // expect a dict
 
     // Prepare output
     local out = {
       action: action,
     };
 
+    // // Auto sanity test , which may have a good perf impact :/
+    // local processed_default_vars = fn_default_vars(vars);
+    // local processed_override_vars = fn_override_vars(processed_default_vars);
+
     // Process action
     if action == 'metadata' then
       out + {
         metadata:  metadata,
       }
-    else if action == 'vars_default' then
+
+    else if action == 'process_transform' then
       out + {
         current_vars: vars,
-        vars_default: fn_default_vars(vars),
+        docker_file:: $.getConf('docker_file'),
+
+        glob:: $.get_global_vars(vars, fn_global_default, fn_global_assemble) + vars,
+        inst :: $.get_global_vars(self.glob, fn_instance_default, fn_instance_assemble),
+
+        instance_vars: self.inst,
+        process_transform: fn_docker_transform(self.inst + vars, self.docker_file),
       }
+
+    else if action == 'process_globals' then
+      // Processed as one instance
+      out + {
+        current_vars: vars,
+
+        glob:: $.get_global_vars(vars, fn_global_default, fn_global_assemble) + vars,
+        inst :: $.get_global_vars(self.glob, fn_instance_default, fn_instance_assemble) + vars,
+
+        globals: self.glob,
+        instance: self.inst,
+      }
+
+    // else if action == 'vars_default' then
+    //   out + {
+    //     current_vars: vars,
+    //     // vars_default: fn_default_vars(vars),
+    //   }
     // else if action == 'vars_override' then
     //   out + {
     //     current_vars: vars,
-    //     vars_override: fn_override_vars(vars),
+    //     // vars_override: fn_override_vars(vars),
     //   }
-    else if action == 'docker_override' then
-      local docker_file = self.getConf('docker_file'); // expect a dict of docker-compose
-      out + {
-        current_vars: vars,
-        docker_override: fn_docker_override(vars, docker_file),
-      }
+    // else if action == 'vars_instance_override' then
+    //   out + {
+    //     current_vars: vars,
+    //     // vars_instance_override: fn_override_instance_vars(vars),
+    //   }
+
+
+    // else if action == 'docker_override' then
+    //   local docker_file = self.getConf('docker_file'); // expect a dict of docker-compose
+    //   out + {
+    //     current_vars: vars,
+    //     // docker_override: fn_docker_override(vars, docker_file),
+    //   }
     else
       out + {
         msg: "Action not set !"

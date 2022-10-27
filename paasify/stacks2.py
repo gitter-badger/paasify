@@ -45,6 +45,7 @@ from paasify.stack_components import (
     PaasifyStackTagManager,
     PaasifyStackApp,
     StackAssembler,
+    VarsManager,
 )
 import paasify.errors as error
 
@@ -122,9 +123,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
     engine = None
     prj = None
 
-    # State vars
-    docker_candidates = None
-
     # Stack vars
     stack_dir = None
     stack_name = None
@@ -133,6 +131,11 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
     # CaFram functions
     # ---------------------
+
+    def node_hook_init(self):
+        "Create instance attributes"
+
+        self._cache = {}
 
     def node_hook_transform(self, payload):
         "PaasifyStack Init"
@@ -198,7 +201,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.stack_name = stack_name
         self.stack_dir = stack_dir
         self.prj_ns = self.prj.config.namespace or self.prj.runtime.namespace
-        # pprint (self.prj.runtime.__dict__)
         self.prj_path = self.prj.runtime.root_path
         self.stack_path = os.path.join(self.prj.runtime.root_path, stack_dir)
         self.ident = self.stack_name
@@ -207,6 +209,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         stack_path = self.stack_path
         stack_path_abs = os.path.abspath(stack_path)
         if not os.path.isabs(self.prj_path):
+        # if not self.prj_path.startswith("/"):
             stack_path = os.path.relpath(stack_path_abs)
 
         # Save new settings
@@ -247,61 +250,71 @@ class PaasifyStack(NodeMap, PaasifyObj):
     # Local functions
     # ---------------------
 
-    def resolve_stack_files(self):
+    @property
+    def docker_candidates(self) -> list:
         """Return all docker-files candidates: local, app and tags
 
-        Modify object and set:
-            Name: self.docker_candidates
-            Content: A list of docker candidates
+        Search docker-compose files in the following dirs:
 
-        Return nothing
+          * Main docker-compose:
+            * <local>/docker-compose.y?ml
+            * <app>/docker-compose.y?ml
+          * Additional docker-composes:
+            * <local>/docker-compose.<tag>.y?ml
+            * <app>/docker-compose.<tag>.y?ml
+
+        Return the list of candidates for the stack
         """
 
-        stack_dir = self.stack_dir
+        # 0. Check cache
+        _key_cache = "docker_candidates"
+        results = self._cache.get(_key_cache)
+        if results:
+            return results
+
+        # 1. Init
+        stack_path = self.stack_path
         app = self.app
 
-        # Search in:
-        # <local>/docker-compose.yml
-        # <app>/docker-compose.yml
-        # <local>/docker-compose.<tags>.yml
-        # <app>/docker-compose.<tags>.yml
-
-        # 1. Get local docker compose
+        # 2. Get local docker compose
         lookup = [
             {
-                "path": stack_dir,
-                "pattern": ["docker-compose.yml", "docker-compose.yml"],
+                "path": stack_path,
+                "pattern": ["docker-compose.yml", "docker-compose.yaml"],
             }
         ]
-        local_cand = lookup_candidates(lookup)
+        local_cand = flatten([x["matches"] for x in lookup_candidates(lookup)])
 
-        # 2. Get app cand as fallback
+        # 3. Get app cand as fallback
         app_cand = []
         if app:
-            local_cand = app.lookup_docker_files_app()
+            app_cand = app.lookup_docker_files_app()
+            app_cand = flatten([x["matches"] for x in app_cand])
 
-        # 3. Flatten result to matching candidates
-        results = []
-        results.extend(local_cand)
-        results.extend(app_cand)
+        # 4. Flatten result to matching candidates
+        results = local_cand + app_cand
+        
+        # 5. Sanity check
+        for file in results:
+            assert isinstance(file, str), f"Got: {file}"
 
-        # Filter result
+        # 6. Filter result
         if len(results) < 1:
-            msg = f"Can't find `docker-compose.yml` file neither in stack or app in: {stack_dir}"
+            msg = f"Can't find `docker-compose.yml` file neither in stack or app in: {stack_path}"
             raise error.StackMissingDockerComposeFile(msg)
+        # TODO: Test ideas: test if local_cand and app_cand are properly setup depending the pattern
 
-        # Return all results
-        self.docker_candidates = results
+        # Set in cache and return value
+        self._cache[_key_cache] = results
+        return results
 
-    def get_tag_plan(self):
+
+    def get_tag_plan(self) -> list:
         """
         Resolve all files associated to tags
 
         Return the list of tags with files
         """
-
-        if not self.docker_candidates:
-            self.resolve_stack_files()
 
         # 0. Init
         # Objects:
@@ -335,8 +348,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
         results.extend(tag_list)
         return results
 
-    def gen_conveniant_vars(self, docker_file):
-        "Generate default available variables"
+
+    def _gen_conveniant_vars(self, docker_file) -> dict:
+        "Generate default core variables"
 
         # Extract stack config
         dfile = anyconfig.load(docker_file, ac_ordered=True, ac_parser="yaml")
@@ -350,81 +364,184 @@ class PaasifyStack(NodeMap, PaasifyObj):
         assert isinstance(self.prj_path, str)
         assert self.stack_path_abs.startswith("/")
 
-        # Build default
+        # Build default (only primitives)
         result = {
             "paasify_sep": "-",
-            "prj_path": self.prj_path,
-            "prj_namespace": self.prj_ns,
-            "prj_domain": to_domain(self.prj_ns),
-            "stack_name": self.stack_name,
-            "stack_path": self.stack_path,
-            "stack_path_abs": self.stack_path_abs,
-            "stack_network": default_network,
-            "stack_service": default_service,
-            "stack_app_name": self.app.app_name if self.app else None,
-            "stack_app_path": self.app.app_dir if self.app else None,
-            "stack_collection_app_path": self.app.collection_dir,
+            "paasify_sep_dir": os.sep,
+            # See: https://www.docker.com/blog/announcing-compose-v2-general-availability/
+            "paasify_sep_net": "_",
+
+            "_prj_path": self.prj_path,
+            "_prj_namespace": self.prj_ns,
+            "_prj_domain": to_domain(self.prj_ns),
+            "_stack_name": self.stack_name,
+            "_prj_namespacestack_path": self.stack_path,
+
+            "_stack_path_abs": self.stack_path_abs,
+            "_stack_network": default_network,
+            "_stack_service": default_service,
+            "_stack_app_name": self.app.app_name if self.app else None,
+            "_stack_app_path": self.app.app_dir if self.app else None,
+            "_stack_collection_app_path": self.app.collection_dir,
         }
         return result
+
+
+    @property
+    def docker_files_lookup(self) -> list:
+        "Return the lookup configuration for docker-files.yml location"
+
+        # Lookup config
+        lookups = [{
+                "path": self.stack_path,
+                "pattern": ["vars.yml", "vars.yaml"],
+            }]
+        if self.app:
+            lookups.append({
+                "path": self.app.app_dir,
+                "pattern": ["vars.yml", "vars.yaml"],
+            })
+
+        return lookups
+
+
+    def get_stack_vars(self, sta, all_tags, extra_user_vars=None):
+        """
+        Build a stack's variable context
+        
+        It loads variables in this way:
+        
+            * Grab stack variables
+                * Core variables
+                * Load varfiles `vars.yml` in path or app directory
+            * Grab user variables
+                * Read global vars (from config.env)
+                * Read stack env (from stack.env)
+                * Optional: Read tag env if provided
+            * Grab each tags variables (only jsonnet tags)
+                * 
+        """
+
+        # 0. Get default, project and stack vars
+        globvars = self.prj.config.vars
+        localvars = self.vars
+        extra_user_vars = extra_user_vars or {}
+        lookups = self.docker_files_lookup
+
+        # 1. Create Stack VarManager
+        docker_file = all_tags[0]["docker_file"]
+        vars_default = self._gen_conveniant_vars(docker_file=docker_file)
+
+        vars_stack = VarsManager(parent=self, ident=f"VarsManager.{self.stack_name}.default")
+        vars_stack.add_as_dict(vars_default)
+        vars_stack.process_yml_vars(lookups)
+
+        # 2. Create User VarManager
+        vars_global = globvars.get_vars_list()
+        vars_local = localvars.get_vars_list()
+
+        vars_user = VarsManager(parent=self, ident=f"VarsManager.{self.stack_name}.user")
+        vars_user.add_as_list(vars_global)
+        vars_user.add_as_list(vars_local)
+        vars_user.add_as_dict(extra_user_vars)  # This is eventually local tag vars
+
+        # Create Build VarManager
+        vars_build = VarsManager(parent=self, ident=f"VarsManager.{self.stack_name}.build")
+        vars_build.add_as_dict(vars_stack.render_as_dict())
+        vars_build.add_as_dict(vars_user.render_as_dict())
+
+        # Loop over all candidates
+        for cand in all_tags:
+
+            tag = cand.get("tag")
+            
+            # Skip tags without jsonnet tag
+            jsonnet_file = cand.get("jsonnet_file")
+            if not jsonnet_file:
+                continue
+            
+            # Build Var context
+            ctx = vars_build.render_as_dict()
+
+            # Execute jsonnet scripts (Sloow)
+            self.log.info(f"    Processing vars from tag: {tag}")
+            defaults = sta.jsonnet_low_api_call(jsonnet_file, "global_default", ctx)
+            ctx.update(defaults)
+            assemble = sta.jsonnet_low_api_call(jsonnet_file, "global_assemble", ctx)
+            
+            # Build result
+            result = {}
+            result.update(defaults)
+            result.update(assemble)
+            
+            # print ("Vars for global tag (docker-compose):", cand.get("tag"))
+            # pprint (defaults)
+            # pprint (assemble)
+
+            vars_build.add_as_dict(result)
+        
+        
+        # Override user config: If all plugins respect the contract of
+        # not overriding, we're fine.
+        # TODO: Assert raw user config has not been overriden by jsonnet plugins
+        # vars_build.add_as_dict(vars_user.render_as_dict())
+
+        return vars_build.render_as_dict(parse=True)
+
 
     def assemble(self):
         "Generate docker-compose.run.yml and parse it with jsonnet"
 
         # 1. Prepare assemble context
         # -------------------
-
-        globvars = self.prj.config.vars
-        localvars = self.vars
-
-        # Get tag plan
+        sta = StackAssembler(parent=self, ident=f"StackAssembler.{self.stack_name}")
         all_tags = self.get_tag_plan()
-        stack_assembler = StackAssembler(
-            parent=self, ident=f"StackVarsManager.{self.stack_name}"
-        )
+        vars_build = self.get_stack_vars(sta, all_tags)
 
-        # 2. Get default vars
+
+        # 2. Build docker-compose
         # -------------------
+        docker_run_payload = sta.assemble_docker_compose(
+            all_tags, self.engine, env=vars_build
+        )
 
-        # Config
-        docker_file = all_tags[0]["docker_file"]
-        lookup = [
-            {
-                "path": self.app.app_dir,
-                "pattern": ["vars.yml", "vars.yaml"],
-            },
-            {
-                "path": self.stack_dir,
-                "pattern": ["vars.yml", "vars.yaml"],
-            },
-        ]
-
-        # Get default, project and stack vars
-        vars_default = self.gen_conveniant_vars(docker_file=docker_file)
-        vars_global = globvars.get_vars_list()
-        vars_local = localvars.get_vars_list()
-
-        # Update the var manager
-        stack_assembler.add_as_dict(vars_default)
-
-        # Process yaml and jsonnet varsfiles
-        stack_assembler.process_yml_vars(lookup)
-        stack_assembler.process_jsonnet_vars(all_tags)
-
-        stack_assembler.add_as_list(vars_global)
-        stack_assembler.add_as_list(vars_local)
-
-        # 3. Assemble components
+        
+        # 3. Assemble jsonnet tags
         # -------------------
+        for cand in all_tags:
 
-        # Build docker-compose
-        docker_run_payload = stack_assembler.assemble_docker_compose(
-            all_tags, self.engine
-        )
+            # 3.0 Init loop
+            # --------------------
+            jsonnet_file = cand.get("jsonnet_file")
+            if not jsonnet_file:
+                continue
 
-        # Apply transform tags
-        docker_run_payload = stack_assembler.process_jsonnet_transforms(
-            all_tags, docker_run_payload
-        )
+            # Check if tag
+            tag = cand.get("tag")
+            tag_vars = {}
+            if tag:
+                tag_vars = tag.vars or {}
+
+
+            # 3.1 Reload var context if overriden
+            # --------------------
+            result = vars_build
+            if len(tag_vars) > 0:
+                # If variables has been overrided, we need to recalculate the whole var stack
+                # which is actually quite slow because
+                # we need to reprocess all jsonnet files
+                result = self.get_stack_vars(sta, all_tags, extra_user_vars=tag_vars)
+
+
+            # 3.2 Prepare jsonnet call
+            # --------------------
+            params = {
+                "args": result,
+                "docker_data": docker_run_payload,
+            }
+            self.log.info(f"    Processing instance vars from tag: {tag}")
+            docker_run_payload = sta.process_jsonnet_exec(jsonnet_file, "docker_transform", params)
+
 
         # 4. Write output file
         # -------------------
@@ -439,6 +556,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.log.info(f"Writing docker-compose file: {outfile}")
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
+
 
     def explain_tags(self):
         "Explain hos tags are processed on stack"

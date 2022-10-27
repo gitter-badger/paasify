@@ -4,7 +4,6 @@ Stack components class
 """
 
 import os
-from string import Template
 from pprint import pprint
 
 import json
@@ -14,7 +13,7 @@ import anyconfig
 from cafram.nodes import NodeList, NodeMap
 from cafram.utils import flatten, first
 
-from paasify.common import lookup_candidates
+from paasify.common import lookup_candidates, StringTemplate
 from paasify.framework import PaasifyObj, PaasifyConfigVar
 import paasify.errors as error
 from paasify.engines import bin2utf8
@@ -25,12 +24,23 @@ from paasify.engines import bin2utf8
 # =======================================================================================
 
 
-class StackAssembler(PaasifyObj):
-    "Object to manage stack assemblage"
+class VarsManager(PaasifyObj):
+    """
+    This class manage a list of variables (PaasifyConfigVar), but it keep
+    the adding order.
+
+    Args:
+        PaasifyObj (_type_): _description_
+
+    Raises:
+        error.ProjectInvalidConfig: _description_
+
+    Returns:
+        _type_: _description_
+    """
 
     _vars = []
-
-    conf_logger = "paasify.cli.builder"
+    conf_logger = "paasify.cli.vars"
 
     def __init__(self, *arsg, **kwargs):
 
@@ -59,14 +69,38 @@ class StackAssembler(PaasifyObj):
         for var_name, var_value in vars.items():
             self.add_as_key(var_name, var_value)
 
+
+    def resolve_dyn_vars(self, tpl, env, hint=None):
+        "Resolver environment and secret vars"
+
+        var_list = tpl.get_identifiers()
+        line = tpl.template
+
+        for var in var_list:
+            if var.startswith("_env_"):
+                name = var[5:]
+                value = os.environ.get(name)
+                msg = f"Fetching environment value for: {hint}: {line} ({name}={value})"
+                self.log.info(msg)
+                env[var] = value
+            elif var.startswith("_secret_"):
+                msg = f"Support for secrets is not implemented yet: {hint}: {line}"
+                self.log.warning(msg)
+                env[var]= var
+                # raise NotImplementedError(msg)
+
+        return env
+
+
     def template_value(self, value, env, hint=None):
         "Render a string with template engine"
 
         if not isinstance(value, str):
             return value
 
-        # Safe usage of user input templating
-        tpl = Template(value)
+        # Resolve dynamic vars
+        tpl = StringTemplate(value)
+        env = self.resolve_dyn_vars(tpl, env, hint=hint)
 
         # pylint: disable=broad-except
         try:
@@ -86,7 +120,8 @@ class StackAssembler(PaasifyObj):
 
         return value
 
-    def render_as_dict(self, parse=False, dict_override=None):
+
+    def render_as_dict(self, parse=False):
         "Return a dict of the variable"
 
         result = {}
@@ -94,18 +129,39 @@ class StackAssembler(PaasifyObj):
             key = var.name
             value = var.value
 
-            if parse:
+            if parse:                
                 value = self.template_value(value, result, hint=key)
             result[key] = value
 
-        # Dict override
-        if dict_override:
-            result.update(dict_override)
-            if parse:
-                for key, value in dict_override.items():
-                    result[key] = self.template_value(value, result, hint=key)
-
         return result
+
+
+    # Vars processors
+    # ===========================
+
+    def process_yml_vars(self, lookup):
+        """Process yml vars from a tag_list"""
+
+        self.log.info("Process yaml vars")
+
+        vars_cand = lookup_candidates(lookup)
+        vars_cand = flatten([x["matches"] for x in vars_cand])
+        
+        for cand in vars_cand:
+            self.log.debug(f"Loading vars file: {cand}")
+            conf = anyconfig.load(cand, ac_parser="yaml")
+            assert isinstance(conf, dict)
+            self.add_as_dict(conf)
+
+
+class StackAssembler(PaasifyObj):
+    "Object to manage stack assemblage"
+
+    conf_logger = "paasify.cli.assembler"
+
+    # Internal object:
+    # all_tags
+    # engine
 
     # Docker processors
     # ===========================
@@ -122,16 +178,18 @@ class StackAssembler(PaasifyObj):
 
         return docker_files
 
-    def assemble_docker_compose(self, all_tags, engine):
+    def assemble_docker_compose(self, all_tags, engine, env=None):
         "Generate the docker-compose file"
 
         docker_files = self._get_docker_files(all_tags)
 
         # Report to user
-        env = self.render_as_dict(parse=True)
+        env = env or self.render_as_dict(parse=True)
+        assert isinstance(env, dict), f"Got: {env}"
+
 
         self.log.debug("Docker vars:")
-        for key, val in env.items():
+        for key, val in sorted(env.items()):
             self.log.debug(f"  {key}: {val}")
 
         try:
@@ -149,105 +207,37 @@ class StackAssembler(PaasifyObj):
         docker_run_payload = anyconfig.loads(docker_run_content, ac_parser="yaml")
         return docker_run_payload
 
-    # Vars processors
-    # ===========================
 
-    def process_yml_vars(self, lookup):
-        """Process yml vars from a tag_list"""
 
-        self.log.info("Process yaml vars")
+    # # Vars processors
+    # # ===========================
 
-        vars_cand = lookup_candidates(lookup)
-        vars_cand = flatten([x["matches"] for x in vars_cand])
-        for cand in vars_cand:
-            self.log.debug(f"Loading vars file: {cand}")
-            conf = anyconfig.load(cand, ac_parser="yaml")
-            assert isinstance(conf, dict)
-            self.add_as_dict(conf)
+    def jsonnet_low_api_call(self, jsonnet_file, action, args):
+        "New low level API call for jsonnet plugins"
 
-    def process_jsonnet_vars(self, all_tags):
-        """Process jsonnet vars from a tag_list"""
+        _payload = self.process_jsonnet_exec(
+                jsonnet_file,
+                action, 
+                {"args": args})
 
-        for cand in all_tags:
-
-            jsonnet_file = cand.get("jsonnet_file")
-            if not jsonnet_file:
-                continue
-
-            current_vars = self.render_as_dict()
-            # Parse jsonnet file
-            ext_vars = {
-                "user_data": current_vars,
-            }
-            self.log.debug(f"Loading jsonnet vars file: {jsonnet_file}")
-            payload = self.process_jsonnet_exec(jsonnet_file, "vars_default", ext_vars)
-
-            # Update result
-            for key, val in payload["vars_default"].items():
-
-                # Set variable only if not already set
-                curr_val = current_vars.get(key, None)
-                if curr_val is None:
-                    self.add_as_key(key, val)
-
-        # return vars_run
-
-    def process_jsonnet_transforms(self, all_tags, docker_run_payload):
-        "Process jsonnet tag jsonnet transforms"
-
-        self.log.info("Jsonnet files (transform):")
-
-        for cand in all_tags:
-            docker_file = cand.get("docker_file")
-
-            # Fetch only jsonnet if docker_file is absent
-            if docker_file:
-                continue
-            jsonnet_file = cand.get("jsonnet_file")
-            if not jsonnet_file:
-                continue
-            self.log.info(f"  Insert: {jsonnet_file}")
-
-            # Create local environment vars
-            jsonnet_data = {}
-            tag = cand.get("tag")
-            if tag:
-                jsonnet_data = tag.vars or {}
-            # print ("UPDATING DOCKER VARS", jsonnet_data)
-
-            env_vars = self.render_as_dict(parse=True, dict_override=jsonnet_data)
-
-            # env_vars.update(jsonnet_data)
-
-            # Remove all null values
-            # Should I keep this ?
-            # => env_vars = {k: v for k, v in env_vars.items() if v is not None}
-
-            # Parse jsonnet file
-            ext_vars = {
-                "user_data": env_vars,
-                "docker_file": docker_run_payload,
-            }
-            # self.log.debug(f"Loading jsonnet transform file: {jsonnet_file}")
-            payload = self.process_jsonnet_exec(
-                jsonnet_file, "docker_override", ext_vars
-            )
-            docker_run_payload = payload["docker_override"]
-
-        return docker_run_payload
+        return _payload
 
     def process_jsonnet_exec(self, file, action, data):
         "Process jsonnet file"
 
         # Developper init
         data = data or {}
-        assert isinstance(data, dict), f"DAta must be dict, got: {data}"
-        assert action in [
-            "metadata",
-            "vars_default",
-            "vars_override",
-            "docker_override",
-        ], f"Action not supported: {action}"
+        assert isinstance(data, dict), f"Data must be dict, got: {data}"
+        
+        # TODO: Enforce jsonnet API
+        # assert action in [
+        #     "metadata",
+        #     "vars_default",
+        #     "vars_override",
+        #     "process_globals", # Testing WIP
+        #     "process_transform", # Testing WIPP
+        #     "docker_override",
+        # ], f"Action not supported: {action}"
 
         # Prepare input variables
         ext_vars = {
@@ -340,10 +330,7 @@ class PaasifyStackApp(NodeMap, PaasifyObj):
                 "pattern": ["docker-compose.yml", "docker-compose.yml"],
             }
         ]
-        local_cand = lookup_candidates(lookup)
-        local_cand = flatten([x["matches"] for x in local_cand])
-
-        return local_cand
+        return lookup_candidates(lookup)
 
     def lookup_jsonnet_files_app(self):
         """Lookup docker-compose files in app directory"""

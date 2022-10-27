@@ -14,6 +14,8 @@ local plugin = {
       license: '',
       version: '',
 
+      depends: ['_paasify'],
+
       require: '',
       api: 1,
       jsonschema: {
@@ -56,41 +58,40 @@ local plugin = {
     },
 
   // Return global vars
-  default_vars(vars)::
-    local dir_prefix = vars.stack_path + '/';
+  global_default(vars)::
     {
 
-        docker_net_ident: vars.app_network,
-        # docker_net_name: vars.app_network_name,
-        #docker_net_name_full: vars.prj_namespace + self.traefik_sep + 'traefik', // vars.app_network_name
-        docker_net_ns: vars.prj_namespace,
-        docker_net_external: false,
+        // docker_net_ident: vars.app_network, // default
+        //docker_net_name: vars.app_network_name,
+        
+        # // vars.app_network_name
+        //docker_net_ns: vars._prj_namespace,
+        // docker_net_name: vars._stack_name + "_default",
 
-        docker_svc_ident: vars.app_service,
-        docker_net_full_name: null,
+        docker_net_external: true,
+
+        //docker_svc_ident: vars.app_service,
+        //docker_net_full_name: null,
 
     },
 
+  // Override vars
+  global_assemble(vars)::
+    {
+      // docker_net_full_name: vars._prj_namespace + vars.paasify_sep_net + vars.docker_net_name,
+      docker_net_service_idents: std.split(vars.app_service, ','),
+    },
  
 
     // docker_override
-  docker_override (in_vars, docker_file)::
-    local vars = self.default_vars(in_vars) + std.prune(in_vars);
-
-    #local service = std.get(conf, 'paasify_stack_service');
-    local services = std.split(vars.app_service, ',');
-    local _net_name = std.prune([
-      vars.docker_net_full_name, 
-      vars.docker_net_ns + vars.paasify_sep + vars.docker_net_name ])[0];
-    local _net_external = std.prune([
-      vars.docker_net_full_name, 
-      vars.docker_net_ns + vars.sep + vars.docker_net_name ])[0];
-
+  docker_transform (vars, docker_file)::
     docker_file + {
-        networks+: paasify.DockerNetDef(vars.docker_net_ident, net_external=true, net_name=_net_name),
+        networks+: paasify.DockerNetDef(vars.app_network, 
+          net_external=vars.docker_net_external, 
+          net_name=vars.app_network_name),
         services+: {
-            [vars.docker_svc_ident]+: 
-                paasify.DockerServiceNet(vars.docker_net_ident) for svc_name in services
+            [vars.app_service]+: 
+                paasify.DockerServiceNet(vars.app_network) for svc_name in vars.docker_net_service_idents
             },
     },
     
