@@ -143,7 +143,7 @@ local plugin = {
             traefik_svc_group: {
               description: 'Traefik group name to assign this container',
               type: "string",
-              default: "$prj_namespace-traefik",
+              default: "$app_namespace-traefik",
             },
             
             traefik_svc_auth: {
@@ -172,7 +172,7 @@ local plugin = {
             traefik_net_name: {
               description: 'Name of the docker network to use',
               type: "string",
-              default: "$prj_namespace-traefik",
+              default: "$app_namespace-traefik",
             },
             traefik_net_external: {
               description: 'Determine if network is external or not',
@@ -203,7 +203,7 @@ local plugin = {
   },
 
   // Return global vars
-  default_vars(vars)::
+  global_default(vars)::
   //local svc_domain = vars.app_name + '.' + vars.app_domain;
     {
 
@@ -211,7 +211,7 @@ local plugin = {
       # --------------------------
 
       // app_name: vars.stack_name,
-      // app_domain: vars.prj_namespace,
+      // app_domain: vars.app_namespace,
       // // app_name: vars.paasify_stack,
       // // app_fqdn: vars.paasify_stack + '.' + vars.app_domain,
 
@@ -222,7 +222,7 @@ local plugin = {
 
       // app_network: vars.stack_network,
       // app_network_external: false,
-      // app_network_name: vars.prj_namespace + vars.paasify_sep + vars.stack_name,
+      // app_network_name: vars.app_namespace + vars.paasify_sep + vars.stack_name,
 
       # App exposition
       # --------------------------
@@ -232,10 +232,11 @@ local plugin = {
 
 
       # Name of the key in networks:{} in docker-compose, 
-      traefik_net_ident: vars.app_network, // vars.app_network
+      traefik_net_ident: vars.app_network, 
 
       # Name of the network
-      traefik_net_name: vars.prj_namespace + self.traefik_sep + 'traefik', // vars.app_network_name
+      // traefik_net_name: vars.app_namespace + self.traefik_sep + 'traefik', // vars.app_network_name
+      traefik_net_name: vars.app_network_name,
       traefik_net_external: true,
 
       # Name of the key in services:{} in docker-compose, 
@@ -249,7 +250,7 @@ local plugin = {
       traefik_svc_port: vars.app_port , // vars.app_port
       
       # Traefik group
-      traefik_svc_group: vars.prj_namespace + self.traefik_sep + 'traefik',
+      traefik_svc_group: vars.app_namespace + self.traefik_sep + 'traefik',
 
       traefik_svc_domain: null,
       traefik_svc_entrypoints: "default-http",
@@ -259,8 +260,8 @@ local plugin = {
       traefik_svc_tls: null,
       traefik_svc_certresolver: null,
 
-      #traefik_svc_name: vars.prj_namespace + self.traefik_sep + vars.app_service,
-      # traefik_svc_name_full: vars.prj_namespace + self.traefik_sep + self.traefik_svc_name,
+      #traefik_svc_name: vars.app_namespace + self.traefik_sep + vars.app_service,
+      # traefik_svc_name_full: vars.app_namespace + self.traefik_sep + self.traefik_svc_name,
 
       // traefik_svc_name: std.prune(default_svc_name)[0],
       // traefik_svc_domain: std.prune(default_svc_domain)[0],
@@ -283,13 +284,12 @@ local plugin = {
   //   },
 
     // docker_override
-  docker_override (in_vars, docker_file)::
-    local vars = self.default_vars(in_vars) + std.prune(in_vars);
+  docker_transform (vars, docker_file)::
 
     # Determine full name to apply config
     local _traefik_svc_name_full = std.prune([
       vars.traefik_svc_name_full, 
-      vars.prj_namespace + vars.traefik_sep + vars.traefik_svc_name])[0];
+      vars.app_namespace + vars.traefik_sep + vars.traefik_svc_name])[0];
     local _traefik_svc_domain = std.prune([
       vars.traefik_svc_domain, 
       vars.traefik_svc_name + '.' + vars.app_domain])[0];
@@ -304,10 +304,10 @@ local plugin = {
       //          vars.traefik_svc_tls),
 
       # Append stack network
-      networks+: TraefikPrjNetwork(
-        vars.traefik_net_ident,
-        vars.traefik_net_name,
-        vars.traefik_net_external),
+      #networks+: TraefikPrjNetwork(
+      #  vars.traefik_net_ident,
+      #  vars.traefik_net_name,
+      #  vars.traefik_net_external),
 
       # Apply per services labels
       services+: {

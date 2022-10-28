@@ -487,7 +487,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # Override user config: If all plugins respect the contract of
         # not overriding, we're fine.
         # TODO: Assert raw user config has not been overriden by jsonnet plugins
-        # vars_build.add_as_dict(vars_user.render_as_dict())
+        # TODO: Simply do not override existing vars above
+        vars_build.add_as_dict(vars_user.render_as_dict())
 
         return vars_build.render_as_dict(parse=True)
 
