@@ -1,6 +1,12 @@
 # Advanced
 
 
+## Why a tag can't be both jsonnet and docker-compose
+
+Actually, this would be redundant as a jsonnet can generate and even modify
+existing docker-compose files, as it's a full featured json language.
+
+
 ## Stack assemble workflow
 
 How is assembled a stack?

@@ -17,8 +17,8 @@ How to choose between both?
 
 |  | docker-compose | jsonnet |
 |---|---|---|
-| Pros | <ul> <li>Well known merge mecanism, supported by docker</li><li>Easy to learn</li></ul> | <ul> <li>Allow to create variables</li> <li>Very powerful turing language to manupulate docker-compose content</li> <li>Provides a convenient API/plugin system </li></ul> |
-| Cons | <ul> <li>Quite limited on advanced use case, such as rewrite or modification</li></ul> | <ul> <li>Need to learn jsonnet language</li><li>Hard to learn and debug</li></ul> |
+| Pros | <ul> <li>Well known merge mecanism, supported by docker</li><li>Easy to learn</li></ul> | <ul> <li>Can be used many times, with differents parameters</li><li>Allow to create variables</li> <li>Very powerful turing language to manupulate docker-compose content</li> <li>Provides a convenient API/plugin system </li></ul> |
+| Cons | <ul> <li>Can be used only once</li><li>Quite limited on advanced use case, such as rewrite or modification</li></ul> | <ul> <li>Need to learn jsonnet language</li><li>Hard to learn and debug</li></ul> |
 
 See how to [create plugins](extend/extend_plugins.md) for further infos.
 
