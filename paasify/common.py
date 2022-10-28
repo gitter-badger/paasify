@@ -70,15 +70,12 @@ def find_file_up(names, paths):
 
 def filter_existing_files(root_path, candidates):
     """Return only existing files"""
-    return list(
-        set(
-            [
-                os.path.join(root_path, cand)
-                for cand in candidates
-                if os.path.isfile(os.path.join(root_path, cand))
-            ]
-        )
-    )
+    result = [
+        os.path.join(root_path, cand)
+        for cand in candidates
+        if os.path.isfile(os.path.join(root_path, cand))
+    ]
+    return list(set(result))
 
 
 def lookup_candidates(lookup_config):
@@ -100,17 +97,19 @@ def cast_docker_compose(var):
     "Convert any types to strings"
 
     if var is None:
-        return ""
+        result = ""
     elif isinstance(var, (bool)):
-        return "true" if var else "false"
+        result = "true" if var else "false"
     elif isinstance(var, (str, int)):
-        return str(var)
+        result = str(var)
     elif isinstance(var, list):
-        return ",".join(var)
+        result = ",".join(var)
     elif isinstance(var, dict):
-        return ",".join([f"{key}={str(val)}" for key, val in var.items()])
+        result = ",".join([f"{key}={str(val)}" for key, val in var.items()])
     else:
         raise Exception(f"Impossible to cast value: {var}")
+
+    return result
 
 
 def merge_env_vars(obj):
@@ -128,6 +127,7 @@ def merge_env_vars(obj):
 def get_paasify_pkg_dir():
     """Return the dir where the actual paasify source code lives"""
 
+    # pylint: disable=import-outside-toplevel
     import paasify as _
 
     return os.path.dirname(_.__file__)

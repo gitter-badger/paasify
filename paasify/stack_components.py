@@ -57,16 +57,16 @@ class VarsManager(PaasifyObj):
         )
         self._vars.append(obj)
 
-    def add_as_list(self, vars):
+    def add_as_list(self, vars_):
         "Add a list of vars into object"
-        assert isinstance(vars, list)
-        self._vars.extend(vars)
+        assert isinstance(vars_, list)
+        self._vars.extend(vars_)
 
-    def add_as_dict(self, vars):
+    def add_as_dict(self, vars_):
         "Add a list of vars into object"
-        assert isinstance(vars, dict)
+        assert isinstance(vars_, dict)
 
-        for var_name, var_value in vars.items():
+        for var_name, var_value in vars_.items():
             self.add_as_key(var_name, var_value)
 
     def resolve_dyn_vars(self, tpl, env, hint=None):
@@ -180,7 +180,7 @@ class StackAssembler(PaasifyObj):
         docker_files = self._get_docker_files(all_tags)
 
         # Report to user
-        env = env or self.render_as_dict(parse=True)
+        env = env or {}
         assert isinstance(env, dict), f"Got: {env}"
 
         self.log.debug("Docker vars:")

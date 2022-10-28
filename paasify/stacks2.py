@@ -413,9 +413,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 * Core variables
                 * Load varfiles `vars.yml` in path or app directory
             * Grab user variables
-                * Read global vars (from config.env)
-                * Read stack env (from stack.env)
-                * Optional: Read tag env if provided
+                * Read global vars (from config.vars)
+                * Read stack vars (from stack.vars)
+                * Optional: Read tag vars if provided
             * Grab each tags variables (only jsonnet tags)
                 *
         """
@@ -512,15 +512,25 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
             # 3.0 Init loop
             # --------------------
-            jsonnet_file = cand.get("jsonnet_file")
-            if not jsonnet_file:
-                continue
 
-            # Check if tag
+            # Check tag infos
             tag = cand.get("tag")
             tag_vars = {}
+            tag_name = "_paasify"
             if tag:
                 tag_vars = tag.vars or {}
+                tag_name = tag.name
+
+            # Check conditions
+            jsonnet_file = cand.get("jsonnet_file")
+            if not jsonnet_file:
+
+                # Throw a user warning about wrong config
+                if len(tag_vars) > 0:
+                    msg = f"Tag vars are only supported for jsonnet tags: {tag_name}: {tag_vars}"
+                    self.log.warning(msg)
+
+                continue
 
             # 3.1 Reload var context if overriden
             # --------------------

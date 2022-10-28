@@ -6,7 +6,6 @@ This class helps to deal with docker engine versions
 # pylint: disable=logging-fstring-interpolation
 # pylint: disable=invalid-name
 
-
 import os
 import re
 import logging
@@ -227,6 +226,8 @@ class EngineCompose(NodeMap, PaasifyObj):
             if not "has active endpoints" in err.txterr:
                 raise error.DockerCommandFailed(f"{err.txterr}")
 
+        return out
+
     def logs(self, follow=False):
         "Return container logs"
 
@@ -294,13 +295,13 @@ class EngineCompose(NodeMap, PaasifyObj):
             )
 
 
-class EngineCompose_v2(EngineCompose):
+class EngineComposeV2(EngineCompose):
     "Docker-engine: Support for version until 2.6"
 
     ident = "docker compose 2"
 
 
-class EngineCompose_v1(EngineCompose):
+class EngineComposeV1(EngineCompose):
     "Docker-engine: Support for version until 1.29"
 
     ident = "docker-compose 1"
@@ -333,8 +334,8 @@ class EngineDetect:
             "20.10.17": {},
         },
         "docker-compose": {
-            "2.0.0": EngineCompose_v2,
-            "1.0.0": EngineCompose_v1,
+            "2.0.0": EngineComposeV2,
+            "1.0.0": EngineComposeV1,
             # "2.6.1": EngineCompose_26,
             # "1.29.0": EngineCompose_129,
             # "1.6.3": EngineCompose_16,
@@ -344,6 +345,8 @@ class EngineDetect:
 
     def detect_docker_compose(self):
         "Detect current version of docker compose. Return a docker-engine class."
+
+        # pylint: disable=no-member
 
         # Try docker-compose v1
 
@@ -370,7 +373,7 @@ class EngineDetect:
                 # TOFIX: This takes ages in debugger, when above _log_msg is unset ?
                 # out = cmd('--version')
                 bin2utf8(out)
-            except sh.ErrorReturnCode as err:
+            except sh.ErrorReturnCode:
                 raise error.DockerUnsupportedVersion(
                     f"Impossible to guess docker-compose version: {out}"
                 ) from err
@@ -380,9 +383,8 @@ class EngineDetect:
         if match:
             version = match.groupdict()
         else:
-            raise error.DockerUnsupportedVersion(
-                f"OUtput format of docker-compose is not recognised: {out.txtout}"
-            )
+            msg = f"Output format of docker-compose is not recognised: {out.txtout}"
+            raise error.DockerUnsupportedVersion(msg)
         curr_ver = version["version"]
 
         # Scan available versions
