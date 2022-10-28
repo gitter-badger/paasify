@@ -1,0 +1,9 @@
+name: var_merge_app2_copy1
+networks:
+  default:
+    name: var_merge_app2_copy1_default
+services:
+  main_app2:
+    image: app2_from_template
+    networks:
+      default:

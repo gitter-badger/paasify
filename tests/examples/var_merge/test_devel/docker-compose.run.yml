@@ -1,0 +1,10 @@
+name: var_merge_test_devel
+networks:
+  default:
+    external: true
+    name: otherns_local_value_default
+services:
+  main_app2:
+    image: app2_from_template
+    networks:
+      default: {}

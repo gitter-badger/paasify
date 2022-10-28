@@ -1,0 +1,9 @@
+name: var_merge_app1
+networks:
+  default:
+    name: var_merge_app1_default
+services:
+  main:
+    image: app1_local
+    networks:
+      default:
