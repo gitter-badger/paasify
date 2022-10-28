@@ -1,4 +1,4 @@
 [submodule "cafram"]
 	path = cafram
-	url = git@git.jeznet.org:mrjk-lab/cafram.git
+	url = git@github.com:mrjk/cafram-archives.git
 	branch = main
