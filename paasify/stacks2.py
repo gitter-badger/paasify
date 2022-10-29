@@ -466,12 +466,16 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
             # Build Var context
             ctx = vars_build.render_as_dict()
+            ctx_keys = ctx.keys()
 
             # Execute jsonnet scripts (Sloow)
             self.log.info(f"    Processing vars from tag: {tag}")
             defaults = sta.jsonnet_low_api_call(jsonnet_file, "global_default", ctx)
+            defaults = { key: value for key, value in defaults.items() if key not in ctx_keys }
             ctx.update(defaults)
+
             assemble = sta.jsonnet_low_api_call(jsonnet_file, "global_assemble", ctx)
+            assemble = { key: value for key, value in assemble.items() if key not in ctx_keys }
 
             # Build result
             result = {}
@@ -483,12 +487,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
             # pprint (assemble)
 
             vars_build.add_as_dict(result)
-
-        # Override user config: If all plugins respect the contract of
-        # not overriding, we're fine.
-        # TODO: Assert raw user config has not been overriden by jsonnet plugins
-        # TODO: Simply do not override existing vars above
-        vars_build.add_as_dict(vars_user.render_as_dict())
 
         return vars_build.render_as_dict(parse=True)
 
