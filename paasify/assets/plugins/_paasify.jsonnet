@@ -131,6 +131,18 @@ local plugin = {
       app_db_user: vars._stack_service,
       app_db_passwd: null,
 
+      # LDAP pattern
+      # ---------------------------
+      ldap_domain: self.app_domain,
+      ldap_host: 'ldap',
+
+      ldap_tls: false,
+      ldap_port: 386,
+      ldap_prot: 'ldap',
+
+      # ldap_tls: true,
+      # ldap_port: 636,
+      # ldap_prot: 'ldaps',
 
     },
 
@@ -141,6 +153,11 @@ local plugin = {
     // - ONLY variable composition here
     local dir_prefix = vars._stack_path_abs + vars.paasify_sep_dir;
     {
+      ldap_uri: vars.ldap_prot + '://' + vars.ldap_host + vars.ldap_port,
+      ldap_base_dn: paasify.LdapBaseDNFromDomain(vars.ldap_domain, sep='dc'),
+      ldap_user_base_dn: 'ou=people,' + self.ldap_base_dn,
+      ldap_group_base_dn: 'ou=groups,' + self.ldap_base_dn,
+      ldap_admin_bind_dn: 'cn=admin,' + self.ldap_base_dn,
       
       # Generic composes
       # --------------------------
@@ -187,6 +204,7 @@ local plugin = {
       net_docker: vars.app_namespace + vars.paasify_sep_net + 'docker', # For docker socket access
       net_proxy: vars.app_namespace + vars.paasify_sep_net + 'proxy',
       net_proxy_web: vars.app_namespace + vars.paasify_sep_net + 'proxy',
+      net_proxy_ip: vars.app_namespace + vars.paasify_sep_net + 'proxy',
 
       net_mail: vars.app_namespace + vars.paasify_sep_net + 'mail',
       net_vpn: vars.app_namespace + vars.paasify_sep_net + 'vpn',
@@ -209,6 +227,10 @@ local plugin = {
   // Automagically change the network name
   // This is due to default compose config behavior to add networks where none as been defined
   docker_transform (vars, docker_file)::
+    //{
+    //  // We default best known version
+    //  version: '3.8',
+    //} + docker_file ,
   
     docker_file + {
       // We enforce best known version
@@ -218,10 +240,10 @@ local plugin = {
         [vars.app_network]: {
           // We ensure default network is correctly named
           name: vars.app_network_name,
+          external: vars.app_network_external,
         },
       },
-    } 
-  ,
+    },
 
 };
 

@@ -44,7 +44,10 @@ local DockerServiceNet(net_id, net_aliases=[], net_ipv4=null, net_ipv6=null) =
   }
   else {};
 
-
+// Create ldap base DN from domain
+local LdapBaseDNFromDomain( domain, sep='dc')=
+  local domain_parts = [ sep + '=' + x for x in std.split(domain, '.')];
+  std.join(',', domain_parts);
 
 
 // Main wrapper
@@ -70,6 +73,7 @@ local DockerServiceNet(net_id, net_aliases=[], net_ipv4=null, net_ipv6=null) =
   // =====================
   DockerServiceNet:: DockerServiceNet,
   DockerNetDef:: DockerNetDef,
+  LdapBaseDNFromDomain:: LdapBaseDNFromDomain,
 
   main(plugin)::
     // Get plugin config

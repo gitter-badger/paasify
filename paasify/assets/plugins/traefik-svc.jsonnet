@@ -210,33 +210,16 @@ local plugin = {
       # Default settings
       # --------------------------
 
-      // app_name: vars.stack_name,
-      // app_domain: vars.app_namespace,
-      // // app_name: vars.paasify_stack,
-      // // app_fqdn: vars.paasify_stack + '.' + vars.app_domain,
-
-
-      // # Compose structure
-      // # --------------------------
-      // app_service: vars.stack_service,
-
-      // app_network: vars.stack_network,
-      // app_network_external: false,
-      // app_network_name: vars.app_namespace + vars.paasify_sep + vars.stack_name,
-
-      # App exposition
-      # --------------------------
-      # Required by API
-
       traefik_sep: vars.paasify_sep,
 
-
       # Name of the key in networks:{} in docker-compose, 
-      traefik_net_ident: vars.app_network, 
+      //traefik_net_ident: vars.app_network, 
+      traefik_net_ident: 'traefik', 
 
       # Name of the network
       // traefik_net_name: vars.app_namespace + self.traefik_sep + 'traefik', // vars.app_network_name
-      traefik_net_name: vars.app_network_name,
+      //traefik_net_name: vars.app_network_name,
+      traefik_net_name: vars.net_proxy_web,
       traefik_net_external: true,
 
       # Name of the key in services:{} in docker-compose, 
@@ -250,7 +233,9 @@ local plugin = {
       traefik_svc_port: vars.app_port , // vars.app_port
       
       # Traefik group
-      traefik_svc_group: vars.app_namespace + self.traefik_sep + 'traefik',
+      //traefik_svc_group: vars.app_namespace + self.traefik_sep + 'traefik',
+      //traefik_svc_group: vars.app_network_name,
+      traefik_svc_group: self.traefik_net_name,
 
       traefik_svc_domain: null,
       traefik_svc_entrypoints: "default-http",
@@ -304,10 +289,10 @@ local plugin = {
       //          vars.traefik_svc_tls),
 
       # Append stack network
-      #networks+: TraefikPrjNetwork(
-      #  vars.traefik_net_ident,
-      #  vars.traefik_net_name,
-      #  vars.traefik_net_external),
+      networks+: TraefikPrjNetwork(
+        vars.traefik_net_ident,
+        vars.traefik_net_name,
+        vars.traefik_net_external),
 
       # Apply per services labels
       services+: {
