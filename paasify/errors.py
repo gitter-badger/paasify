@@ -111,3 +111,9 @@ class MissingTag(PaasifyError):
     """Raised when referencing unexistant tag"""
 
     rc = 43
+
+
+class MissingApp(PaasifyError):
+    """Raised when referencing unknown app"""
+
+    rc = 44

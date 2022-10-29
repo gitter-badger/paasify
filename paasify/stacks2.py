@@ -250,7 +250,6 @@ class PaasifyStack(NodeMap, PaasifyObj):
     # Local functions
     # ---------------------
 
-    @property
     def docker_candidates(self) -> list:
         """Return all docker-files candidates: local, app and tags
 
@@ -321,12 +320,13 @@ class PaasifyStack(NodeMap, PaasifyObj):
         # Vars:
         stack_dir = self.stack_path
         project_jsonnet_dir = self.prj.runtime.project_jsonnet_dir
+        docker_candidates = self.docker_candidates()
 
         # 1. Generate default tag (docker compose files only)
         tag_base = {
             "tag": None,
             "jsonnet_file": None,
-            "docker_file": first(self.docker_candidates),
+            "docker_file": first(docker_candidates),
         }
 
         # 2. Forward to StackTagManager: Generate directory lookup for tags
@@ -471,11 +471,15 @@ class PaasifyStack(NodeMap, PaasifyObj):
             # Execute jsonnet scripts (Sloow)
             self.log.info(f"    Processing vars from tag: {tag}")
             defaults = sta.jsonnet_low_api_call(jsonnet_file, "global_default", ctx)
-            defaults = { key: value for key, value in defaults.items() if key not in ctx_keys }
+            defaults = {
+                key: value for key, value in defaults.items() if key not in ctx_keys
+            }
             ctx.update(defaults)
 
             assemble = sta.jsonnet_low_api_call(jsonnet_file, "global_assemble", ctx)
-            assemble = { key: value for key, value in assemble.items() if key not in ctx_keys }
+            assemble = {
+                key: value for key, value in assemble.items() if key not in ctx_keys
+            }
 
             # Build result
             result = {}
@@ -597,7 +601,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
             if not tag:
                 print("    Default config:")
-                list_items(self.docker_candidates)
+                list_items(self.docker_candidates())
                 print("    Tag config:")
                 continue
 

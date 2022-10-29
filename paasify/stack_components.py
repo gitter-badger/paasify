@@ -121,7 +121,7 @@ class VarsManager(PaasifyObj):
         "Return a dict of the variable, last defined var win"
 
         # Transform var list to dict
-        result = { var.name: var.value for var in self._vars }
+        result = {var.name: var.value for var in self._vars}
         if not parse:
             return result
 
@@ -265,6 +265,15 @@ class PaasifyStackApp(NodeMap, PaasifyObj):
         "app_name": None,
     }
 
+    def node_hook_init(self, **kwargs):
+
+        # self.stack = self.get_parents()[2]
+        self.stack = self._node_parent
+        self.prj = self.stack._node_parent._node_parent
+        self.sources = self.prj.sources
+
+        self.app_dir = None
+
     def node_hook_transform(self, payload):
 
         if isinstance(payload, str):
@@ -299,19 +308,27 @@ class PaasifyStackApp(NodeMap, PaasifyObj):
 
         return result
 
-    def node_hook_children(self):
-        "Self init object after loading of app"
+    def ensure_app_exists(self):
+        "Validate stack is installed"
 
-        self.prj = self.get_parents()[2]
-        self.collection_dir = os.path.join(
-            self.prj.runtime.project_collection_dir, self.app_source
-        )
-        self.app_dir = os.path.join(self.collection_dir, self.app_path)
-        self.tags_dir = os.path.join(self.collection_dir, ".paasify", "plugins")
+        app_dir = self.sources.find_app(self.app_name, source_name=self.app_source)
+
+        if not app_dir:
+            self.log.warning("Be sure you run before: paasify src-install")
+            msg = f"Impossible to find app: {self.app_name} for stack {self.stack.name}"
+            raise error.MissingApp(msg)
+
+        self.app_dir = app_dir
+        self.tags_dir = os.path.join(app_dir, ".paasify", "plugins")
+
+        # TODO: Compat, remove this shit
+        self.collection_dir = app_dir
 
     def lookup_docker_files_app(self):
         """Lookup docker-compose files in app directory"""
 
+        self.ensure_app_exists()
+        app_dir = self.app_dir
         lookup = [
             {
                 "path": self.app_dir,

@@ -11,11 +11,14 @@ import logging
 
 # import _jsonnet
 
+from urllib.parse import urlparse
+from giturlparse import parse as gitparse
+
 from pprint import pprint, pformat
 
 # from paasify.common import _exec
-from cafram.utils import _exec
-from cafram.nodes import NodeMap, NodeDict
+from cafram.utils import _exec, first
+from cafram.nodes import NodeMap, NodeDict, NodeList
 
 # from paasify.class_model import ClassClassifier
 from paasify.framework import PaasifyObj
@@ -32,61 +35,68 @@ log = logging.getLogger(__name__)
 class Source(NodeMap, PaasifyObj):
     """A Source instance"""
 
+    conf_default = {
+        "url": None,
+        "path": None,
+        "prefix": None,
+        # "prefix": "https://github.com/%s.git",
+    }
+
     schema_def = {
         "$schema": "http://json-schema.org/draft-07/schema#",
         "title": "Paasify Source configuration",
         "additionalProperties": False,
         "type": "object",
         "properties": {
-            "url": {
+            "remote": {
                 "type": "string",
             },
-            "path": {
+            "name": {
                 "type": "string",
             },
             "prefix": {
                 "type": "string",
             },
-            "alias": {
-                "type": "string",
-            },
+            # "alias": {
+            #    "type": "array",
+            # },
         },
     }
 
-    def _init(self, **kwargs):
+    @property
+    def name(self):
+        "Return the remote name"
+        conf = self.get_value()
+        name = conf.get("name")
+        if name:
+            return name
 
-        print(self)
-        print(self.parent)
-        self.obj_prj = self.parent.obj_prj
+        return self.git_repo_ident
 
-        config = {
-            "name": self.name,
-            "url": None,
-            "alias": None,
-            "prefix": "https://github.com/%s.git",
-            # "prefix": "https://framagit.org/%s.git",
-        }
-        config.update(self.user_config)
-        self.collection_dir = self.runtime["collections_dir"]
+    @property
+    def git_repo_ident(self):
+        "Return git repo ident"
+        out = gitparse(self.remote)
+        ret = f"{out.owner}/{out.repo}"
+        return ret
 
-        self.config = config
-        self._init_attr_from_dict(config)
-        self.path = self.get_path()
+    @property
+    def path(self):
+        "Return path of git repo installation path"
+        return os.path.join(self.collection_dir, self.git_repo_ident)
 
-        self._init_git_url()
+    @property
+    def git_url(self):
+        "Return the git URL"
+        ret = self.remote
+        if self.prefix:
+            ret = f"{self.prefix}{self.remote}"
+        return ret
 
-    def _init_git_url(self):
-        # Determine what is the git_url
-        config = self.config
-        url = config["url"]
-        name = config["name"]
-        prefix = config["prefix"]
+    def node_hook_init(self, **kwargs):
 
-        self.git_url = url if url else prefix % name
-
-    def get_path(self):
-        "Return path of git repo"
-        return os.path.join(self.collection_dir, self.name)
+        self.obj_prj = self._node_parent._node_parent
+        self.collection_dir = self.obj_prj.runtime.project_collection_dir
 
     def is_git(self):
         "Return true if git repo"
@@ -129,7 +139,7 @@ class Source(NodeMap, PaasifyObj):
         _exec("git", cli_args, _fg=True)
 
 
-class SourcesManager(NodeDict, PaasifyObj):
+class SourcesManager(NodeList, PaasifyObj):
     "Source manager"
 
     schema_def = {
@@ -144,42 +154,35 @@ class SourcesManager(NodeDict, PaasifyObj):
         },
     }
 
-    store = []
     conf_children = Source
-
-    # def _init(self, **kwargs):
-
-    #     self.obj_prj = self._node_parent
-
-    #     self.collection_dir = self.obj_prj.runtime["collections_dir"]
-
-    #     assert isinstance(self.user_config, dict), f"Source def is not a dict"
-
-    #     store = []
-
-    #     for source_name, source_def in self.user_config.items():
-    #         source = Source(self, user_config=source_def, name=source_name)
-    #         store.append(source)
-
-    #     self.store = store
 
     def get_all(self):
         "Return the list of all sources"
-        return list(self.store)
+        return list(self.get_children())
 
     def list_all_names(self) -> list:
         "Return a list of valid string names"
-        r1 = [src.name for src in self.store]
-        r2 = [src.alias for src in self.store]
-        return r1 + r2
+
+        sources = self.get_children()
+        return [src.name for src in sources]
 
     def get_source(self, src_name):
         "Get source"
+        sources = self.get_children()
 
-        result = [src for src in self.store if src_name == src.name] or [
-            src for src in self.store if src_name == src.alias
-        ]
-        return result[0] if len(result) > 0 else None
+        return first([src for src in sources if src.name == src_name])
+
+    def find_app(self, app_name, source_name=None):
+        "Find an app across all sources"
+
+        source_names = [source_name] or self.list_all_names()
+
+        for src in source_names:
+            src = self.get_source(src)
+            test_dir = os.path.join(src.path, app_name)
+            if os.path.isdir(test_dir):
+                return test_dir
+        return None
 
     def resolve_ref_pattern(self, src_pat):
         "Return a resource from its name or alias"
@@ -194,3 +197,32 @@ class SourcesManager(NodeDict, PaasifyObj):
                 return src_stack, src_name
 
         return src_pat, None
+
+    # =========================
+
+    def cmd_ls(self) -> list:
+        "List all stacks names"
+
+        sources = self.get_children()
+        print(f"{'Name' :<32}   {'Installed' :<14} {'git' :<14} {'URL' :<10}")
+        for src in sources:
+
+            is_installed = "True" if src.is_installed() else "False"
+            is_git = "True" if src.is_git() else "False"
+            print(
+                f"  {src.name :<32} {is_installed :<14} {is_git :<14} {src.git_url :<10} {src.path}"
+            )
+
+    def cmd_install(self):
+
+        sources = self.get_children()
+        for src in sources:
+            log.notice(f"Installing source: {src.name}")
+            src.install()
+
+    def cmd_update(self):
+
+        sources = self.get_children()
+        for src in sources:
+            log.notice(f"Installing source: {src.name}")
+            src.update()

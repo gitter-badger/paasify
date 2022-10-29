@@ -240,7 +240,7 @@ def src_ls(
     """List sources"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_src_list()
+    prj.sources.cmd_ls()
 
 
 @cli_app.command()
@@ -250,7 +250,7 @@ def src_install(
     """Install sources"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_src_install()
+    prj.sources.cmd_install()
 
 
 @cli_app.command()
@@ -260,7 +260,7 @@ def src_update(
     """Update sources"""
     paasify = ctx.obj["paasify2"]
     prj = paasify.load_project()
-    prj.cmd_src_update()
+    prj.sources.cmd_update()
 
 
 @cli_app.command()

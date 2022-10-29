@@ -30,9 +30,9 @@ from cafram.nodes import NodeMap
 
 import paasify.errors as error
 from paasify.engines import EngineDetect
+from paasify.sources import SourcesManager
 from paasify.framework import (
     PaasifyObj,
-    PaasifySources,
     PaasifyConfigVars,
 )
 from paasify.common import list_parent_dirs, find_file_up, get_paasify_pkg_dir
@@ -357,7 +357,7 @@ class PaasifyProject(NodeMap, PaasifyObj):
         },
         {
             "key": "sources",
-            "cls": PaasifySources,
+            "cls": SourcesManager,
         },
         {
             "key": "stacks",
