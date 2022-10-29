@@ -110,26 +110,24 @@ class VarsManager(PaasifyObj):
         except KeyError as err:
             self.log.warning(f"Variable {err} is not defined in: {hint}='{value}'")
 
-        except Exception as err:
-            self.log.warning(
-                f"Could not parse variable: {hint}='{value}' ( => {err.__class__}/{err})"
+        except ValueError as err:
+            self.log.debug(
+                f"Could not parse variable: {hint}='{value}', forwarding to docker compose"
             )
-            raise error.ProjectInvalidConfig(err)
 
         return value
 
     def render_as_dict(self, parse=False):
-        "Return a dict of the variable"
+        "Return a dict of the variable, last defined var win"
 
-        result = {}
-        for var in self._vars:
-            key = var.name
-            value = var.value
+        # Transform var list to dict
+        result = { var.name: var.value for var in self._vars }
+        if not parse:
+            return result
 
-            if parse:
-                value = self.template_value(value, result, hint=key)
-            result[key] = value
-
+        # Parse each values
+        for key, value in result.items():
+            result[key] = self.template_value(value, result, hint=key)
         return result
 
     # Vars processors
