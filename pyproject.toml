@@ -27,6 +27,7 @@ jsonschema = "^4.16.0"
 semver = "^2.13.0"
 jsonnet = "^0.18.0"
 #cafram = { path = "../cafram/", develop = false }
+giturlparse = "^0.10.0"
 
 [tool.poetry.group.dev.dependencies]
 pylint = "^2.15.3"
