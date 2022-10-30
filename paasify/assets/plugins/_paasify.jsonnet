@@ -63,6 +63,10 @@ local plugin = {
     // - No self usage
     // - No variable composition here
     {
+      
+      paasify_is_swarm: false,
+      paasify_swarm_nodes: 1,
+
       # Generic (Allow user overrides)
       # --------------------------
       app_name: std.get(vars, 'app_name', default=vars._stack_name) ,
@@ -99,6 +103,12 @@ local plugin = {
 
       # App configuration
       # --------------------------
+
+      # See: https://docs.docker.com/compose/compose-file/compose-file-v3/#restart
+      app_restart_policy: 'unless-stopped',
+      # app_restart_policy: 'on-failure',
+      # app_restart_policy: 'always',
+      # app_restart_policy: 'no',
 
       app_puid: '1000',
       app_pgid: '1000',
@@ -231,18 +241,56 @@ local plugin = {
     //  // We default best known version
     //  version: '3.8',
     //} + docker_file ,
+    local svc_keys = std.objectFields(docker_file.services);
+    local net_keys = std.objectFields(docker_file.networks);
+    local vol_keys = std.objectFields(docker_file.volumes);
+    local secret_keys = std.objectFields(docker_file.secrets);
+    local config_keys = std.objectFields(docker_file.configs);
+    local pref_base = 'paasify.';
   
     docker_file + {
       // We enforce best known version
       version: '3.8',
 
       networks+: {
-        [vars.app_network]: {
+        [net_key]+: {
+          // Update default labels for each networks
+          labels+: {
+            [pref_base + 'enabled']: true,
+            [pref_base + 'prj.' + vars.app_namespace]: true,
+            [pref_base + 'prj.' + vars.app_namespace + '.name']: vars.app_name,
+            //[pref_base + 'prj.' + vars.app_namespace + '.domain']: vars.app_domain,
+            [pref_base + 'prj.' + vars.app_namespace + '.fqdn']: vars.app_fqdn,
+            [pref_base + 'prj.' + vars.app_namespace + '.path']: vars.app_dir_root,
+            [pref_base + 'prj.' + vars.app_namespace + '.origin']: ! vars.app_network_external,
+            [pref_base + 'prj.' + vars.app_namespace + '.services']: std.join(',', svc_keys),
+          }
+        } for net_key in net_keys
+      } + {
+        // Update default network
+        [vars.app_network]+: {
           // We ensure default network is correctly named
           name: vars.app_network_name,
           external: vars.app_network_external,
         },
       },
+
+      services+: {
+        [svc_name]+: {
+          // Update default labels for each containers
+          labels+: {
+            [pref_base + 'enabled']: true,
+            [pref_base + 'name']: vars.app_name,
+            [pref_base + 'namespace']: vars.app_namespace,
+            [pref_base + 'domain']: vars.app_domain,
+            [pref_base + 'fqdn']: vars.app_fqdn,
+            [pref_base + 'path']: vars.app_dir_root,
+            [pref_base + 'networks']: std.join(',', net_keys),
+          },
+          restart: vars.app_restart_policy,
+        } for svc_name in svc_keys
+      },
+
     },
 
 };
