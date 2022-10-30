@@ -117,3 +117,10 @@ class MissingApp(PaasifyError):
     """Raised when referencing unknown app"""
 
     rc = 44
+
+
+class ConfigBackendError(PaasifyError):
+    """Raised when could not work with cafram"""
+
+    rc = 45
+

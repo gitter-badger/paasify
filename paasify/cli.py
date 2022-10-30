@@ -35,6 +35,7 @@ import yaml
 import sh
 import typer
 from cafram.utils import get_logger
+from cafram.base import CaframException
 
 
 import paasify.errors as error
@@ -428,18 +429,23 @@ def clean_terminate(err):
 
     if isinstance(err, yaml.composer.ComposerError):
         log.critical(err)
-        log.critical("Paasify exited with: YAML Composer error")
+        log.critical("Paasify exited with: YAML Composer error (file syntax)")
         sys.exit(error.YAMLError.rc)
 
     if isinstance(err, yaml.parser.ParserError):
         log.critical(err)
-        log.critical("Paasify exited with: YAML Parser error")
+        log.critical("Paasify exited with: YAML Parser error (file format)")
         sys.exit(error.YAMLError.rc)
 
     if isinstance(err, sh.ErrorReturnCode):
         log.critical(err)
         log.critical(f"Paasify exited with: failed command returned {err.exit_code}")
         sys.exit(error.ShellCommandFailed.rc)
+
+    if isinstance(err, CaframException):
+        log.critical(err)
+        log.critical(f"Paasify exited with backend error.")
+        sys.exit(error.ConfigBackendError.rc)
 
     if err.__class__ in oserrors:
 
