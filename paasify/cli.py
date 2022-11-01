@@ -427,6 +427,11 @@ def clean_terminate(err):
         log.critical(f"Paasify exited with: error {err.rc}: {err_name}")
         sys.exit(err.rc)
 
+    if isinstance(err, yaml.scanner.ScannerError):
+        log.critical(err)
+        log.critical("Paasify exited with: YAML Scanner error (file syntax)")
+        sys.exit(error.YAMLError.rc)
+
     if isinstance(err, yaml.composer.ComposerError):
         log.critical(err)
         log.critical("Paasify exited with: YAML Composer error (file syntax)")
