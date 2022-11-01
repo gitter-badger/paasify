@@ -36,6 +36,19 @@ class OutputFormat(str, Enum):
 # Misc functions
 # =====================================================================
 
+def update_dict(dict1, dict2, strict=False):
+    """Update dict1 keys with null value from dict2
+    """
+    result = dict1.copy()
+    for key, new_value in dict2.items():
+        value = result.get(key)
+        if not strict and not value:
+            result[key] = new_value
+        elif strict and value is None:
+            result[key] = new_value
+
+    return result
+
 
 def list_parent_dirs(path):
     """

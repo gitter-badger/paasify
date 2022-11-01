@@ -6,6 +6,8 @@ Stack components class
 import os
 from pprint import pprint
 
+import re
+
 import json
 import _jsonnet
 import anyconfig
@@ -13,7 +15,7 @@ import anyconfig
 from cafram.nodes import NodeList, NodeMap
 from cafram.utils import flatten, first
 
-from paasify.common import lookup_candidates, StringTemplate
+from paasify.common import lookup_candidates, StringTemplate, update_dict
 from paasify.framework import PaasifyObj, PaasifyConfigVar
 import paasify.errors as error
 from paasify.engines import bin2utf8
@@ -265,6 +267,10 @@ class PaasifyStackApp(NodeMap, PaasifyObj):
         "app_name": None,
     }
 
+    @property
+    def name(self):
+        return self.app_name
+
     def node_hook_init(self, **kwargs):
 
         # self.stack = self.get_parents()[2]
@@ -275,7 +281,6 @@ class PaasifyStackApp(NodeMap, PaasifyObj):
         self.app_dir = None
 
     def node_hook_transform(self, payload):
-
         if isinstance(payload, str):
             payload = {"app": payload}
 
@@ -297,7 +302,8 @@ class PaasifyStackApp(NodeMap, PaasifyObj):
         app_def = f"{app_source}:{app_path}"
 
         if not app_name:
-            app_name = "_".join([part for part in os.path.split(app_path) if part])
+            app_name = os.path.split(app_path)[-1]
+            app_name = re.sub(r'[0-9]*$', '', app_name)
 
         result = {
             "app": app_def,
@@ -311,7 +317,7 @@ class PaasifyStackApp(NodeMap, PaasifyObj):
     def ensure_app_exists(self):
         "Validate stack is installed"
 
-        app_dir = self.sources.find_app(self.app_name, source_name=self.app_source)
+        app_dir = self.sources.find_app(self.app_path, source_name=self.app_source)
 
         if not app_dir:
             self.log.warning("Be sure you run before: paasify src-install")

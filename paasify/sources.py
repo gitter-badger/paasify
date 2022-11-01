@@ -172,14 +172,14 @@ class SourcesManager(NodeList, PaasifyObj):
 
         return first([src for src in sources if src.name == src_name])
 
-    def find_app(self, app_name, source_name=None):
+    def find_app(self, app_path, source_name=None):
         "Find an app across all sources"
 
         source_names = [source_name] or self.list_all_names()
 
         for src in source_names:
             src = self.get_source(src)
-            test_dir = os.path.join(src.path, app_name)
+            test_dir = os.path.join(src.path, app_path)
             if os.path.isdir(test_dir):
                 return test_dir
         return None

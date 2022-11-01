@@ -137,43 +137,14 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         self._cache = {}
 
-    def node_hook_transform(self, payload):
-        "PaasifyStack Init"
-
         # Internal attributes
         self.prj = self.get_parent().get_parent()
         assert (
             self.prj.__class__.__name__ == "PaasifyProject"
         ), f"Expected PaasifyProject, got: {self.prj}"
 
-        # Ensure payload is a dict
-        if isinstance(payload, str):
-            if ":" in payload:
-                payload = {
-                    "name": payload.split(":")[1],
-                    "app": payload,
-                }
-            else:
-                payload = {
-                    "name": payload,
-                    "path": payload,
-                }
-
-        # Check requirements
-        if (
-            not payload.get("name")
-            and not payload.get("path")
-            and not payload.get("app")
-        ):
-            assert False, "BUG, this should be handled by jsonschema !"
-
-        return payload
-
     def node_hook_app_load(self):
         "Modify stack depending app"
-
-        # self.name = self.get_name()
-        # self.path = self.get_path()
 
         # Assert name,path,app
         stack_name = self.name
@@ -188,8 +159,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 stack_name = stack_app.app_name
 
             # Fetch from path
-            if stack_dir:
-                stack_name = stack_dir.replace(os.path.sep, "_")
+            elif stack_dir:
+                stack_name = os.path.split(stack_dir)[-1]
 
             if not stack_name:
                 assert False, f"Missing name, or app or path for stack: {self}"
@@ -377,8 +348,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
             "_stack_network": default_network,
             "_stack_service": default_service,
             "_stack_app_name": self.app.app_name if self.app else None,
-            "_stack_app_path": self.app.app_dir if self.app else None,
-            "_stack_collection_app_path": self.app.collection_dir,
+            "_stack_app_path": os.path.abspath(self.app.app_dir) if self.app else None,
+            #"_stack_collection_app_path": self.app.collection_dir,
         }
         return result
 
@@ -754,11 +725,12 @@ def stack_target(fn):
                 # Loop over specified list of tasks
                 assert isinstance(stack_names, list), f"Got: {stack_names}"
                 stack_names = [name for name in stack_names if name]
-
+                
                 stacks = [
                     stack
                     for stack in self.get_children()
                     if stack.stack_name in stack_names
+                    or stack.stack_path in stack_names
                 ]
 
                 # Sanity check
