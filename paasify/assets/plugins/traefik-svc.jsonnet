@@ -226,7 +226,7 @@ local plugin = {
       traefik_svc_ident: vars.app_service , // vars.app_service
 
       # Traefik service name (from traefik POV)
-      traefik_svc_name:  vars.app_service,
+      traefik_svc_name:  vars.app_name,
       traefik_svc_name_full: null,
 
       # Traefik port to map

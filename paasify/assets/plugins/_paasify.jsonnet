@@ -64,8 +64,8 @@ local plugin = {
     // - No variable composition here
     {
       
-      paasify_is_swarm: false,
-      paasify_swarm_nodes: 1,
+      is_swarm: false,
+      swarm_nodes: 1,
 
       # Generic (Allow user overrides)
       # --------------------------
@@ -135,11 +135,11 @@ local plugin = {
       # --------------------------
       app_db_type: null,
       
-      app_db_host: null,
-      app_db_port: null,
-      app_db_name: vars._stack_service,
-      app_db_user: vars._stack_service,
-      app_db_passwd: null,
+      app_db_host: 'db',
+      app_db_port: '3306',
+      app_db_name: self.app_name,
+      app_db_user: self.app_name,
+      app_db_passwd: self.app_name,
 
       # LDAP pattern
       # ---------------------------
@@ -178,6 +178,9 @@ local plugin = {
 
       # App directories
       # --------------------------
+
+      # App prefix
+      app_dir_template: vars._stack_app_path,
 
       # Usual app dirs
       app_dir_root: dir_prefix,
@@ -230,17 +233,9 @@ local plugin = {
 
     },
 
-    // docker_override
-  // docker_override (vars, docker_file)::
-  //   docker_file,
-
   // Automagically change the network name
   // This is due to default compose config behavior to add networks where none as been defined
   docker_transform (vars, docker_file)::
-    //{
-    //  // We default best known version
-    //  version: '3.8',
-    //} + docker_file ,
     local svc_keys = std.objectFields(docker_file.services);
     local net_keys = std.objectFields(docker_file.networks);
     local vol_keys = std.objectFields(docker_file.volumes);
@@ -296,3 +291,4 @@ local plugin = {
 };
 
 paasify.main(plugin)
+
