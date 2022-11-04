@@ -349,7 +349,7 @@ class PaasifyStack(NodeMap, PaasifyObj):
             "_stack_service": default_service,
             "_stack_app_name": self.app.app_name if self.app else None,
             "_stack_app_path": os.path.abspath(self.app.app_dir) if self.app else None,
-            #"_stack_collection_app_path": self.app.collection_dir,
+            # "_stack_collection_app_path": self.app.collection_dir,
         }
         return result
 
@@ -725,7 +725,7 @@ def stack_target(fn):
                 # Loop over specified list of tasks
                 assert isinstance(stack_names, list), f"Got: {stack_names}"
                 stack_names = [name for name in stack_names if name]
-                
+
                 stacks = [
                     stack
                     for stack in self.get_children()
@@ -842,7 +842,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
             stack.engine.up(_fg=True)
 
     @stack_target
-    def cmd_stack_down(self, stacks=None):
+    def cmd_stack_down(self, stacks=None, ignore_errors=False):
         "Stop a stack"
 
         stacks = list(stacks)
@@ -850,7 +850,14 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         self.log.notice("Stop stacks:")
         for stack in stacks:
             self.log.notice(f"  Stop stack: {stack.stack_name}")
-            stack.engine.down(_fg=True)
+            try:
+                stack.engine.down(_fg=True)
+            except error.DockerCommandFailed as err:
+                if not ignore_errors:
+                    raise
+                self.log.debug(
+                    f"Ignoring stop failure in case of recreate for stack: {stack.stack_name}"
+                )
 
     @stack_target
     def cmd_stack_ps(self, stacks=None):
@@ -881,7 +888,7 @@ class PaasifyStackManager(NodeList, PaasifyObj):
         "Recreate a stack"
 
         self.log.notice("Recreate stacks")
-        self.cmd_stack_down(stacks=stacks)
+        self.cmd_stack_down(stacks=stacks, ignore_errors=True)
         self.cmd_stack_assemble(stacks=stacks)
         self.cmd_stack_up(stacks=stacks)
         self.log.notice("Stack has been recreated")
