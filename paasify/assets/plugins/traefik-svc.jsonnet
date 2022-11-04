@@ -36,10 +36,10 @@ local LabelsTraefikCertResolver(svc, name) =
   } else {};
 
 # Networking
-local TraefikSvcNetwork(id, name) =
+local TraefikSvcNetwork(id, name, current=null) =
   if std.isString(id) then
   {
-    [id]: null,
+    [id]: std.get(current, id, null),
   } else {};
 
 local TraefikPrjNetwork(id, name, external) =
@@ -119,12 +119,18 @@ local plugin = {
               type: "string",
               default: "$app_service",
             },
-            traefik_svc_name: {
-              description: 'Name of the service (dynamic)',
+            traefik_svc_key: {
+              description: 'Traefik key name of the service, must NOT contains dot (dynamic)',
               type: "string",
               default: "$app_service",
             },
-            traefik_svc_domain: {
+
+            traefik_svc_name: {
+              description: 'First part of the FQDN (dynamic)',
+              type: "string",
+              default: "$app_service",
+            },
+            traefik_svc_fqdn: {
               description: 'Fully Qualified Domain Name of the application (dynamic)',
               default: "$traefik_svc_name.$vars.app_domain",
               type: "string",
@@ -184,7 +190,7 @@ local plugin = {
             // Other settings
             traefik_sep: {
               description: 'String to separe names',
-              default: "-",
+              default: "_",
               type: "string",
             },
           },
@@ -210,75 +216,51 @@ local plugin = {
       # Default settings
       # --------------------------
 
-      traefik_sep: vars.paasify_sep,
+      traefik_sep: '_', //vars.paasify_sep,
 
       # Name of the key in networks:{} in docker-compose, 
-      //traefik_net_ident: vars.app_network, 
       traefik_net_ident: 'traefik', 
 
       # Name of the network
-      // traefik_net_name: vars.app_namespace + self.traefik_sep + 'traefik', // vars.app_network_name
-      //traefik_net_name: vars.app_network_name,
       traefik_net_name: vars.net_proxy_web,
       traefik_net_external: true,
 
       # Name of the key in services:{} in docker-compose, 
-      traefik_svc_ident: vars.app_service , // vars.app_service
+      traefik_svc_ident: vars.app_service,
 
       # Traefik service name (from traefik POV)
+      traefik_svc_key: null,
       traefik_svc_name:  vars.app_name,
       traefik_svc_name_full: null,
 
       # Traefik port to map
-      traefik_svc_port: vars.app_port , // vars.app_port
+      traefik_svc_port: vars.app_port,
       
       # Traefik group
-      //traefik_svc_group: vars.app_namespace + self.traefik_sep + 'traefik',
-      //traefik_svc_group: vars.app_network_name,
       traefik_svc_group: self.traefik_net_name,
 
-      traefik_svc_domain: null,
+      traefik_svc_fqdn: null,
       traefik_svc_entrypoints: "default-http",
-
 
       traefik_svc_auth: null,
       traefik_svc_tls: null,
       traefik_svc_certresolver: null,
 
-      #traefik_svc_name: vars.app_namespace + self.traefik_sep + vars.app_service,
-      # traefik_svc_name_full: vars.app_namespace + self.traefik_sep + self.traefik_svc_name,
-
-      // traefik_svc_name: std.prune(default_svc_name)[0],
-      // traefik_svc_domain: std.prune(default_svc_domain)[0],
-      #traefik_svc_domain: self.traefik_svc_name + '.' + vars.app_domain,
-
-      // traefik_svc_entrypoints: std.prune(default_svc_entrypoints)[0],
-      // traefik_svc_auth: std.get(conf, 'traefik_svc_auth', default=null),
-      // traefik_svc_tls: std.get(conf, 'traefik_svc_tls', default=false),
-      // traefik_svc_certresolver: std.get(conf, 'traefik_svc_certresolver', default=null),
-
     },
 
-  // override_vars(vars):: 
-    
-  //   {
-  //     //app_fqdn: vars.app_name + '.' + vars.app_domain,
-  //     // app_name: vars.paasify_stack,
-  //     // app_fqdn: vars.paasify_stack + '.' + vars.app_domain,
-
-  //   },
-
-    // docker_override
+  // docker_override
   docker_transform (vars, docker_file)::
 
     # Determine full name to apply config
     local _traefik_svc_name_full = std.prune([
-      vars.traefik_svc_name_full, 
+      vars.traefik_svc_key,
       vars.app_namespace + vars.traefik_sep + vars.traefik_svc_name])[0];
-    local _traefik_svc_domain = std.prune([
-      vars.traefik_svc_domain, 
+    local _traefik_svc_fqdn = std.prune([
+      vars.traefik_svc_fqdn, 
+      vars.app_fqdn, 
       vars.traefik_svc_name + '.' + vars.app_domain])[0];
       
+    local _cur_svc_net = docker_file.services[vars.traefik_svc_ident].networks;
 
     docker_file + {
 
@@ -300,7 +282,7 @@ local plugin = {
           labels+: 
             LabelsTraefik(
               _traefik_svc_name_full,
-              _traefik_svc_domain,
+              _traefik_svc_fqdn,
               vars.traefik_svc_entrypoints,
               vars.traefik_svc_port, 
               vars.traefik_svc_group) 
@@ -316,7 +298,9 @@ local plugin = {
             ,
           networks+: TraefikSvcNetwork(
             vars.traefik_net_ident,
-            vars.traefik_network_name),
+            vars.traefik_network_name,
+            current=_cur_svc_net
+          ),
         },
       },
 

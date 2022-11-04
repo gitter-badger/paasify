@@ -70,8 +70,10 @@ local plugin = {
       # Generic (Allow user overrides)
       # --------------------------
       app_name: std.get(vars, 'app_name', default=vars._stack_name) ,
+      app_alias: std.get(vars, 'app_alias', default=self.app_name) ,
       app_namespace: std.get(vars, 'app_namespace', default=vars._prj_namespace) ,
       app_domain: std.get(vars, 'app_domain', default=vars._prj_domain + '.localhost') ,
+      app_adm_name: self.app_name + "-adm",
 
 
       # Networking
@@ -126,9 +128,13 @@ local plugin = {
       # --------------------------
 
       app_admin_login: 'admin',
-      app_admin_passwd: 'admin123!!!',
+      app_admin_passwd: 'CHANGEME123!!!',
+
       app_user_login: 'user',
-      app_user_passwd: 'user',
+      app_user_passwd: 'CHANGEME!',
+
+      app_readonly_login: 'readonly',
+      app_readonly_passwd: 'CHANGEME',
 
 
       # App Backend info
@@ -144,6 +150,7 @@ local plugin = {
       # LDAP pattern
       # ---------------------------
       ldap_domain: self.app_domain,
+      ldap_org: self.app_domain,
       ldap_host: 'ldap',
 
       ldap_tls: false,
@@ -163,7 +170,7 @@ local plugin = {
     // - ONLY variable composition here
     local dir_prefix = vars._stack_path_abs + vars.paasify_sep_dir;
     {
-      ldap_uri: vars.ldap_prot + '://' + vars.ldap_host + vars.ldap_port,
+      ldap_uri: vars.ldap_prot + '://' + vars.ldap_host + ':' + vars.ldap_port,
       ldap_base_dn: paasify.LdapBaseDNFromDomain(vars.ldap_domain, sep='dc'),
       ldap_user_base_dn: 'ou=people,' + self.ldap_base_dn,
       ldap_group_base_dn: 'ou=groups,' + self.ldap_base_dn,
@@ -174,6 +181,10 @@ local plugin = {
       app_fqdn: vars.app_name + '.' + vars.app_domain,
       app_admin_email: vars.app_admin_login + '@' + vars.app_domain,
       app_user_email: 'user@' + vars.app_domain,
+
+      app_adm_fqdn: vars.app_adm_name + '.' + vars.app_domain,
+
+      app_description: self.app_fqdn + " instance",
 
 
       # App directories
@@ -251,14 +262,13 @@ local plugin = {
         [net_key]+: {
           // Update default labels for each networks
           labels+: {
-            [pref_base + 'enabled']: true,
-            [pref_base + 'prj.' + vars.app_namespace]: true,
-            [pref_base + 'prj.' + vars.app_namespace + '.name']: vars.app_name,
-            //[pref_base + 'prj.' + vars.app_namespace + '.domain']: vars.app_domain,
-            [pref_base + 'prj.' + vars.app_namespace + '.fqdn']: vars.app_fqdn,
-            [pref_base + 'prj.' + vars.app_namespace + '.path']: vars.app_dir_root,
-            [pref_base + 'prj.' + vars.app_namespace + '.origin']: ! vars.app_network_external,
-            [pref_base + 'prj.' + vars.app_namespace + '.services']: std.join(',', svc_keys),
+            [pref_base + 'managed']: true,
+            //[pref_base + 'prj.' + vars.app_namespace]: true,
+            //[pref_base + 'prj.' + vars.app_namespace + '.name']: vars.app_name,
+            //[pref_base + 'prj.' + vars.app_namespace + '.fqdn']: vars.app_fqdn,
+            //[pref_base + 'prj.' + vars.app_namespace + '.path']: vars.app_dir_root,
+            //[pref_base + 'prj.' + vars.app_namespace + '.origin']: ! vars.app_network_external,
+            //[pref_base + 'prj.' + vars.app_namespace + '.services']: std.join(',', svc_keys),
           }
         } for net_key in net_keys
       } + {
@@ -274,13 +284,13 @@ local plugin = {
         [svc_name]+: {
           // Update default labels for each containers
           labels+: {
-            [pref_base + 'enabled']: true,
+            [pref_base + 'managed']: true,
             [pref_base + 'name']: vars.app_name,
             [pref_base + 'namespace']: vars.app_namespace,
-            [pref_base + 'domain']: vars.app_domain,
+            //[pref_base + 'domain']: vars.app_domain,
             [pref_base + 'fqdn']: vars.app_fqdn,
             [pref_base + 'path']: vars.app_dir_root,
-            [pref_base + 'networks']: std.join(',', net_keys),
+            //[pref_base + 'networks']: std.join(',', net_keys),
           },
           restart: vars.app_restart_policy,
         } for svc_name in svc_keys
