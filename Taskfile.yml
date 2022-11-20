@@ -1,0 +1,196 @@
+version: '3'
+
+includes:
+
+  dev:
+    taskfile: ./scripts/Taskfile.yml
+    dir: .
+    optional: true
+
+  doc:
+    taskfile: ./docs/Taskfile.yml
+    dir: ./docs
+    optional: true
+
+  docker:
+    taskfile: ./docker/Taskfile.yml
+    optional: true
+
+
+tasks:
+
+  # Generic helpers
+  # -----------------
+
+  default:
+    desc: Show all commands
+    cmds:
+      - task --list-all
+
+  # Project helpers
+  # -----------------
+
+  bootstrap:
+    desc: Bootstrap environment
+    sources:
+      - poetry.lock
+    cmds:
+      - poetry config --list
+      - poetry install -vv --no-interaction --no-root
+
+  setup:
+    desc: Setup project
+    cmds:
+      - poetry install -vv --no-interaction --only-root
+
+  update:
+    desc: Synchronize git
+    cmds:
+      - git fetch -a && git pull
+
+
+  # Build workflow
+  # -----------------
+
+  build:
+    desc: Create a python package
+    run: once
+    # Used by semantic-release during publish process, as pre-commit command
+    #sources:
+    #  - pyproject.toml
+    cmds:
+      - task: clean
+      - poetry build
+      - cp CHANGELOG.md dist/CHANGELOG.md
+      - cp VERSION_NOTES.md dist/RELEASE.md
+
+  clean:
+    desc: Clean generated packages
+    status:
+      - test ! -d dist/
+    cmds:
+      - rm -rf dist/ && mkdir -p dist
+
+
+  # Release workflow
+  # -----------------
+
+  release_changelog:
+    desc: "Used by semantic-release during publish process, as pre-commit command"
+    cmds:
+      - poetry run semantic-release changelog --unreleased > VERSION_NOTES.md
+
+  release_status:
+    desc: Show release status
+    cmds:
+      - poetry run ./scripts/versions.sh
+
+  release_stable:
+    desc: Bump code stable version, generate changelog, create a tag
+    # Note having :
+    # GH_TOKEN set will create a release in github
+    # PYPI_TOKEN set will release a version on pypi
+    preconditions:
+      - sh: >
+          [[ "$(git rev-parse --abbrev-ref HEAD)" == main ]]
+        msg: You must checkout 'main' branch first
+      - sh: >
+          ! git status -s | grep -E '^[AM]* '
+        msg: You must clean your working dir first
+    cmds:
+      - SKIP=end-of-file-fixer poetry run semantic-release -D tag_commit=true publish
+      - task: publish_gh
+      - task: publish_pypi
+      - task: doc:publish_gh
+
+  release_beta:
+    aliases:
+      - release
+    desc: Bump code stable version, generate changelog, create a tag
+    preconditions:
+      - sh: '[[ "$(git rev-parse --abbrev-ref HEAD)" == develop ]]'
+        msg: You must checkout 'develop' branch first
+      - sh: ! git status -s | grep -E '^[AM]* '
+        msg: You must clean your working dir first
+    cmds:
+      - >
+        SKIP=end-of-file-fixer poetry run semantic-release
+        -D tag_commit=true
+        -D branch=develop
+        publish --prerelease
+      - task: publish_gh
+      - task: publish_pypi
+      - task: doc:publish_gh
+
+
+
+  # Publish workflow
+  # -----------------
+
+  publish_pypi:
+    desc: Publish python package on pypi.org
+    deps:
+      - build
+    cmds:
+      - poetry publish
+
+  publish_gh:
+    desc: Publish python packge on a github release
+    env:
+      INPUT_PRERELEASE: false
+      INPUT_ALLOW_OVERRIDE: true
+
+    vars:
+      INPUT_TOKEN:
+        sh: echo "$GH_TOKEN"
+      BODY_HEADER: |
+        ## What's new in this version ?
+
+        This release has been published: $(date --utc)
+
+        ## List of changes:
+
+        $(cat VERSION_NOTES.md)
+
+    deps:
+      - build
+    cmds:
+      - ls -ahl dist/
+      - INPUT_BODY="{{.BODY_HEADER}}" INPUT_TOKEN={{.INPUT_TOKEN}} bash scripts/publish_github.sh
+
+
+
+
+#
+#  # Project Workflow
+#  # ---------------
+#  run_qa:
+#    desc: Run short test suites
+#    deps:
+#    - run_black
+#    - report_linting
+#
+#  run_test:
+#    desc: Run full test suites
+#    deps:
+#    - run_black
+#    - run_test
+#    - report_coverage
+#    - report_linting
+#
+#
+#
+#  # Top level Workflow
+#  # ---------------
+#
+#  # serve_doc:
+#  #   desc: Serve locally documentation site
+#  #   deps:
+#  #     - doc:serve_doc
+#
+#  clean:
+#    desc: Clean all artifacts
+#    deps:
+#      - pkg_clean
+#      - docker_clean
+#

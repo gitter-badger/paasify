@@ -1,0 +1,191 @@
+version: '3'
+
+vars:
+  GIT_REF:
+    sh: git rev-parse --short HEAD
+  GIT_BRANCH:
+    sh: git rev-parse --abbrev-ref HEAD
+  APP_VERSION:
+    sh: poetry version -s 2>/dev/null || true
+
+
+tasks:
+
+  default:
+    desc: Show all commands
+    cmds:
+      - task --list-all
+
+  # Main
+  # -----------------
+
+  bootstrap:
+    desc: Install jupyter dependencies
+    cmds:
+      - task: jupyter_bootstrap
+
+  build:
+    desc: Build documentation
+    cmds:
+      - task: doc_build
+
+  serve:
+    desc: Run locally mkdocs
+    cmds:
+      - task: doc_serve
+
+
+  # Publishing
+  # -----------------
+
+  version_list:
+    desc: List documentation versions
+    cmds:
+      - mike list
+
+  publish_gh:
+    desc: publish doc on github
+    deps:
+      - publish_gh_mkdocs
+
+
+  publish_gh_mkdocs:
+    desc: 'Publish documentation on: https://mrjk.github.io/python-project-poetry-template/index.html'
+    vars:
+      GIT_REF:
+        sh: git rev-parse --short HEAD
+      GIT_BRANCH:
+        sh: git rev-parse --abbrev-ref HEAD
+      APP_VERSION:
+        sh: poetry version -s 2>/dev/null || true
+      APP_MINOR:
+        sh: git describe --tags --abbrev=0 | sed -E  's/(v?[0-9]+\.([0-9]+)).*/\1/'
+    cmds:
+      - mkdocs gh-deploy --message 'Deployed {{.APP_VERSION}} - {{.GIT_REF}} from {{.GIT_BRANCH}}'
+
+
+  # MkDocs (Local Python)
+  # -----------------
+
+  doc_build:
+    desc: Generate API doc
+    run: once
+    cmds:
+      - ./gen_apidoc.sh
+    sources:
+      - ../paasify/*.py
+
+  doc_serve:
+    aliases:
+      - serve
+    desc: Run mkdocs website
+    deps: [doc_build]
+    interactive: true
+    cmds:
+      - >
+        echo "Documentation: http://127.0.0.1:8000"
+      - mkdocs serve
+
+
+  # Jupyter (Local Python)
+  # -----------------
+  jupyter_bootstrap:
+    desc: Install jupyter dependencies
+    cmds:
+      - python -m bash_kernel.install
+
+  jupyter_serve:
+    desc: Run jupyter playbook editor website
+    interactive: true
+    cmds:
+      - >
+        echo "Jupyter: http://127.0.0.1:8888"
+      - jupyter-notebook --autoreload --notebook-dir src/jupyter/
+
+
+  # Online VS-Code (docker)
+  # -----------------
+  docker_serve:
+    alias:
+      - vscode
+      - edit
+    desc: Run documentation IDE
+    deps: [doc_build]
+    cmds:
+      - docker-compose up -d
+      - |
+        sleep 3
+        echo "Documentation: http://127.0.0.1:8042"
+        echo "Jupyter:       $( docker-compose logs | grep -m 1 ' or http:' | sed 's/.* or //' )"
+
+  docker_serve_stop:
+    desc: Stop documentation IDE
+    cmds:
+      - docker-compose rm -f
+
+
+
+
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#   build_doc:
+#     desc: Generate API doc
+#     deps: [install]
+#     run: once
+#     cmds:
+#       - ./gen_apidoc.sh
+#     sources:
+#       - ../paasify/*.py
+#
+#
+#   # Dockerized tools
+#   # -----------------
+#   serve_ide:
+#     desc: Run documentation IDE
+#     deps: [build_doc]
+#     cmds:
+#       - docker-compose up -d
+#       - |
+#         sleep 3
+#         echo "Documentation: http://127.0.0.1:8042"
+#         echo "Jupyter:       $( docker-compose logs | grep -m 1 ' or http:' | sed 's/.* or //' )"
+#
+#   stop_ide:
+#     desc: Stop documentation IDE
+#     cmds:
+#       - docker-compose rm -f
+#       #- docker-compose stop
+#
+#
+#   # Local tools
+#   # -----------------
+#   serve:
+#     desc: Run mkdocs website
+#     deps: [build_doc]
+#     interactive: true
+#     cmds:
+#       - >
+#         echo "Documentation: http://127.0.0.1:8000"
+#       - mkdocs serve
+#
+#   serve_jupyter:
+#     desc: Run jupyter playbook editor website
+#     interactive: true
+#     cmds:
+#       - >
+#         echo "Jupyter: http://127.0.0.1:8888"
+#       - jupyter-notebook --autoreload --notebook-dir src/jupyter/
+#

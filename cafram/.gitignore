@@ -1,0 +1,7 @@
+__pycache__
+.coverage
+.envrc
+poetry.lock
+*.code-workspace
+devel/*
+wip.py

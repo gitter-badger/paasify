@@ -1,0 +1,28 @@
+[tool.poetry]
+name = "cafram"
+version = "0.1.0"
+description = "Config as Framework"
+authors = ["mrjk"]
+license = "GPL"
+readme = "README.md"
+packages = [{ include = "cafram" }]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+jsonschema = "^4.16.0"
+"ruamel.yaml" = "^0.17.21"
+sh = "^1.14.3"
+pytest-cov = "^3.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^7.0.0"
+pytest-clarity = "^1.0.1"
+black = "^22.8.0"
+behave = "^1.2.6"
+pylint = "^2.15.3"
+pytest-regressions = "^2.4.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+cafram = "cafram"
