@@ -37,6 +37,7 @@ tasks:
     cmds:
       - poetry config --list
       - poetry install -vv --no-interaction --no-root
+      - pre-commit install --install-hooks
 
   setup:
     desc: Setup project
