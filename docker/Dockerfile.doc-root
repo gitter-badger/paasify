@@ -35,4 +35,3 @@ COPY --from=builder /usr/local/bin/ /usr/local/bin/
 
 #COPY --chown=work:work docs/ /app
 COPY docs/ /app
-
