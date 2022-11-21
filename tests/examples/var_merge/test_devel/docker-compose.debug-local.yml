@@ -7,4 +7,3 @@ services:
       custom_from_var1: $custom_from_var1
       custom_from_var2: $custom_from_var2
       custom_from_var3: ${custom_from_var3:-OK tag override is only allowed for jsonnet files}
-

@@ -7,7 +7,7 @@ config:
 
     var_null1: null
     var_test: null
-      
+
     custom_from_var1: OK_from_config_global
 
 
@@ -74,5 +74,3 @@ stacks:
           #docker_net_ident: tutu
           #var_base3: tag_value
           #var_null3: null
-
-

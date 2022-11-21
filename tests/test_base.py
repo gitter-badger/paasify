@@ -1,12 +1,10 @@
 #!/usr/bin/env pytest
+# -*- coding: utf-8 -*-
 
-import sys
 import os
 from pprint import pprint
 import logging
-import json
 
-import unittest
 import pytest
 
 import yaml
@@ -19,33 +17,28 @@ import paasify.errors as error
 from paasify.common import get_paasify_pkg_dir
 
 
-
-
-
-
 # Test cli
 # ------------------------
-#cwd = os.getcwd()
 cwd = os.path.realpath(os.path.dirname(get_paasify_pkg_dir()))
 runner = CliRunner()
 
+
 def test_cli_info_without_project():
-    result = runner.invoke(cli_app, ["-vvvvv", "--config", cwd + "/tests/examples", "info"])
+    result = runner.invoke(
+        cli_app, ["-vvvvv", "--config", cwd + "/tests/examples", "info"])
     out = result.stdout_bytes.decode("utf-8")
-    print (out)
+    print(out)
     assert result.exit_code != 0
-    #assert "Impossible to find" in out
+    # assert "Impossible to find" in out
+
 
 def test_cli_info_with_project():
 
     prj_dir = cwd + "/tests/examples/minimal"
     result = runner.invoke(cli_app, ["--config", prj_dir, "info"])
-    
-    out = result.stdout_bytes.decode("utf-8")
+
+    # out = result.stdout_bytes.decode("utf-8")
     assert result.exit_code == 0
-    
-
-
 
 
 # Test stacks basics
@@ -73,7 +66,7 @@ def test_stacks_resolution(data_regression):
             "stack_app": stack.app.serialize() if stack.app else None,
         }
         results.append(result)
-        
+
     data_regression.check(results)
 
 
@@ -87,15 +80,13 @@ def test_stacks_resolution_fail_on_duplicates(data_regression):
         }
     }
     psf = PaasifyApp(payload=app_conf)
-    
+
     # Test the load fails
     try:
         psf.load_project()
         assert False, "Duplicate configuration should have raised an error!"
     except error.ProjectInvalidConfig:
         pass
-
-
 
 
 # Test stacks docker-file search
@@ -127,12 +118,11 @@ def recursive_replace(dir, old, new):
 
     for (dirpath, dirnames, filenames) in os.walk(dir):
         for file in filenames:
-            
+
             path = os.path.join(dirpath, file)
             data = read_file(path)
             data = data.replace(old, new)
             write_file(path, data)
-
 
 
 def load_yaml_file_hierarchy(dir):
@@ -144,7 +134,7 @@ def load_yaml_file_hierarchy(dir):
     for (dirpath, dirnames, filenames) in os.walk(dir):
         for file in filenames:
             files.append(os.path.join(dirpath, file))
-            #files.append([dirpath, file])
+            # files.append([dirpath, file])
 
     pprint(files)
     # Load yaml files
@@ -153,7 +143,7 @@ def load_yaml_file_hierarchy(dir):
         # dir = file[0]
         # fname = file[1]
         # path = os.path.join(dir, fname)
-        
+
         with open(file, encoding="utf-8") as _file:
             payload = yaml.safe_load(_file)
 
@@ -161,14 +151,14 @@ def load_yaml_file_hierarchy(dir):
         #     # Trigger abspath dir replacement
         #     # We need to do that as docker compose config transform
         #     # generate absolute path for its volumes.
-            
+
         #     str_payload = json.dumps(payload)
         #     str_payload = str_payload.replace(abs_path, dir)
         #     payload = json.loads(str_payload)
 
         path = os.path.relpath(file)
         results[path] = payload
-    
+
     return results
 
 
@@ -178,8 +168,6 @@ def test_stacks_vars(caplog, data_regression) -> None:
     "Ensure name, app path and direct string config works correctly"
 
     caplog.set_level(logging.INFO, logger="paasify.cli")
-
-    
 
     # Load project
     root_prj = cwd + "/tests/examples/var_merge"
@@ -199,18 +187,10 @@ def test_stacks_vars(caplog, data_regression) -> None:
     data_regression.check(results)
 
 
-
-
-
 # Main run
 # ------------------------
-
 if __name__ == "__main__":
-    
+
     pytest.main([__file__])
 
-
-    
-    #unittest.main()
-
-
+    # unittest.main()

@@ -10,7 +10,7 @@ stacks:
   - app: custom_source:custom_app
   - name: my_local_app
   - path: local/app/path
-  
+
   ## with app and name
   - app: custom_source:custom_app
     name: custom_name
@@ -26,5 +26,3 @@ stacks:
   ## with name and path
   - name: my_local_app
     path: nested/path
-
-

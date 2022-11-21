@@ -2,4 +2,3 @@ services:
   main_app2:
     environment:
       OVERRIDE1: OK_override
-
