@@ -48,7 +48,7 @@
 | - [tags_suffix](#config_oneOf_i0_tags_suffix ) | No      | Combination | No         | -          | Paasify Stack Tags configuration |
 | - [tags_prefix](#config_oneOf_i0_tags_prefix ) | No      | Combination | No         | -          | Paasify Stack Tags configuration |
 
-**Example:** 
+**Example:**
 
 ```yaml
 config:
@@ -128,7 +128,7 @@ config:
 | **Additional items** | False              |
 | **Tuple validation** | N/A                |
 
-**Example:** 
+**Example:**
 
 ```yaml
 env:
@@ -156,7 +156,7 @@ env:
 | ------------------------------------------------------------------------------ | ------- | ------ | ---------- | ---------- | -------------------------------- |
 | - [additionalProperties](#config_oneOf_i0_vars_oneOf_i1_additionalProperties ) | No      | object | No         | -          | Variable definition as key/value |
 
-**Example:** 
+**Example:**
 
 ```yaml
 env:
@@ -242,7 +242,7 @@ must respect the following conditions
 
 **Description:** Do not define any vars
 
-**Examples:** 
+**Examples:**
 
 ```yaml
 env: null
@@ -291,7 +291,7 @@ env: {}
 | **Additional items** | False              |
 | **Tuple validation** | N/A                |
 
-**Example:** 
+**Example:**
 
 ```yaml
 tags:
@@ -316,7 +316,7 @@ tags:
 
 **Description:** Do not declare any tags
 
-**Example:** 
+**Example:**
 
 ```yaml
 tags: null
@@ -363,7 +363,7 @@ tags: null
 | **Additional items** | False              |
 | **Tuple validation** | N/A                |
 
-**Example:** 
+**Example:**
 
 ```yaml
 tags:
@@ -388,7 +388,7 @@ tags:
 
 **Description:** Do not declare any tags
 
-**Example:** 
+**Example:**
 
 ```yaml
 tags: null
@@ -435,7 +435,7 @@ tags: null
 | **Additional items** | False              |
 | **Tuple validation** | N/A                |
 
-**Example:** 
+**Example:**
 
 ```yaml
 tags:
@@ -460,7 +460,7 @@ tags:
 
 **Description:** Do not declare any tags
 
-**Example:** 
+**Example:**
 
 ```yaml
 tags: null
@@ -485,7 +485,7 @@ tags: null
 
 **Description:** Use automatic conf if not set. You can still override conf values with environment vars.
 
-**Examples:** 
+**Examples:**
 
 ```yaml
 config: null

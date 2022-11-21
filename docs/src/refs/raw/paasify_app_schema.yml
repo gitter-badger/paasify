@@ -11,4 +11,3 @@ properties:
     title: Application configuration
     type: object
     additionalProperties: true
-

@@ -6,7 +6,7 @@
     Plugin reference is [available here](/extend/extend_plugins/#project)
 
 
-Your project should be tracked in a control system, such as git. 
+Your project should be tracked in a control system, such as git.
 
 Files project to be commited:
 ```
@@ -19,7 +19,7 @@ stack1/
   data/
   conf/
 stack2/
-  
+
 ```
 
 
@@ -115,5 +115,3 @@ This is a simple git repository where files are commited.
 #### Append apps and plugins
 
 TODO:
-
-

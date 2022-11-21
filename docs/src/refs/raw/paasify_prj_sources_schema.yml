@@ -21,4 +21,3 @@ oneOf:
         type: string
       prefix:
         type: string
-

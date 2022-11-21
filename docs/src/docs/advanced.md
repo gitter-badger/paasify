@@ -39,5 +39,3 @@ Related piece of code: `paasify.stacks2.PaasifyStack.assemble()`
       show_source: true
       heading_level: 4
       # show_category_heading: true
-
-

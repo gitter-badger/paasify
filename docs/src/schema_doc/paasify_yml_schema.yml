@@ -242,4 +242,3 @@ properties:
   sources:
     type: object
   stacks: {}
-

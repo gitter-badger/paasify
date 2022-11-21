@@ -41,5 +41,3 @@
       show_root_heading: True
       show_source: true
       heading_level: 3
-
-

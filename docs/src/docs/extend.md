@@ -67,7 +67,7 @@ local plugin = {
     },
 
   // Provides processed vars
-  override_vars(vars):: 
+  override_vars(vars)::
     {
         config: vars.default_var1 + '.' + vars.default_var2,
     },
@@ -101,7 +101,3 @@ local plugin = {
 
 };
 ```
-
-
-
-

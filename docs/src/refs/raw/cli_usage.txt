@@ -1,8 +1,8 @@
-                                                                                  
- Usage: paasify [OPTIONS] COMMAND [ARGS]...                                       
-                                                                                  
- Paasify, build your compose-files                                                
-                                                                                  
+
+ Usage: paasify [OPTIONS] COMMAND [ARGS]...
+
+ Paasify, build your compose-files
+
 ╭─ Options ──────────────────────────────────────────────────────────────────────╮
 │ --verbose             -v      INTEGER RANGE [0<=x<=5]  [default: 1]            │
 │ --config              -c      TEXT                     Path of paasify.yml     │
@@ -38,4 +38,3 @@
 │ src-update         Update sources                                              │
 │ up                 Start docker stack                                          │
 ╰────────────────────────────────────────────────────────────────────────────────╯
-

@@ -5,4 +5,3 @@ html page is <a href="/refs/config/paasify_prj_sources_schema.html" target="_bla
 
 <iframe scrolling="yes" src="/refs/config/paasify_prj_sources_schema.html" style="width: 100vw; height: 70vh; overflow: auto; border: 0px;">
 </iframe>
-

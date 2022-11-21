@@ -37,7 +37,7 @@ Generic App variables:
 # Image management
 APP_IMAGE: Defaulted to: APP_IMAGE_NAME:APP_IMAGE_VERSION
 APP_IMAGE_VERSION: defaulted to latest
-APP_IMAGE_NAME: 
+APP_IMAGE_NAME:
 
 # Main services
 APP_NAMESPACE: Name of the namespace
@@ -128,4 +128,3 @@ Others:
 ```
 JAVA_OPTS
 ```
-

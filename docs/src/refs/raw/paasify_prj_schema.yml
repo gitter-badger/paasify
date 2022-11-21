@@ -59,4 +59,3 @@ properties:
     type: object
     description: Internal object to pass context variables, internal use only or for
       troubleshooting purpose
-

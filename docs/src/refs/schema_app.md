@@ -24,5 +24,3 @@ config/paasify_prj_schema.html
 config/paasify_prj_config_schema.html
 config/paasify_prj_sources_schema.html
 config/paasify_prj_stacks_schema.html
-
-

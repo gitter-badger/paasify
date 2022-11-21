@@ -21,6 +21,3 @@ version: ''
 
 <iframe scrolling="yes" src="/plugins_apidoc/traefik-svc/web.html" style="width: 100vw; height: 70vh; overflow: auto; border: 0px;">
 </iframe>
-
-
-                

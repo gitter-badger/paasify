@@ -9,7 +9,7 @@ Paasify provides two interfaces:
 
 
 Paasify is shipped with a an executable called `paasify`. It provides a first class interface to
-interact with a paasify project. It is also possible to use Paasify via it's 
+interact with a paasify project. It is also possible to use Paasify via it's
 python API `paasify` ([Documentation](/schema_doc/python_app)).
 
 ### Configuration file
@@ -20,7 +20,7 @@ This is the entrypoint of a project.
 ### Current directory context
 
 The command line is contextualized depending your current working directory. Paasify
-will try to find the upper level `paasify.yml` file. If a project is found, will work 
+will try to find the upper level `paasify.yml` file. If a project is found, will work
 as if executed at the root of this project directory. If your current working directory
 is inside a stack, then all commands will apply on this stack:
 
@@ -133,13 +133,13 @@ A tag can either corresponds to:
 
 !!! info "There are two types of plugins"
     Related documentation is available [here](/advanced#two-kinds-of-plugins)
-    
+
 
 Both mechanisms allow to achieve different things, while the former
 provide a well-known docker-compose merge mechanism, it may not
-sufficient to provide advanced functionnality, and this is where the 
+sufficient to provide advanced functionnality, and this is where the
 later become useful, leveraging the jsonnet language support to modify
-docker-compose structure. 
+docker-compose structure.
 
 Checkout [Advanced topics](advanced.md) to learn more.
 
@@ -201,7 +201,7 @@ It is composed of the following conepts:
 
 #### Apps
 
-An app is a single application component. 
+An app is a single application component.
 
 TODO
 

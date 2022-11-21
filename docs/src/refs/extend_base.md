@@ -116,6 +116,3 @@ inside each collection. A collection can alos provides plugins, like stacks.
 TODO
 
 ### File hierarchy
-
-
-
