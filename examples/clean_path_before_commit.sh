@@ -6,4 +6,3 @@
 grep -rl $HOME . | xargs sed -i "s#$HOME#\$HOME#g"
 
 echo "All \$HOME occurences has been replaced"
-

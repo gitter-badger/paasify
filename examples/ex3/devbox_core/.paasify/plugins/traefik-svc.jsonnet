@@ -129,7 +129,7 @@ local plugin = {
               default: "$traefik_svc_name.$vars.app_domain",
               type: "string",
             },
-            
+
             traefik_svc_entrypoints: {
               description: 'Traefik entrypoints of the application',
               type: "string",
@@ -145,7 +145,7 @@ local plugin = {
               type: "string",
               default: "$prj_namespace-traefik",
             },
-            
+
             traefik_svc_auth: {
               description: 'Service Authentication to use',
               type: "string",
@@ -161,7 +161,7 @@ local plugin = {
               type: "string",
               default: null,
             },
-            
+
 
             // Network settings
             traefik_net_ident: {
@@ -231,14 +231,14 @@ local plugin = {
       traefik_sep: vars.paasify_sep,
 
 
-      # Name of the key in networks:{} in docker-compose, 
+      # Name of the key in networks:{} in docker-compose,
       traefik_net_ident: vars.app_network, // vars.app_network
 
       # Name of the network
       traefik_net_name: vars.prj_namespace + self.traefik_sep + 'traefik', // vars.app_network_name
       traefik_net_external: true,
 
-      # Name of the key in services:{} in docker-compose, 
+      # Name of the key in services:{} in docker-compose,
       traefik_svc_ident: vars.app_service , // vars.app_service
 
       # Traefik service name (from traefik POV)
@@ -247,7 +247,7 @@ local plugin = {
 
       # Traefik port to map
       traefik_svc_port: vars.app_port , // vars.app_port
-      
+
       # Traefik group
       traefik_svc_group: vars.prj_namespace + self.traefik_sep + 'traefik',
 
@@ -273,8 +273,8 @@ local plugin = {
 
     },
 
-  // override_vars(vars):: 
-    
+  // override_vars(vars)::
+
   //   {
   //     //app_fqdn: vars.app_name + '.' + vars.app_domain,
   //     // app_name: vars.paasify_stack,
@@ -288,12 +288,12 @@ local plugin = {
 
     # Determine full name to apply config
     local _traefik_svc_name_full = std.prune([
-      vars.traefik_svc_name_full, 
+      vars.traefik_svc_name_full,
       vars.prj_namespace + vars.traefik_sep + vars.traefik_svc_name])[0];
     local _traefik_svc_domain = std.prune([
-      vars.traefik_svc_domain, 
+      vars.traefik_svc_domain,
       vars.traefik_svc_name + '.' + vars.app_domain])[0];
-      
+
 
     docker_file + {
 
@@ -308,13 +308,13 @@ local plugin = {
       # Apply per services labels
       services+: {
         [vars.traefik_svc_ident]+: {
-          labels+: 
+          labels+:
             LabelsTraefik(
               _traefik_svc_name_full,
               _traefik_svc_domain,
               vars.traefik_svc_entrypoints,
-              vars.traefik_svc_port, 
-              vars.traefik_svc_group) 
+              vars.traefik_svc_port,
+              vars.traefik_svc_group)
             + LabelsTraefikAuthelia(
                 _traefik_svc_name_full,
                 vars.traefik_svc_auth)
@@ -334,7 +334,7 @@ local plugin = {
       // ["x-debug"]: std.prune(vars),
       // ["x-debug2"]: traefik_svc_name_full,
     },
-    
+
 
 };
 

@@ -94,8 +94,8 @@ local plugin = {
 
     },
 
-//   override_vars(vars):: 
-    
+//   override_vars(vars)::
+
 //     {
 //       app_fqdn: vars.app_name + '.' + vars.app_domain,
 
@@ -108,9 +108,9 @@ local plugin = {
           new_custom_service: null,
         },
       // ["x-paasify-debug-vars"]: vars,
-        
+
       },
-    
+
 
 };
 

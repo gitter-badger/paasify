@@ -101,7 +101,7 @@ local plugin = {
 
     },
 
- 
+
 
     // docker_override
   docker_override (in_vars, docker_file)::
@@ -114,7 +114,7 @@ local plugin = {
         ["x-paasify-debug"]: {
             new_custom_service: null,
             },
-        
+
 
         networks+: {
         [vars.docker_net_ident]: {
@@ -123,16 +123,16 @@ local plugin = {
             }
         },
         services+: {
-            [vars.docker_svc_ident]+: 
-                { 
-                    networks+: { 
-                        [vars.docker_net_ident]: null 
+            [vars.docker_svc_ident]+:
+                {
+                    networks+: {
+                        [vars.docker_net_ident]: null
                     }
 
                 } for svc_name in services
             },
     },
-    
+
 
 };
 

@@ -1,6 +1,6 @@
 
 
-local _metadata_default = 
+local _metadata_default =
   {
     "ERROR": "Metadata is not set !"
   };
@@ -91,7 +91,7 @@ local _fn_docker_override (vars, docker_file) = docker_file;
   //     local common =  { [x]: std.get(user_data, std.lstripChars(x, '_'), default_data[x] ) for x in std.objectFields(default_data) };
   //     {
   //       input: user_data,
-        
+
   //       diff: default_data + common + global_vars_override(default_data + user_data ),
   //       merged: user_data + global_vars_override(default_data + user_data ),
   //     }
@@ -131,7 +131,7 @@ local _fn_docker_override (vars, docker_file) = docker_file;
   //     {
   //       input: user_data,
   //       TMP: _metadata,
-        
+
   //       // diff: default_data + common + global_vars_override(default_data + user_data ),
   //       // merged: user_data + global_vars_override(default_data + user_data ),
   //     }
@@ -154,4 +154,3 @@ local _fn_docker_override (vars, docker_file) = docker_file;
 
 # Run main script !
 #main()
-
