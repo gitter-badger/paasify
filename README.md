@@ -2,10 +2,10 @@
 
 Deploy docker-compose files with ease!
 
-Paasify is a little tool that will help deploying `docker-compose.yml` based apps, either on docker swarm 
-or on regular docker (via docker-compose). It will also manage the different git repositories 
-you need to build your infrastructure. This project try to overstep the missing gap between the 
-docker-compose deployment easiness and infrastructure as a code. Also, this project propose an 
+Paasify is a little tool that will help deploying `docker-compose.yml` based apps, either on docker swarm
+or on regular docker (via docker-compose). It will also manage the different git repositories
+you need to build your infrastructure. This project try to overstep the missing gap between the
+docker-compose deployment easiness and infrastructure as a code. Also, this project propose an
 opiniated devops workflow and try to provide a smart Infrastructure as Code workflow.
 
 ## Quickstart
@@ -84,6 +84,4 @@ This project is brought to you thanks to Barbu-IT.
 
 ### Releases
 
-* alpha: 
-
-
+* alpha:
