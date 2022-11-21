@@ -20,7 +20,7 @@ local assert_docker_file(docker_file) =
 local plugin = {
 
   // Provides plugin metadata
-  metadata: 
+  metadata:
     {
         local meta = self,
 
@@ -50,7 +50,7 @@ local plugin = {
                     type: "null",
                 },
             },
-            
+
         }
     },
 
@@ -60,10 +60,10 @@ local plugin = {
     {
         var1_UatoaL5seibis6Ee: "UatoaL5seibis6Ee",
         var2_UatoaL5seibis6Ee: "UatoaL5seibis6Ee",
-        
+
     },
 
-//   override_vars(vars):: 
+//   override_vars(vars)::
 //     assert assert_base_vars(vars);
 //     assert std.assertEqual(vars.var1_UatoaL5seibis6Ee, "UatoaL5seibis6Ee");
 //     assert std.assertEqual(vars.var2_UatoaL5seibis6Ee, "UatoaL5seibis6Ee");
@@ -86,9 +86,9 @@ local plugin = {
     docker_file + {
       ["x-paasify-debug"]: {
           status: "PASSED",
-        },        
+        },
       },
-    
+
 
 };
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Paasify Application library
 
@@ -16,7 +17,7 @@ prj.dump()
 
 """
 
-from pprint import pprint
+from pprint import pprint  # noqa: F401
 
 from cafram.utils import (
     to_yaml,

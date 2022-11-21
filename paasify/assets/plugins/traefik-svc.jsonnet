@@ -135,7 +135,7 @@ local plugin = {
               default: "$traefik_svc_name.$vars.app_domain",
               type: "string",
             },
-            
+
             traefik_svc_entrypoints: {
               description: 'Traefik entrypoints of the application',
               type: "string",
@@ -151,7 +151,7 @@ local plugin = {
               type: "string",
               default: "$app_namespace-traefik",
             },
-            
+
             traefik_svc_auth: {
               description: 'Service Authentication to use',
               type: "string",
@@ -167,7 +167,7 @@ local plugin = {
               type: "string",
               default: null,
             },
-            
+
 
             // Network settings
             traefik_net_ident: {
@@ -218,14 +218,14 @@ local plugin = {
 
       traefik_sep: '_', //vars.paasify_sep,
 
-      # Name of the key in networks:{} in docker-compose, 
-      traefik_net_ident: 'traefik', 
+      # Name of the key in networks:{} in docker-compose,
+      traefik_net_ident: 'traefik',
 
       # Name of the network
       traefik_net_name: vars.net_proxy_web,
       traefik_net_external: true,
 
-      # Name of the key in services:{} in docker-compose, 
+      # Name of the key in services:{} in docker-compose,
       traefik_svc_ident: vars.app_service,
 
       # Traefik service name (from traefik POV)
@@ -235,7 +235,7 @@ local plugin = {
 
       # Traefik port to map
       traefik_svc_port: vars.app_port,
-      
+
       # Traefik group
       traefik_svc_group: self.traefik_net_name,
 
@@ -256,10 +256,10 @@ local plugin = {
       vars.traefik_svc_key,
       vars.app_namespace + vars.traefik_sep + vars.traefik_svc_name])[0];
     local _traefik_svc_fqdn = std.prune([
-      vars.traefik_svc_fqdn, 
-      vars.app_fqdn, 
+      vars.traefik_svc_fqdn,
+      vars.app_fqdn,
       vars.traefik_svc_name + '.' + vars.app_domain])[0];
-      
+
     local _cur_svc_net = docker_file.services[vars.traefik_svc_ident].networks;
 
     docker_file + {
@@ -279,13 +279,13 @@ local plugin = {
       # Apply per services labels
       services+: {
         [vars.traefik_svc_ident]+: {
-          labels+: 
+          labels+:
             LabelsTraefik(
               _traefik_svc_name_full,
               _traefik_svc_fqdn,
               vars.traefik_svc_entrypoints,
-              vars.traefik_svc_port, 
-              vars.traefik_svc_group) 
+              vars.traefik_svc_port,
+              vars.traefik_svc_group)
             + LabelsTraefikAuthelia(
                 _traefik_svc_name_full,
                 vars.traefik_svc_auth)
@@ -307,7 +307,7 @@ local plugin = {
       // ["x-debug"]: std.prune(vars),
       // ["x-debug2"]: traefik_svc_name_full,
     },
-    
+
 
 };
 

@@ -63,7 +63,7 @@ local plugin = {
 
         // docker_net_ident: vars.app_network, // default
         //docker_net_name: vars.app_network_name,
-        
+
         # // vars.app_network_name
         //docker_net_ns: vars._prj_namespace,
         // docker_net_name: vars._stack_name + "_default",
@@ -81,20 +81,20 @@ local plugin = {
       // docker_net_full_name: vars._prj_namespace + vars.paasify_sep_net + vars.docker_net_name,
       docker_net_service_idents: std.split(vars.app_service, ','),
     },
- 
+
 
     // docker_override
   docker_transform (vars, docker_file)::
     docker_file + {
-        networks+: paasify.DockerNetDef(vars.app_network, 
-          net_external=vars.docker_net_external, 
+        networks+: paasify.DockerNetDef(vars.app_network,
+          net_external=vars.docker_net_external,
           net_name=vars.app_network_name),
         services+: {
-            [vars.app_service]+: 
+            [vars.app_service]+:
                 paasify.DockerServiceNet(vars.app_network) for svc_name in vars.docker_net_service_idents
             },
     },
-    
+
 
 };
 

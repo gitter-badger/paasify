@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Paasify Engine management
 
 This class helps to deal with docker engine versions
@@ -14,7 +15,7 @@ import json
 from distutils.version import StrictVersion
 
 # from packaging.version import StrictVersion
-from pprint import pprint
+from pprint import pprint  # noqa: F401
 
 import semver
 
@@ -223,7 +224,7 @@ class EngineCompose(NodeMap, PaasifyObj):
             bin2utf8(err)
 
             # This is U.G.L.Y
-            if not "has active endpoints" in err.txterr:
+            if "has active endpoints" not in err.txterr:
                 raise error.DockerCommandFailed(f"{err.txterr}")
 
         return out

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Paasify common library
 
 Holds common pieces of code
@@ -138,7 +139,8 @@ def cast_docker_compose(var):
 def merge_env_vars(obj):
     "Transform all keys of a dict starting by _ to their equivalent wihtout _"
 
-    override_keys = [key.lstrip("_") for key in obj.keys() if key.startswith("_")]
+    override_keys = [key.lstrip("_")
+                     for key in obj.keys() if key.startswith("_")]
     for key in override_keys:
         old_key = "_" + key
         obj[key] = obj[old_key]
@@ -185,7 +187,8 @@ class StringTemplate(Template):
             ):
                 # If all the groups are None, there must be
                 # another group we're not expecting
-                raise ValueError("Unrecognized named group in pattern", self.pattern)
+                raise ValueError(
+                    "Unrecognized named group in pattern", self.pattern)
         return ids
 
     def is_valid(self):
@@ -203,13 +206,14 @@ class StringTemplate(Template):
             ):
                 # If all the groups are None, there must be
                 # another group we're not expecting
-                raise ValueError("Unrecognized named group in pattern", self.pattern)
+                raise ValueError(
+                    "Unrecognized named group in pattern", self.pattern)
         return True
 
 
 # We override this method only if version of python is below 3.11
 if hasattr(Template, "get_identifiers"):
-    StringTemplate = Template
+    StringTemplate = Template  # noqa: F811
 
 
 # =====================================================================
@@ -253,7 +257,7 @@ def parse_vars(match):
 # SHELL_REGEX =r'[^$](\${(?P<name2>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*(?R)?.*))?})'
 
 
-#### WIPPP
+# WIPPP
 
 # OKK simple: v1 SHELL_REGEX =r'[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>[^}]*))})|(\$(?P<name2>[0-9A-Z_]+)))'
 SHELL_REGEX = r"[^$]((\${(?P<name1>[0-9A-Z_]+)((?P<mode>:?[?-]?)(?P<arg>.*))})|(\$(?P<name2>[0-9A-Z_]+)))"
@@ -277,14 +281,14 @@ def extract_shell_vars(file):
 
     content = "".join(lines)
 
-    ### LEXER APPROACH
+    # LEXER APPROACH
 
     # lexer = shlex.shlex(content)
     print(shlex.split(content))
     # for token in lexer:
     #     print ( repr(token))
 
-    #### REGEX APPROACH
+    # REGEX APPROACH
 
     # Parse shell vars, first round
     results = []

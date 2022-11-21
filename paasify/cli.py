@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """Paasify CLI interface
 
 This API provides a similar experience as the CLI, but in Python.
@@ -22,15 +23,13 @@ paasify.apply()
 
 import os
 import sys
-from enum import Enum
 
 import traceback
 
 from typing import Optional
 
 
-from pprint import pprint
-from pathlib import Path
+from pprint import pprint  # noqa: F401
 import yaml
 
 import sh
@@ -74,7 +73,8 @@ cli_app = typer.Typer(
 @cli_app.callback()
 def main(
     ctx: typer.Context,
-    verbose: int = typer.Option(1, "--verbose", "-v", count=True, min=0, max=5),
+    verbose: int = typer.Option(
+        1, "--verbose", "-v", count=True, min=0, max=5),
     working_dir: str = typer.Option(
         # os.getcwd(),  # For absolute paths
         # ".",          # For relative paths
@@ -442,7 +442,8 @@ def clean_terminate(err):
 
     if isinstance(err, sh.ErrorReturnCode):
         log.critical(err)
-        log.critical(f"Paasify exited with: failed command returned {err.exit_code}")
+        log.critical(
+            f"Paasify exited with: failed command returned {err.exit_code}")
         sys.exit(error.ShellCommandFailed.rc)
 
     if isinstance(err, CaframException):

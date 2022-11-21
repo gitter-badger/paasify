@@ -72,7 +72,7 @@ local plugin = {
 
     },
 
- 
+
 
     // docker_override
   docker_override (in_vars, docker_file)::
@@ -81,20 +81,20 @@ local plugin = {
     #local service = std.get(conf, 'paasify_stack_service');
     local services = std.split(vars.app_service, ',');
     local _net_name = std.prune([
-      vars.docker_net_full_name, 
+      vars.docker_net_full_name,
       vars.docker_net_ns + vars.paasify_sep + vars.docker_net_name ])[0];
     local _net_external = std.prune([
-      vars.docker_net_full_name, 
+      vars.docker_net_full_name,
       vars.docker_net_ns + vars.sep + vars.docker_net_name ])[0];
 
     docker_file + {
         networks+: paasify.DockerNetDef(vars.docker_net_ident, net_external=false, net_name=_net_name),
         services+: {
-            [vars.docker_svc_ident]+: 
+            [vars.docker_svc_ident]+:
                 paasify.DockerServiceNet(vars.docker_net_ident, net_aliases=vars.docker_net_aliases) for svc_name in services
             },
     },
-    
+
 
 };
 

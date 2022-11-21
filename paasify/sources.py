@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 """Paasify Source management libray
 
 """
 
 import os
 import logging
-from pprint import pprint, pformat
+from pprint import pprint, pformat  # noqa: F401
 
 # import yaml
 # import anyconfig
@@ -12,13 +13,11 @@ from pprint import pprint, pformat
 
 # import _jsonnet
 
-from urllib.parse import urlparse
 from giturlparse import parse as gitparse
-
 
 # from paasify.common import _exec
 from cafram.utils import _exec, first
-from cafram.nodes import NodeMap, NodeDict, NodeList
+from cafram.nodes import NodeMap, NodeList
 
 # from paasify.class_model import ClassClassifier
 from paasify.framework import PaasifyObj
@@ -82,7 +81,8 @@ class Source(NodeMap, PaasifyObj):
         "Return git repo ident"
         remote = self.remote
         if not remote:
-            self.log.info(f"Using local collection for source: {self.serialize('raw')}")
+            self.log.info(
+                f"Using local collection for source: {self.serialize('raw')}")
             if self.name:
                 return self.name
 

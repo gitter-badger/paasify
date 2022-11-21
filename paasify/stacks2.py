@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 Paasify Stack management
 
@@ -13,7 +14,7 @@ This library provides two classes:
 import os
 
 import re
-from pprint import pprint
+from pprint import pprint  # noqa: F401
 from functools import wraps
 
 import anyconfig
@@ -25,13 +26,12 @@ from cafram.utils import (
     to_yaml,
     first,
     flatten,
-    duplicates,
     write_file,
     to_json,
 )
 
 import paasify.errors as error
-from paasify.common import lookup_candidates, get_paasify_pkg_dir
+from paasify.common import lookup_candidates
 from paasify.framework import (
     PaasifyObj,
     PaasifyConfigVars,
@@ -47,10 +47,7 @@ from paasify.stack_components import (
 # # Try to load json schema if present
 ENABLE_JSON_SCHEMA = False
 try:
-    from json_schema_for_humans.generate import (
-        generate_from_filename,
-        generate_from_schema,
-    )
+    from json_schema_for_humans.generate import generate_from_filename
     from json_schema_for_humans.generation_configuration import GenerationConfiguration
 
     ENABLE_JSON_SCHEMA = True
@@ -192,8 +189,10 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # Check
         assert self.stack_name, f"Bug here, should not be empty, got: {self.stack_name}"
-        assert re.search("^[a-zA-Z0-9_].*$", self.stack_name), f"Got: {self.stack_name}"
-        assert re.search("^[a-zA-Z0-9_/].*$", self.stack_dir), f"Got: {self.stack_dir}"
+        assert re.search("^[a-zA-Z0-9_].*$",
+                         self.stack_name), f"Got: {self.stack_name}"
+        assert re.search("^[a-zA-Z0-9_/].*$",
+                         self.stack_dir), f"Got: {self.stack_dir}"
         # print (f"New stack: {stack_name} in dir: {stack_dir} with app: {self.app}")
 
     def node_hook_final(self):
@@ -206,7 +205,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
         payload = {
             "stack_name": f"{self.prj_ns}_{self.stack_name}",
             "stack_path": self.stack_path,
-            "docker_file": "docker-compose.run.yml",  # os.path.join(self.stack_dir, "docker-compose.run.yml"),
+            # os.path.join(self.stack_dir, "docker-compose.run.yml"),
+            "docker_file": "docker-compose.run.yml",
         }
         self.engine = self.prj.engine_cls(parent=self, payload=payload)
 
@@ -419,7 +419,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
         )
         vars_user.add_as_list(vars_global)
         vars_user.add_as_list(vars_local)
-        vars_user.add_as_dict(extra_user_vars)  # This is eventually local tag vars
+        # This is eventually local tag vars
+        vars_user.add_as_dict(extra_user_vars)
 
         # Create Build VarManager
         vars_build = VarsManager(
@@ -444,13 +445,15 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
             # Execute jsonnet scripts (Sloow)
             self.log.info(f"    Processing vars from tag: {tag}")
-            defaults = sta.jsonnet_low_api_call(jsonnet_file, "global_default", ctx)
+            defaults = sta.jsonnet_low_api_call(
+                jsonnet_file, "global_default", ctx)
             defaults = {
                 key: value for key, value in defaults.items() if key not in ctx_keys
             }
             ctx.update(defaults)
 
-            assemble = sta.jsonnet_low_api_call(jsonnet_file, "global_assemble", ctx)
+            assemble = sta.jsonnet_low_api_call(
+                jsonnet_file, "global_assemble", ctx)
             assemble = {
                 key: value for key, value in assemble.items() if key not in ctx_keys
             }
@@ -473,7 +476,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # 1. Prepare assemble context
         # -------------------
-        sta = StackAssembler(parent=self, ident=f"StackAssembler.{self.stack_name}")
+        sta = StackAssembler(
+            parent=self, ident=f"StackAssembler.{self.stack_name}")
         all_tags = self.get_tag_plan()
         vars_build = self.get_stack_vars(sta, all_tags)
 
@@ -516,7 +520,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
                 # If variables has been overrided, we need to recalculate the whole var stack
                 # which is actually quite slow because
                 # we need to reprocess all jsonnet files
-                result = self.get_stack_vars(sta, all_tags, extra_user_vars=tag_vars)
+                result = self.get_stack_vars(
+                    sta, all_tags, extra_user_vars=tag_vars)
 
             # 3.2 Prepare jsonnet call
             # --------------------
@@ -647,7 +652,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
             dest_schema = os.path.join(dest_dir, "jsonschema")
             if tag_schema:
-                print(f"Generated jsonschema files in: {dest_schema}.[json|yml]")
+                print(
+                    f"Generated jsonschema files in: {dest_schema}.[json|yml]")
                 write_file(dest_schema + ".json", to_json(tag_schema))
                 write_file(dest_schema + ".yml", to_yaml(tag_schema))
 
@@ -665,7 +671,8 @@ class PaasifyStack(NodeMap, PaasifyObj):
                     expand_buttons=True,
                     show_breadcrumbs=False,
                 )
-                generate_from_filename(dest_schema + ".json", dest_html, config=config)
+                generate_from_filename(
+                    dest_schema + ".json", dest_html, config=config)
 
                 # /schema_doc/paasify_yml_schema.html
                 # /plugin_api_doc/{tag.name}/web.html

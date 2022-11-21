@@ -1,7 +1,7 @@
 
 // Default functions
 // =============================
-local _metadata_default = 
+local _metadata_default =
   {
     "ERROR": "Metadata is not set !"
   };
@@ -92,7 +92,7 @@ local LdapBaseDNFromDomain( domain, sep='dc')=
     local args = $.getConf('args'); // expect a dict
 
     // Extract plugins function
-    
+
     if action == 'docker_transform' then
       local fn = std.get(plugin, "docker_transform", default=_fn_docker_override);
       fn(args, $.getConf('docker_data'))
@@ -221,7 +221,7 @@ local LdapBaseDNFromDomain( domain, sep='dc')=
   //     local common =  { [x]: std.get(user_data, std.lstripChars(x, '_'), default_data[x] ) for x in std.objectFields(default_data) };
   //     {
   //       input: user_data,
-        
+
   //       diff: default_data + common + global_vars_override(default_data + user_data ),
   //       merged: user_data + global_vars_override(default_data + user_data ),
   //     }
@@ -261,7 +261,7 @@ local LdapBaseDNFromDomain( domain, sep='dc')=
   //     {
   //       input: user_data,
   //       TMP: _metadata,
-        
+
   //       // diff: default_data + common + global_vars_override(default_data + user_data ),
   //       // merged: user_data + global_vars_override(default_data + user_data ),
   //     }
@@ -284,4 +284,3 @@ local LdapBaseDNFromDomain( domain, sep='dc')=
 
 # Run main script !
 #main()
-

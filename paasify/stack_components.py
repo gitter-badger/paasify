@@ -1,10 +1,11 @@
+# -*- coding: utf-8 -*-
 """
 Stack components class
 
 """
 
 import os
-from pprint import pprint
+from pprint import pprint  # noqa: F401
 
 import re
 
@@ -108,10 +109,12 @@ class VarsManager(PaasifyObj):
             old_value = value
             value = tpl.substitute(**env)
             if old_value != value:
-                self.log.debug(f"Transformed template value: {old_value} => {value}")
+                self.log.debug(
+                    f"Transformed template value: {old_value} => {value}")
 
         except KeyError as err:
-            self.log.warning(f"Variable {err} is not defined in: {hint}='{value}'")
+            self.log.warning(
+                f"Variable {err} is not defined in: {hint}='{value}'")
 
         except ValueError:
             self.log.debug(
@@ -201,7 +204,8 @@ class StackAssembler(PaasifyObj):
 
         # Fetch output
         docker_run_content = out.stdout.decode("utf-8")
-        docker_run_payload = anyconfig.loads(docker_run_content, ac_parser="yaml")
+        docker_run_payload = anyconfig.loads(
+            docker_run_content, ac_parser="yaml")
         return docker_run_payload
 
     # Vars processors
@@ -210,7 +214,8 @@ class StackAssembler(PaasifyObj):
     def jsonnet_low_api_call(self, jsonnet_file, action, args):
         "New low level API call for jsonnet plugins"
 
-        _payload = self.process_jsonnet_exec(jsonnet_file, action, {"args": args})
+        _payload = self.process_jsonnet_exec(
+            jsonnet_file, action, {"args": args})
 
         return _payload
 
@@ -325,7 +330,8 @@ class PaasifyStackApp(NodeMap, PaasifyObj):
     def ensure_app_exists(self):
         "Validate stack is installed"
 
-        app_dir = self.sources.find_app(self.app_path, source_name=self.app_source)
+        app_dir = self.sources.find_app(
+            self.app_path, source_name=self.app_source)
 
         if not app_dir:
             self.log.warning("Be sure you run before: paasify src-install")
@@ -583,7 +589,8 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
 
         lookup = []
         for dir_ in dirs:
-            self.log.trace(f"Looking up file '{','.join(pattern)}' in dir: {dir_}")
+            self.log.trace(
+                f"Looking up file '{','.join(pattern)}' in dir: {dir_}")
             lookup_def = {
                 "path": dir_,
                 "pattern": pattern,
@@ -597,7 +604,8 @@ class PaasifyStackTag(NodeMap, PaasifyObj):
 
     def lookup_docker_files_tag(self, dirs):
         """Lookup docker-compose files in app directory"""
-        pattern = [f"docker-compose.{self.name}.yml", f"docker-compose.{self.name}.yml"]
+        pattern = [f"docker-compose.{self.name}.yml",
+                   f"docker-compose.{self.name}.yml"]
         return self._lookup_file(dirs, pattern)
 
     def lookup_jsonnet_files_tag(self, dirs):

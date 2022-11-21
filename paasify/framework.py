@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 "Paasify Framework Libary"
 
 
@@ -7,7 +8,7 @@ import os
 import logging
 
 
-from pprint import pprint
+from pprint import pprint  # noqa: F401
 
 
 from cafram.nodes import NodeList, NodeMap, NodeDict
