@@ -85,6 +85,7 @@ black = "^22.10.0"
 pytest-regressions = "^2.4.1"
 pytest-coverage = "^0.0"
 pytest-clarity = "^1.0.1"
+flake8 = "^5.0.4"
 
 
 [tool.poetry.group.docs.dependencies]
