@@ -53,6 +53,8 @@ paasify = "paasify.cli:app"
 [tool.poetry.dependencies]
 python = "^3.8"
 
+cafram = {git = "https://github.com/barbu-it/cafram", rev = "main"}
+
 sh = "^1.14.3"
 anyconfig = "^0.13.0"
 ruamel-yaml = "^0.17.21"
