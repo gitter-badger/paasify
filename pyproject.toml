@@ -51,7 +51,7 @@ paasify = "paasify.cli:app"
 # ==================
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.7"
 
 #cafram = {git = "https://github.com/barbu-it/cafram", rev = "main"}
 
