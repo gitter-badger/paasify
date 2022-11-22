@@ -1,7 +1,8 @@
 docs_dir: src/
 site_dir: build/site/
 
-site_url: https://barbu-it.github.io/paasify
+site_url: https://barbu-it.github.io/paasify/
+repo_url: https://github.com/barbu-it/paasify
 site_name: "Paasify Documentation"
 site_author: mrjk
 site_description: "Paasify Documentation"
