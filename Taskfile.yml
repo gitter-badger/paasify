@@ -1,5 +1,8 @@
 version: '3'
 
+vars:
+  PRJ_DIR: paasify
+
 includes:
 
   dev:
@@ -35,12 +38,20 @@ tasks:
     sources:
       - poetry.lock
     cmds:
+      - 'poetry --version >&/dev/null || pip install --upgrade poetry'
       - poetry config --list
       - poetry install -vv --no-interaction --no-root
-      - poetry run pre-commit install --install-hooks
+      - |2
+        if poetry run pre-commit >&/dev/null; then
+          poetry run pre-commit install --install-hooks
+        fi
 
   setup:
     desc: Setup project
+    deps:
+      - bootstrap
+    sources:
+      - "{{.PRJ_DIR}}/*"
     cmds:
       - poetry install -vv --no-interaction --only-root
 
@@ -48,6 +59,7 @@ tasks:
     desc: Synchronize git
     cmds:
       - git fetch -a && git pull
+      - task: setup
 
 
   # Build workflow

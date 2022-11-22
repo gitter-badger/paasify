@@ -6,10 +6,14 @@ dist/*
 *.code-workspace
 docs/build/*
 
+.envrc.*
+.direnv/
+.task/
+.vscode/*
+
 
 # Temp
 docs/code_config/*
-.vscode/*
 lab/*
 tmp/*
 tests_dev/*

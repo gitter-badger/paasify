@@ -56,6 +56,17 @@ Troubleshooting:
 * [yq](https://mikefarah.gitbook.io/yq/): Process YAML files
 
 
+## Quickstart for development with Task and direnv
+
+4 commands:
+```
+git clone ... paasify
+cd paasify
+direnv allow
+task setup
+```
+
+
 ## Quickstart for development
 
 Project setup:
