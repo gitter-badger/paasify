@@ -88,18 +88,18 @@ tasks:
   # Release workflow
   # -----------------
 
+  version:
+    desc: Show versions status
+    cmds:
+      - poetry run ./scripts/versions.sh
+
   release_changelog:
     desc: "Used by semantic-release during publish process, as pre-commit command"
     cmds:
       - poetry run semantic-release changelog --unreleased > VERSION_NOTES.md
 
-  release_status:
-    desc: Show release status
-    cmds:
-      - poetry run ./scripts/versions.sh
-
   release_stable:
-    desc: Bump code stable version, generate changelog, create a tag
+    desc: Bump code to stable version, generate changelog, create a tag
     # Note having :
     # GH_TOKEN set will create a release in github
     # PYPI_TOKEN set will release a version on pypi
@@ -119,7 +119,7 @@ tasks:
   release_beta:
     aliases:
       - release
-    desc: Bump code stable version, generate changelog, create a tag
+    desc: Bump code to beta version, generate changelog, create a tag
     preconditions:
       - sh: '[[ "$(git rev-parse --abbrev-ref HEAD)" == develop ]]'
         msg: You must checkout 'develop' branch first
