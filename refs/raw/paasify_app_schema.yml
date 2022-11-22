@@ -1,0 +1,13 @@
+type: object
+title: Paasify App
+description: Paasify app implementation
+additionalProperties: false
+default: {}
+properties:
+  project:
+    title: Project configuration
+    description: 'See: schema prj'
+  config:
+    title: Application configuration
+    type: object
+    additionalProperties: true
