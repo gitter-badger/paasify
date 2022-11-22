@@ -108,7 +108,7 @@ tasks:
           [[ "$(git rev-parse --abbrev-ref HEAD)" == main ]]
         msg: You must checkout 'main' branch first
       - sh: >
-          not git status -s | grep -E '^[AM]* '
+          git status -s | not grep -E '^[AM]* '
         msg: You must clean your working dir first
     cmds:
       - SKIP=end-of-file-fixer poetry run semantic-release -D tag_commit=true publish
@@ -123,7 +123,7 @@ tasks:
     preconditions:
       - sh: '[[ :develop:main: =~ :$(git rev-parse --abbrev-ref HEAD): ]]'
         msg: You must checkout 'develop' branch first
-      - sh: not git status -s | grep -E '^[AM]* '
+      - sh: git status -s | not grep -E '^[AM]* '
         msg: You must clean your working dir first
     cmds:
       - >
