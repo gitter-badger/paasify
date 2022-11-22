@@ -121,7 +121,7 @@ tasks:
       - release
     desc: Bump code to beta version, generate changelog, create a tag
     preconditions:
-      - sh: '[[ "$(git rev-parse --abbrev-ref HEAD)" == develop ]]'
+      - sh: '[[ :develop:main: =~ :$(git rev-parse --abbrev-ref HEAD): ]]'
         msg: You must checkout 'develop' branch first
       - sh: ! git status -s | grep -E '^[AM]* '
         msg: You must clean your working dir first
