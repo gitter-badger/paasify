@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 "Current project version"
 
-__version__ = "0.0.1-beta.2"
+__version__ = "0.0.1-beta.3"
 
 
 # Display version if direct call
