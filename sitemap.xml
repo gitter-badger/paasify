@@ -1,167 +1,167 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://paasify.org/</loc>
+         <loc>https://barbu-it.github.io/paasify/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/about/contribute/</loc>
+         <loc>https://barbu-it.github.io/paasify/about/contribute/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/about/development/</loc>
+         <loc>https://barbu-it.github.io/paasify/about/development/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/about/license/</loc>
+         <loc>https://barbu-it.github.io/paasify/about/license/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/docs/advanced/</loc>
+         <loc>https://barbu-it.github.io/paasify/docs/advanced/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/docs/concepts/</loc>
+         <loc>https://barbu-it.github.io/paasify/docs/concepts/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/docs/configuration/</loc>
+         <loc>https://barbu-it.github.io/paasify/docs/configuration/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/docs/distribute/</loc>
+         <loc>https://barbu-it.github.io/paasify/docs/distribute/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/docs/extend/</loc>
+         <loc>https://barbu-it.github.io/paasify/docs/extend/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/jupyter/learn_101/</loc>
+         <loc>https://barbu-it.github.io/paasify/jupyter/learn_101/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/plugins_apidoc/_paasify/markdown/</loc>
+         <loc>https://barbu-it.github.io/paasify/plugins_apidoc/_paasify/markdown/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/plugins_apidoc/test-paasify-api/markdown/</loc>
+         <loc>https://barbu-it.github.io/paasify/plugins_apidoc/test-paasify-api/markdown/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/plugins_apidoc/traefik-svc/markdown/</loc>
+         <loc>https://barbu-it.github.io/paasify/plugins_apidoc/traefik-svc/markdown/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/cli_usage/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/cli_usage/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/extend_base/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/extend_base/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/extend_tags/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/extend_tags/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/python_api_app/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/python_api_app/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/python_api_other/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/python_api_other/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/python_api_project/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/python_api_project/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/schema_app/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/schema_app/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/schema_prj/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/schema_prj/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/schema_prj_config/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/schema_prj_config/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/schema_prj_sources/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/schema_prj_sources/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/schema_prj_stacks/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/schema_prj_stacks/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/config/paasify_app_schema/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/config/paasify_app_schema/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/config/paasify_prj_config_schema/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/config/paasify_prj_config_schema/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/config/paasify_prj_schema/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/config/paasify_prj_schema/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/config/paasify_prj_sources_schema/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/config/paasify_prj_sources_schema/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/refs/config/paasify_prj_stacks_schema/</loc>
+         <loc>https://barbu-it.github.io/paasify/refs/config/paasify_prj_stacks_schema/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/schema_doc/paasify_yml_schema/</loc>
+         <loc>https://barbu-it.github.io/paasify/schema_doc/paasify_yml_schema/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/tutorial/best_practices/</loc>
+         <loc>https://barbu-it.github.io/paasify/tutorial/best_practices/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://paasify.org/tutorial/quickstart/</loc>
+         <loc>https://barbu-it.github.io/paasify/tutorial/quickstart/</loc>
          <lastmod>2022-11-22</lastmod>
          <changefreq>daily</changefreq>
     </url>
