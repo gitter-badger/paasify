@@ -120,8 +120,11 @@ tasks:
     aliases:
       - release
     desc: Bump code to beta version, generate changelog, create a tag
+    vars:
+      BRANCH:
+        sh: git rev-parse --abbrev-ref HEAD
     preconditions:
-      - sh: '[[ :develop:main: =~ :$(git rev-parse --abbrev-ref HEAD): ]]'
+      - sh: '[[ :develop:main: =~ :{{.BRANCH}}: ]]'
         msg: You must checkout 'develop' branch first
       - sh: git status -s | not grep -E '^[AM]* '
         msg: You must clean your working dir first
@@ -129,7 +132,7 @@ tasks:
       - >
         SKIP=end-of-file-fixer poetry run semantic-release
         -D tag_commit=true
-        -D branch=develop
+        -D branch={{.BRANCH}}
         publish --prerelease
       - task: publish_gh
       - task: publish_pypi
