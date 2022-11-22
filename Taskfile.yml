@@ -108,9 +108,9 @@ tasks:
     # GH_TOKEN set will create a release in github
     # PYPI_TOKEN set will release a version on pypi
     preconditions:
-      - sh: '[[ -z "${GH_TOKEN-}" ]]'
+      - sh: '[[ -n "${GH_TOKEN-}" ]]'
         msg: Please set GH_TOKEN environment variable
-      - sh: '[[ -z "${POETRY_PYPI_TOKEN_PYPI-}" ]]'
+      - sh: '[[ -n "${POETRY_PYPI_TOKEN_PYPI-}" ]]'
         msg: Please set POETRY_PYPI_TOKEN_PYPI environment variable
       - sh: >
           [[ "$(git rev-parse --abbrev-ref HEAD)" == main ]]
@@ -121,9 +121,7 @@ tasks:
     cmds:
       - git pull --no-ff
       - SKIP=end-of-file-fixer poetry run semantic-release -D tag_commit=true publish
-      - task: publish_gh
-      - task: publish_pypi
-      - task: doc:publish_gh
+      - task: publish
 
   release_beta:
     aliases:
@@ -133,9 +131,9 @@ tasks:
       BRANCH:
         sh: git rev-parse --abbrev-ref HEAD
     preconditions:
-      - sh: '[[ -z "${GH_TOKEN-}" ]]'
+      - sh: '[[ -n "${GH_TOKEN-}" ]]'
         msg: Please set GH_TOKEN environment variable
-      - sh: '[[ -z "${POETRY_PYPI_TOKEN_PYPI-}" ]]'
+      - sh: '[[ -n "${POETRY_PYPI_TOKEN_PYPI-}" ]]'
         msg: Please set POETRY_PYPI_TOKEN_PYPI environment variable
       - sh: '[[ :develop:main: =~ :{{.BRANCH}}: ]]'
         msg: You must checkout 'develop' branch first
@@ -148,19 +146,26 @@ tasks:
         -D tag_commit=true
         -D branch={{.BRANCH}}
         publish --prerelease
-      - task: publish_gh
-      - task: publish_pypi
-      - task: doc:publish_gh
-
+      - task: publish
 
 
   # Publish workflow
   # -----------------
 
+  publish:
+    desc: Publish everything (GH, Pypi, Doc)
+    cmds:
+      - task: publish_gh
+      - task: publish_pypi
+      - task: doc:publish_gh
+
   publish_pypi:
     desc: Publish python package on pypi.org
     deps:
       - build
+    preconditions:
+      - sh: '[[ -n "${POETRY_PYPI_TOKEN_PYPI-}" ]]'
+        msg: Please set POETRY_PYPI_TOKEN_PYPI environment variable
     cmds:
       - poetry publish
 
@@ -169,6 +174,9 @@ tasks:
     env:
       INPUT_PRERELEASE: false
       INPUT_ALLOW_OVERRIDE: true
+    preconditions:
+      - sh: '[[ -n "${GH_TOKEN-}" ]]'
+        msg: Please set GH_TOKEN environment variable
 
     vars:
       INPUT_TOKEN:
@@ -185,7 +193,6 @@ tasks:
     deps:
       - build
     cmds:
-      - ls -ahl dist/
       - INPUT_BODY="{{.BODY_HEADER}}" INPUT_TOKEN={{.INPUT_TOKEN}} bash scripts/publish_github.sh
 
 
