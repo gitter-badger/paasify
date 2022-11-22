@@ -51,7 +51,7 @@ paasify = "paasify.cli:app"
 # ==================
 
 [tool.poetry.dependencies]
-python = "^3.7"
+python = "^3.8"
 
 #cafram = {git = "https://github.com/barbu-it/cafram", rev = "main"}
 
@@ -76,6 +76,7 @@ semver = "^2.13.0"
 #  jsonnet = "^0.18.0"
 #  giturlparse = "^0.10.0"
 #
+cafram = {git = "https://github.com/barbu-it/cafram.git", rev = "main"}
 
 [tool.poetry.group.dev.dependencies]
 python-semantic-release = "^7.32.2"
