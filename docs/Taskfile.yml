@@ -60,6 +60,9 @@ tasks:
         sh: poetry version -s 2>/dev/null || true
       APP_MINOR:
         sh: git describe --tags --abbrev=0 | sed -E  's/(v?[0-9]+\.([0-9]+)).*/\1/'
+    env:
+      # We disable precommit for this
+      PRE_COMMIT_ALLOW_NO_CONFIG: 1
     cmds:
       - mkdocs gh-deploy --message 'Deployed {{.APP_VERSION}} - {{.GIT_REF}} from {{.GIT_BRANCH}}'
 
