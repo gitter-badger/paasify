@@ -104,9 +104,6 @@ tasks:
 
   release_stable:
     desc: Bump code to stable version, generate changelog, create a tag
-    # Note having :
-    # GH_TOKEN set will create a release in github
-    # PYPI_TOKEN set will release a version on pypi
     preconditions:
       - sh: '[[ -n "${GH_TOKEN-}" ]]'
         msg: Please set GH_TOKEN environment variable

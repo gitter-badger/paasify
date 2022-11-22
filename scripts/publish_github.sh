@@ -36,11 +36,14 @@ guess_files ()
   local assets_dir=dist
   tag=${tag#v}
 
-  ls -1 "$assets_dir/"*"$tag"*
-  {
-    echo "CHANGELOG.md"
-    echo "RELEASE.md"
-  } | sed "s@^@$assets_dir/@" | xargs
+  if ls -1 "$assets_dir/"*"$tag"* 2>/dev/null; then
+    {
+      echo "CHANGELOG.md"
+      echo "RELEASE.md"
+    } | sed "s@^@$assets_dir/@" | xargs
+  else
+    ls -1 "$assets_dir/"*
+  fi
 
 }
 
