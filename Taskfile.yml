@@ -19,6 +19,10 @@ includes:
     taskfile: ./docker/Taskfile.yml
     optional: true
 
+  extra:
+    taskfile: ./scripts/Taskfile.extra.yml
+    dir: .
+    optional: true
 
 tasks:
 
@@ -104,6 +108,10 @@ tasks:
     # GH_TOKEN set will create a release in github
     # PYPI_TOKEN set will release a version on pypi
     preconditions:
+      - sh: '[[ -z "${GH_TOKEN-}" ]]'
+        msg: Please set GH_TOKEN environment variable
+      - sh: '[[ -z "${POETRY_PYPI_TOKEN_PYPI-}" ]]'
+        msg: Please set POETRY_PYPI_TOKEN_PYPI environment variable
       - sh: >
           [[ "$(git rev-parse --abbrev-ref HEAD)" == main ]]
         msg: You must checkout 'main' branch first
@@ -125,6 +133,10 @@ tasks:
       BRANCH:
         sh: git rev-parse --abbrev-ref HEAD
     preconditions:
+      - sh: '[[ -z "${GH_TOKEN-}" ]]'
+        msg: Please set GH_TOKEN environment variable
+      - sh: '[[ -z "${POETRY_PYPI_TOKEN_PYPI-}" ]]'
+        msg: Please set POETRY_PYPI_TOKEN_PYPI environment variable
       - sh: '[[ :develop:main: =~ :{{.BRANCH}}: ]]'
         msg: You must checkout 'develop' branch first
       - sh: git status -s | not grep -E '^[AM]* '

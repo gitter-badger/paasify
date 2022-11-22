@@ -1,16 +1,21 @@
+# Python files
 **/__pycache__
-**/.ipynb_checkpoints*
 dist/*
+**/.ipynb_checkpoints*
 
+# Temporary files
 .coverage
 *.code-workspace
 docs/build/*
 
+# User customization
 .envrc.*
+scripts/Taskfile.extra.yml
+
+# Tools dirs
 .direnv/
 .task/
 .vscode/*
-
 
 # Temp
 docs/code_config/*
