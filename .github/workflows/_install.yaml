@@ -19,6 +19,9 @@ on:
       access_token:
         description: 'Github Secret Token to check out the repo'
 
+env:
+  VIRTUAL_ENV: .venv
+
 jobs:
 
   install:
@@ -98,10 +101,7 @@ jobs:
 
       - name: Add venv to PATH
         run: |
-          set -x
-          command -v poetry
-          poetry env info --path
-          echo "$(poetry env info --path)/bin" >> $GITHUB_PATH
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
 
       - name: Install dependencies (cached)
         if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'

@@ -15,7 +15,6 @@ on:
       - develop
 
 env:
-  # Is it still required ?
   VIRTUAL_ENV: .venv
 
 jobs:
@@ -72,8 +71,7 @@ jobs:
       # This step is only needed if you don't want to use `poetry run <cmd>`
       - name: Add venv to PATH
         run: |
-          echo "$PWD/$(poetry env info --path)/bin"
-          echo "$PWD/$(poetry env info --path)/bin" >> $GITHUB_PATH
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
 
       # Run tests
       # ---------------------
