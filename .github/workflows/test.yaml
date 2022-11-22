@@ -20,7 +20,7 @@ env:
 jobs:
 
   install:
-    uses: ./.github/lib/install.yaml
+    uses: ./.github/workflows/_install.yml
     with:
       python_version: ${{ matrix.python_version }}
       poetry_version: ${{ matrix.poetry_version }}
