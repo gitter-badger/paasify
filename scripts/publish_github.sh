@@ -51,7 +51,7 @@ parse_args ()
   #
   ## Input verification
   #
-  TOKEN="$INPUT_TOKEN"
+  TOKEN="${INPUT_TOKEN:-$GH_TOKEN-}"
   if [ -z "$TOKEN" ]; then
   	>&2 echo "::error::missing: token (see log for details)"
   	>&2 printf "\nERR: Invalid input: 'token' is required, and must be specified.\n"
