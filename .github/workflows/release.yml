@@ -36,7 +36,7 @@ jobs:
 
   install:
     needs: context
-    uses: ./.github/workflows/_install.yaml
+    uses: ./.github/lib/install.yaml
     with:
       python_version: "${{ needs.context.outputs.python}}"
       poetry_version: "${{ needs.context.outputs.poetry}}"
