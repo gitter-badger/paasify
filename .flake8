@@ -1,0 +1,6 @@
+[flake8]
+
+exclude = cafram,.direnv,.venv
+extend-ignore =
+  # E501 line too long
+  E501
