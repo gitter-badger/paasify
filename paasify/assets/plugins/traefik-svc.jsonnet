@@ -257,8 +257,8 @@ local plugin = {
       vars.app_namespace + vars.traefik_sep + vars.traefik_svc_name])[0];
     local _traefik_svc_fqdn = std.prune([
       vars.traefik_svc_fqdn,
-      vars.app_fqdn,
-      vars.traefik_svc_name + '.' + vars.app_domain])[0];
+      vars.traefik_svc_name + '.' + vars.app_domain,
+      vars.app_fqdn])[0];
 
     local _cur_svc_net = docker_file.services[vars.traefik_svc_ident].networks;
 
