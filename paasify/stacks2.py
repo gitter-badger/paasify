@@ -212,10 +212,9 @@ class PaasifyStack(NodeMap, PaasifyObj):
 
         # Build tag list
         tag_list = ["_paasify"] + (
-            self.tags_prefix
-            or self.prj.config.tags_prefix + self.tags
-            or self.prj.config.tags + self.tags_suffix
-            or self.prj.config.tags_suffix
+            (self.tags_prefix or self.prj.config.tags_prefix) +
+            (self.tags or self.prj.config.tags) +
+            (self.tags_suffix or self.prj.config.tags_suffix)
         )
         self.tag_manager = PaasifyStackTagManager(
             parent=self, ident="StackTagMgr", payload=tag_list
@@ -547,6 +546,25 @@ class PaasifyStack(NodeMap, PaasifyObj):
         self.log.info(f"Writing docker-compose file: {outfile}")
         output = to_yaml(docker_run_payload)
         write_file(outfile, output)
+
+        # 5. Prepare environment
+        # -------------------
+        # This is a first a basic implementation of apps volumes with permissions
+        # TOFIX: Permission change will apply the same permissions on all volumes in a blind way
+        # Ie: Permission for mysql containers is not the same as the app itself.
+        volumes = docker_run_payload.get('volumes', {})
+        uid = int(vars_build.get('app_puid', '-1'))
+        gid = int(vars_build.get('app_pgid', '-1'))
+        for vol_name, vol_def in volumes.items():
+            driver = vol_def.get('driver')
+            driver_opts = vol_def.get('driver_opts')
+            if driver == 'local' and driver_opts:
+                device = driver_opts.get('device')
+                if device and not os.path.exists(device):
+                    self.log.info(
+                        f"Create volume directory '{vol_name}' with owner '{uid}:{gid}': {device}")
+                    os.makedirs(device)
+                    os.chown(device, uid, gid)
 
     def explain_tags(self):
         "Explain hos tags are processed on stack"
