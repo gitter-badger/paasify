@@ -237,7 +237,9 @@ class StackAssembler(PaasifyObj):
         # ], f"Action not supported: {action}"
 
         # Prepare input variables
+        mod_ident = os.path.splitext(os.path.basename(file))[0]
         ext_vars = {
+            "parent": json.dumps(mod_ident),
             "action": json.dumps(action),
         }
         for key, val in data.items():

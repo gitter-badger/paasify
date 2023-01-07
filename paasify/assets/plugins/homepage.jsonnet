@@ -9,6 +9,8 @@ local plugin = {
       name: "Homepage integration",
       description: 'Integrate with Homepage (https://gethomepage.dev)',
 
+      ident : 'homepage',
+
       author: "mrjk",
       email: '',
       license: '',

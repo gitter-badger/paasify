@@ -39,7 +39,11 @@ local LabelsTraefikCertResolver(svc, name) =
 local TraefikSvcNetwork(id, name, current=null) =
   if std.isString(id) then
   {
-    [id]: std.get(current, id, null),
+    [id]:
+    {
+      #name: std.get(current, id, null),
+      priority: 1000,
+    },
   } else {};
 
 local TraefikPrjNetwork(id, name, external) =
@@ -71,6 +75,8 @@ local plugin = {
     local meta = self,
     name: "Traefik Service",
     description: 'Bind service to traefik instance',
+
+    ident: 'traefik-svc',
 
     author: "mrjk",
     email: '',
