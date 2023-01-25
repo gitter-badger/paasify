@@ -1,5 +1,7 @@
 # Paasify
 
+[![Join the chat at https://gitter.im/barbu-it/paasify](https://badges.gitter.im/barbu-it/paasify.svg)](https://gitter.im/barbu-it/paasify?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 Deploy docker-compose files with ease!
 
 Paasify is a little tool that will help deploying `docker-compose.yml` based apps, either on docker swarm
